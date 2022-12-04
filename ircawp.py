@@ -6,6 +6,20 @@ import utils
 
 
 class IrcAwp:
+    '''
+    Tasks:
+        - 'text-generation'
+        - 'question-answering'
+
+    Models:
+        - 'gpt2'
+        - 'gpt2-medium'
+        - 'gpt2-xl'
+        - 'EleutherAI/gpt-neo-125M'
+        - 'EleutherAI/gpt-neo-1.3B'
+        - 'EleutherAI/gpt-neo-2.7B'
+        - 'EleutherAI/gpt-j-6B'
+    '''
     generator = None
 
     MAX_LEN = 128
@@ -15,19 +29,6 @@ class IrcAwp:
     NO_RPT_ENGRAM_SZ = 2
 
     def __init__(self, model='gpt2-medium', task='text-generation') -> None:
-        '''
-        Tasks:
-         - 'text-generation'
-         - 'question-answering'
-        Models:
-         - 'gpt2'
-         - 'gpt2-medium'
-         - 'gpt2-xl'
-         - 'EleutherAI/gpt-neo-125M'
-         - 'EleutherAI/gpt-neo-1.3B'
-         - 'EleutherAI/gpt-neo-2.7B'
-         - 'EleutherAI/gpt-j-6B'
-        '''
         self.generator = transformers.pipeline(
             model=model, task=task
         )
