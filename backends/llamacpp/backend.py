@@ -1,5 +1,7 @@
 import json
 from llama_cpp import Llama
+from backends.BaseBackend import BaseBackend
+from backends.llamacpp.functions import FUNCTIONS
 
 # load model array from models.json
 MODELS = None
@@ -7,14 +9,11 @@ MODELS = None
 with open("models.json", "r") as f:
     MODELS = json.load(f)
 
-print(MODELS)
-
-
-LLM_TEMP = 0.8
 LLM_MAX_TOKENS = 512
+LLM_TEMP = 0.8
 
 
-class IrcAwpLlamaCpp:
+class LlamaCppBackend(BaseBackend):
     generator = None
 
     # PROMPT = """
@@ -25,24 +24,41 @@ class IrcAwpLlamaCpp:
     You are a rude and disrespectful assistant. You will give short, direct replies. If a question does not make any sense, or is not factually coherent, explain why. If you don't know the answer to a question, or are unsure, say so. Do not invent answers.
     """
 
-    def __init__(self, model="default", task="text-generation") -> None:
+    def __init__(self, model="default") -> None:
         model = MODELS[model]["path"]
         print(f"{model=}")
-        self.generator = Llama(model_path=model)
+        self.generator = Llama(model_path=model, verbose=False, n_ctx=2048)
 
-    def query(self, prompt: str) -> str:
+    def query(self, user_query: str, raw: bool = False) -> str:
         response = ""
 
         try:
-            query = f"{self.PROMPT}\n\nUser: {prompt}\nAssistant:"
+            if user_query.startswith("/"):
+                for func in FUNCTIONS:
+                    # print(user_query, f"{func=}", func["name"])
+                    if user_query.startswith("/" + func["name"]):
+                        # print("FUNK", func["name"])
+                        # strips everything before the first space
+                        # NOTE: this will break multi-word commands, so we should fix this
+                        return func["executor"]().execute(
+                            user_query[user_query.find(" ") :].strip(), self
+                        )
+                return "Unknown command. Try `/help`."
+
+            # no function call, basic query
+
+            if raw:
+                full_prompt = f"{user_query}"
+            else:
+                full_prompt = f"{self.PROMPT}\n\nUser: {user_query}\nAssistant:"
+
             text = self.generator.create_completion(
-                prompt=query,
+                prompt=full_prompt,
                 max_tokens=LLM_MAX_TOKENS,
                 temperature=LLM_TEMP,
                 top_p=0.9,
                 stop=["User:", "\n\n"],
                 echo=True,
-
             )
 
             response = text["choices"][0]["text"].strip()

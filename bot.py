@@ -3,7 +3,7 @@ import re
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 import logging
-from backends.llamacpp import IrcAwpLlamaCpp
+from backends.llamacpp.backend import LlamaCppBackend
 import dotenv
 
 print("=-=-=-=-= BOOTING =-=-=-=-=")
@@ -12,7 +12,6 @@ config = dotenv.dotenv_values(".env")
 logging.basicConfig(level=logging.ERROR)
 
 ircawp = None
-
 
 app = App(token=config["SLACK_BOT_TOKEN"])
 
@@ -37,5 +36,5 @@ def event_test(event, message, client, say, body):
 
 
 if __name__ == "__main__":
-    ircawp = IrcAwpLlamaCpp()
+    ircawp = LlamaCppBackend()
     SocketModeHandler(app, config["SLACK_APP_TOKEN"]).start()

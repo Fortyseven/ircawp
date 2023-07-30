@@ -1,8 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 import os
 import sys
-# from rich import print
-import backends.llamacpp as ircawp
+from rich import print
+from backends.llamacpp.backend import LlamaCppBackend as ircawp
 
 prompt = " ".join(sys.argv[1:])
 
@@ -11,6 +11,6 @@ if not prompt:
     os._exit(-1)
 
 
-ircawp = ircawp.IrcAwpLlamaCpp()
+ircawp = ircawp()
 
 print(ircawp.query(prompt))

@@ -7,14 +7,14 @@ import queue
 import threading
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
-from backends.llamacpp import IrcAwpLlamaCpp
+from backends.llamacpp.backend import LlamaCppBackend
 
 THREAD_SLEEP = 0.25
 
 print("=-=-=-=-= BOOTING =-=-=-=-=")
 config = dotenv.dotenv_values(".env")
 
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.INFO)
 
 slack_queue = queue.Queue()
 
@@ -58,7 +58,7 @@ def process_queue():
 
 
 if __name__ == "__main__":
-    ircawp = IrcAwpLlamaCpp()
+    ircawp = LlamaCppBackend()
 
     queue_thread = threading.Thread(target=process_queue, daemon=True)
     queue_thread.start()

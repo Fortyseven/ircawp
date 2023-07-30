@@ -2,11 +2,12 @@ import transformers
 
 # from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPTJPreTrainedModel, GPTJModel  # , GPTJToke
 import sys
+from backends import BaseBackend
 
 import utils
 
 
-class IrcAwpGPT2:
+class IrcAwpGPT2(BaseBackend):
     """
     Tasks:
         - 'text-generation'
@@ -55,7 +56,7 @@ class IrcAwpGPT2:
             if len(response) == 0:
                 response = "**I don't feel so good, sorry.**"
 
-        except RuntimeError as e:
+        except Exception as e:
             response = f"**IT HERTZ, IT HERTZ:** '{str(e)}'"
 
         return response
