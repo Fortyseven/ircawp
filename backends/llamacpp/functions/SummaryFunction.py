@@ -21,7 +21,14 @@ class SummaryFunction(BaseFunction.BaseFunction):
             if query.find("://") < 0:
                 query = f"https://{query}"
 
-            content = requests.get(query, timeout=4, allow_redirects=True, verify=False, )
+            content = requests.get(
+                query,
+                timeout=4,
+                allow_redirects=True,
+                headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.140 Safari/537.36 Edge/18.17763"
+                },
+            )
 
             if content.status_code >= 400:
                 return f"Error: code ({content.status_code}) for ({query})"
