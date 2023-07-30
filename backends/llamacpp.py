@@ -19,10 +19,12 @@ LLM_MAX_TOKENS = 512
 class IrcAwpLlamaCpp:
     generator = None
 
-    PROMPT = """
-    You are a helpful, respectful and honest assistant. You will give short, direct replies.
+    # PROMPT = """
+    # You are a helpful, respectful and honest assistant. You will give short, direct replies. If a question does not make any sense, or is not factually coherent, explain why. If you don't know the answer to a question, or are unsure, say so. Do not invent answers.
+    # """
 
-    If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.
+    PROMPT = """
+    You are a rude and disrespectful assistant. You will give short, direct replies. If a question does not make any sense, or is not factually coherent, explain why. If you don't know the answer to a question, or are unsure, say so. Do not invent answers.
     """
 
     def __init__(self, model="default", task="text-generation") -> None:
@@ -42,10 +44,11 @@ class IrcAwpLlamaCpp:
                 top_p=0.9,
                 stop=["User:", "\n\n"],
                 echo=True,
+
             )
 
             response = text["choices"][0]["text"].strip()
-            response = response[response.find("Assistant: ") + 10 :].strip()
+            response = response[response.find("Assistant:") + 10 :].strip()
 
             if len(response) == 0:
                 response = "**I don't feel so good, Mr. Stark.**"
