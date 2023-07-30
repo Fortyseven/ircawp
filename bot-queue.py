@@ -28,13 +28,12 @@ def add_to_queue(user_id, message, say):
 
 
 def process_queue_entry(user_id, prompt, say):
-    # print(f"===============================")
-    # print(f'LLM Prompt >> "{prompt}"')
+    logging.info("==========================")
+    logging.info(f"Processing queue entry for {user_id} with prompt '{prompt}'")
 
     response = ircawp.query(prompt)
 
-    # print(f'            << "{response}"')
-    # print(f"===============================")
+    logging.info(f"Response: '{response}'")
 
     say(f"<@{user_id}>: {response}")
 
@@ -50,6 +49,8 @@ def ingest_event(event, message, client, say, body):
 
 
 def process_queue():
+    logging.info("Starting queue processing thread...")
+
     while True:
         time.sleep(THREAD_SLEEP)
         if not slack_queue.empty():
