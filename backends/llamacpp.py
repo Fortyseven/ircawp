@@ -1,6 +1,4 @@
 import json
-import transformers
-import utils
 from llama_cpp import Llama
 
 # load model array from models.json

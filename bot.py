@@ -37,5 +37,5 @@ def event_test(event, message, client, say, body):
 
 
 if __name__ == "__main__":
-    ircawp =IrcAwpLlamaCpp()
+    ircawp = IrcAwpLlamaCpp()
     SocketModeHandler(app, config["SLACK_APP_TOKEN"]).start()
