@@ -6,7 +6,7 @@ import sys
 import utils
 
 
-class IrcAwp:
+class IrcAwpGPT2:
     """
     Tasks:
         - 'text-generation'

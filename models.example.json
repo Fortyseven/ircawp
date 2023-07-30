@@ -1,0 +1,5 @@
+{
+    "default": {
+        "path": "models/Wizard-Vicuna-13B-Uncensored-HF-q5_1.bin"
+    },
+}

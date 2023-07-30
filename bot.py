@@ -3,7 +3,7 @@ import re
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 import logging
-from ircawp import IrcAwp
+from backends.llamacpp import IrcAwpLlamaCpp
 import dotenv
 
 print("=-=-=-=-= BOOTING =-=-=-=-=")
@@ -26,7 +26,7 @@ def event_test(event, message, client, say, body):
 
     prompt = matches[2]
     print(f"===============================")
-    print(f'GPT2 Prompt >> "{prompt}"')
+    print(f'LLM Prompt >> "{prompt}"')
 
     response = ircawp.query(prompt)
 
@@ -37,5 +37,5 @@ def event_test(event, message, client, say, body):
 
 
 if __name__ == "__main__":
-    ircawp = IrcAwp()
+    ircawp =IrcAwpLlamaCpp()
     SocketModeHandler(app, config["SLACK_APP_TOKEN"]).start()
