@@ -9,18 +9,18 @@ def wc(string: str):
 
 def cleanup(prompt: str, response: str) -> str:
     # if prompt ends in punctuation, strip it
-    if prompt[-1:] in '.?!':
-        response = response.replace(prompt, '')
+    if prompt[-1:] in ".?!":
+        response = response.replace(prompt, "")
 
     # Uppercase the first letter, always
     response = response.strip()
     response = response[0].upper() + response[1:]
 
     # Split response up by newline
-    lines = response.split('\n')
+    lines = response.split("\n")
 
     # Remove empty lines
-    lines = [x for x in lines if x != '']
+    lines = [x for x in lines if x != ""]
 
     # Ensure no lines repeat themselves
     indexes = np.unique(lines, return_index=True)[1]
@@ -28,7 +28,7 @@ def cleanup(prompt: str, response: str) -> str:
 
     # Ensure the last line has punctuation.
     if not lines[-1][-1] in '.?!"':
-        ender = random.choice('!?.')
+        ender = random.choice("!?.")
         lines[-1] += ender
 
     # axe anything less than 3 words

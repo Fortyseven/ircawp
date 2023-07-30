@@ -1,4 +1,5 @@
 import transformers
+
 # from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPTJPreTrainedModel, GPTJModel  # , GPTJToke
 import sys
 
@@ -6,7 +7,7 @@ import utils
 
 
 class IrcAwp:
-    '''
+    """
     Tasks:
         - 'text-generation'
         - 'question-answering'
@@ -19,7 +20,8 @@ class IrcAwp:
         - 'EleutherAI/gpt-neo-1.3B'
         - 'EleutherAI/gpt-neo-2.7B'
         - 'EleutherAI/gpt-j-6B'
-    '''
+    """
+
     generator = None
 
     MAX_LEN = 128
@@ -28,10 +30,8 @@ class IrcAwp:
     NUM_BEAMS = 5
     NO_RPT_ENGRAM_SZ = 2
 
-    def __init__(self, model='gpt2-medium', task='text-generation') -> None:
-        self.generator = transformers.pipeline(
-            model=model, task=task
-        )
+    def __init__(self, model="gpt2-medium", task="text-generation") -> None:
+        self.generator = transformers.pipeline(model=model, task=task)
 
     def query(self, prompt: str) -> str:
         response = ""
@@ -47,10 +47,10 @@ class IrcAwp:
                 no_repeat_ngram_size=self.NO_RPT_ENGRAM_SZ,
                 do_sample=True,
                 pad_token_id=50256,
-                early_stopping=True
+                early_stopping=True,
             )
 
-            response = utils.cleanup(prompt, text[0]['generated_text'])
+            response = utils.cleanup(prompt, text[0]["generated_text"])
 
             if len(response) == 0:
                 response = "**I don't feel so good, sorry.**"
