@@ -57,7 +57,15 @@ class LlamaCppBackend(BaseBackend):
                 else LLM_MAX_TOKENS
             )
 
-            generator = Llama(model_path=model, verbose=True, n_ctx=n_ctx)
+            generator = Llama(
+                model_path=model,
+                verbose=False,
+                n_ctx=2048,
+                n_gpu_layers=12,
+                n_threads=12,
+                n_batch=512,
+                use_mlock=True,
+            )
 
             text = generator.create_completion(
                 prompt=full_prompt,
