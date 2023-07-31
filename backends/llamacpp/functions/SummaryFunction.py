@@ -59,9 +59,8 @@ class SummaryFunction(BaseFunction.BaseFunction):
             from langchain.prompts import PromptTemplate
 
             # model = "/models/llm-ggml-v3/wizard-vicuna/Wizard-Vicuna-7B-Uncensored.ggmlv3.q4_0.bin"
-            model = "/home/fortyseven/Downloads/mamba-gpt-3b-v3.ggmlv3.q8_0.bin"
             llm = LlamaCpp(
-                model_path=model,
+                model_path=SUMMARY_MODEL,
                 temperature=0.7,
                 # max_tokens=2048,
                 n_ctx=2048,
