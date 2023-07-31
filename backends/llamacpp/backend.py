@@ -20,6 +20,17 @@ class LlamaCppBackend(BaseBackend):
 
     def __init__(self, model="default") -> None:
         self.model = model
+        self.model = MODELS[self.model]["path"]
+
+        self.generator = Llama(
+            model_path=self.model,
+            verbose=False,
+            n_ctx=1024,
+            n_gpu_layers=12,
+            n_threads=12,
+            n_batch=512,
+            use_mlock=True,
+        )
 
     def query(self, user_query: str, raw: bool = False) -> str:
         today = datetime.datetime.now().strftime("%A, %B %d, %Y")
@@ -31,7 +42,6 @@ class LlamaCppBackend(BaseBackend):
         ).strip()
 
         response = ""
-        generator = None
 
         try:
             if user_query.startswith("/"):
@@ -49,25 +59,13 @@ class LlamaCppBackend(BaseBackend):
             else:
                 full_prompt = f"{PROMPT}\n\nUser: {user_query}\nAssistant:"
 
-            model = MODELS[self.model]["path"]
-
             n_ctx = (
                 len(full_prompt)
                 if len(full_prompt) < LLM_MAX_TOKENS
                 else LLM_MAX_TOKENS
             )
 
-            generator = Llama(
-                model_path=model,
-                verbose=False,
-                n_ctx=2048,
-                n_gpu_layers=12,
-                n_threads=12,
-                n_batch=512,
-                use_mlock=True,
-            )
-
-            text = generator.create_completion(
+            text = self.generator.create_completion(
                 prompt=full_prompt,
                 max_tokens=2048,
                 temperature=LLM_TEMP,
