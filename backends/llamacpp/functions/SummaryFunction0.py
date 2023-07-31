@@ -4,12 +4,16 @@ from backends.llamacpp.functions import BaseFunction
 
 from utils.reduce import reduce_html
 
-
-# TODO: don't hard-code this
-SUMMARY_MODEL = "models/mamba-gpt-3b-v3.ggmlv3.q8_0.bin"
+"""
+This is an older version of SummaryFunction that does not use langchain. It's "faster" but also much
+lower quality. It is kept here for future reference.
+"""
 
 
 class SummaryFunction(BaseFunction.BaseFunction):
+    PROMPT = "Briefly summarize this text:\n\n"
+    MAX_BYTES = 2000
+
     def execute(self, query: str, backend: BaseBackend) -> str:
         # remove slack url encoding e.g. <https://google.com|google.com>
         query = query.replace("<", "").replace(">", "").split("|")[0].strip()
@@ -18,6 +22,8 @@ class SummaryFunction(BaseFunction.BaseFunction):
             return "No query provided for summary function."
 
         try:
+            was_truncated = False
+
             # ensure query is a valid URL
             if query.find("://") < 0:
                 query = f"https://{query}"
@@ -53,42 +59,26 @@ class SummaryFunction(BaseFunction.BaseFunction):
             if len(cleaned_text) < 20:
                 return f"Error: text too short for ({query}) == ({len(cleaned_text)} bytes)"
 
-            from langchain import LlamaCpp, PromptTemplate, LLMChain
-            from langchain.text_splitter import CharacterTextSplitter
-            from langchain.chains.mapreduce import MapReduceChain
-            from langchain.prompts import PromptTemplate
+            if len(cleaned_text) > self.MAX_BYTES:
+                old_size = len(cleaned_text)
+                cleaned_text = cleaned_text[: self.MAX_BYTES]
+                was_truncated = True
 
-            # model = "/models/llm-ggml-v3/wizard-vicuna/Wizard-Vicuna-7B-Uncensored.ggmlv3.q4_0.bin"
-            model = "/home/fortyseven/Downloads/mamba-gpt-3b-v3.ggmlv3.q8_0.bin"
-            llm = LlamaCpp(
-                model_path=model,
-                temperature=0.7,
-                # max_tokens=2048,
-                n_ctx=2048,
-                verbose=True,
-                use_mlock=True,
-                n_gpu_layers=12,
-                n_threads=12,
-                n_batch=512,
-            )
+            full_prompt = f"{self.PROMPT}{cleaned_text}"
 
-            text_splitter = CharacterTextSplitter()
+            print(f"{full_prompt=}")
 
-            texts = text_splitter.split_text(cleaned_text)
+            postamble = ""
 
-            from langchain.docstore.document import Document
+            if was_truncated:
+                postamble = f"\nWARNING: input was truncated from {old_size} characters to {self.MAX_BYTES} characters, summary may be inaccurate."
 
-            docs = [Document(page_content=text) for text in texts[:3]]
-
-            from langchain.chains.summarize import load_summarize_chain
-
-            summarize_chain = load_summarize_chain(
-                llm=llm,
-                chain_type="map_reduce",
-            )
+            # print(clean_text, preamble)
             return (
-                f"TITLE: {title} | ({query}) | ({len(cleaned_text)} bytes)\n----------------\n"
-                + summarize_chain.run(docs)
+                f"CLEANED: {cleaned_text}\n----------------\n"
+                + f"TITLE: {title} | ({query}) | ({len(cleaned_text)} bytes)\n----------------\n"
+                + backend.query(full_prompt, raw=False)
+                + f"\n----------------{postamble}"
             )
         except requests.exceptions.Timeout:
             return f"Timed out while trying to fetch ({query})"
