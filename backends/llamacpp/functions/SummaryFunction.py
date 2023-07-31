@@ -9,7 +9,10 @@ class SummaryFunction(BaseFunction.BaseFunction):
     MAX_BYTES = 2000
 
     def execute(self, query: str, backend: BaseBackend) -> str:
-        if not query:
+        # remove <>
+        query = query.replace("<", "").replace(">", "")
+
+        if not query.strip():
             return "No query provided for summary function"
 
         # full_prompt = f"{self.PROMPT}\n\nUser: {user_query}\nAssistant:"
