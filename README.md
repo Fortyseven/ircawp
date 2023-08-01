@@ -40,6 +40,10 @@ But for now, the standard LLM weirdness is good enough for me! ;)
 
 -   Modify .env with your Slack API credentials.
 
+## Config
+
+-   The `prompt` string in the config has some interpolated variables available for dynamic prompt content, including `{today}` for today's date. Add your own as needed.
+
 ## Usage
 
 -   Run `bot.py` to start the bot. If all your configs and models are in place, and your creds are in `.env`, it should just work.
