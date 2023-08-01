@@ -27,6 +27,10 @@
             "description": "Summarizes the given text on a webpage.",
             "module": "SummaryFunction",
             "model_id": "mamba-3b_80"
+        },
+        "weather": {
+            "description": "Fetches the weather for the given location using `wttr.in`.",
+            "module": "WeatherFunction"
         }
     }
 }
