@@ -16,5 +16,6 @@ ircawp = ircawp()
 
 print("\n----------------------------\n")
 print("- USER:\n-   " + prompt)
-print("- PROMPT:\n-   " + template_str(config["prompt"]))
+if not prompt.startswith("/"):
+    print("- PROMPT:\n-   " + template_str(config["prompt"]))
 print("- ASSISTANT:\n-   " + ircawp.query(prompt, raw=False) + "\n")
