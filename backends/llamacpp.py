@@ -1,4 +1,3 @@
-import json
 from llama_cpp import Llama
 from backends.BaseBackend import BaseBackend
 from lib.config import config

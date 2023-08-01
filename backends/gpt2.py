@@ -1,10 +1,9 @@
 import transformers
 
 # from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPTJPreTrainedModel, GPTJModel  # , GPTJToke
-import sys
 from backends import BaseBackend
 
-import utils
+import lib
 
 
 class IrcAwpGPT2(BaseBackend):
@@ -51,7 +50,7 @@ class IrcAwpGPT2(BaseBackend):
                 early_stopping=True,
             )
 
-            response = utils.cleanup(prompt, text[0]["generated_text"])
+            response = lib.cleanup(prompt, text[0]["generated_text"])
 
             if len(response) == 0:
                 response = "**I don't feel so good, sorry.**"
