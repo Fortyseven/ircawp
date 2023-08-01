@@ -1,15 +1,12 @@
 import json
 from llama_cpp import Llama
 from backends.BaseBackend import BaseBackend
-from backends.llamacpp.functions import FUNCTIONS
+from lib.config import config
+from functions import FUNCTIONS
+
 import datetime
 
 # load model array from models.json
-MODELS = None
-
-with open("models.json", "r") as f:
-    MODELS = json.load(f)
-
 LLM_MAX_TOKENS = 2048
 LLM_TEMP = 0.7
 LLM_TOP_P = 0
@@ -18,18 +15,32 @@ LLM_TOP_P = 0
 class LlamaCppBackend(BaseBackend):
     generator = None
 
-    def __init__(self, model="default") -> None:
-        self.model = model
-        self.model = MODELS[self.model]["path"]
+    def __init__(self) -> None:
+        self.model = config["models"][config.get("chat_model_id", "default")]
 
         self.generator = Llama(
             model_path=self.model,
             verbose=False,
-            n_ctx=1024,
+            n_ctx=config.get("n_ctx", 1024),
             n_gpu_layers=12,
             n_threads=12,
             n_batch=512,
-            use_mlock=True,
+        )
+
+        print(f"Using model: {self.model}")
+
+    def process_function(self, cmd_query: str) -> str:
+        cmd_key = cmd_query.split(" ")[0].strip()
+
+        if not cmd_key in FUNCTIONS:
+            return "Unknown command. Try `/help`."
+
+        cmd_func = FUNCTIONS[cmd_key]
+
+        # strips everything before the first space
+        return cmd_func["execute"](
+            query=cmd_query[cmd_query.find(" ") :].strip(),
+            backend=self,
         )
 
     def query(self, user_query: str, raw: bool = False) -> str:
@@ -45,13 +56,7 @@ class LlamaCppBackend(BaseBackend):
 
         try:
             if user_query.startswith("/"):
-                for func in FUNCTIONS:
-                    if user_query.startswith("/" + func["name"]):
-                        # strips everything before the first space
-                        return func["executor"]().execute(
-                            user_query[user_query.find(" ") :].strip(), self
-                        )
-                return "Unknown command. Try `/help`."
+                return self.process_function(user_query[1:])
 
             # no function call, basic query
             if raw:

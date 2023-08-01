@@ -1,5 +1,5 @@
 class BaseBackend:
-    def __init__(self, model="default") -> None:
+    def __init__(self) -> None:
         pass
 
     def query(self, user_query: str) -> str:

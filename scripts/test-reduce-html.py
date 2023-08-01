@@ -3,7 +3,7 @@ import os
 import sys
 import requests
 from rich import print
-from backends.llamacpp.backend import LlamaCppBackend as ircawp
+from backends.llamacpp import LlamaCppBackend as ircawp
 from utils.reduce import reduce_html
 
 prompt = " ".join(sys.argv[1:])

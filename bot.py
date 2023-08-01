@@ -7,23 +7,49 @@ import queue
 import threading
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
-from backends.llamacpp.backend import LlamaCppBackend
+from backends.llamacpp import LlamaCppBackend
 
-THREAD_SLEEP = 0.25
+from lib.config import config
 
 print("=-=-=-=-= BOOTING =-=-=-=-=")
-config = dotenv.dotenv_values(".env")
 
-logging.basicConfig(level=logging.INFO)
+# config
+
+slack_creds = dotenv.dotenv_values(".env")
+if not slack_creds["SLACK_APP_TOKEN"] or not slack_creds["SLACK_BOT_TOKEN"]:
+    raise "Slack credentials incomplete. Check .env file."
+
+THREAD_SLEEP = config.get("thread_sleep", 0.250)
+logging.basicConfig(level=config.get("log_level", "INFO"))
+
+# globals
 
 slack_queue = queue.Queue()
 
 ircawp = None
 
-bolt = App(token=config["SLACK_BOT_TOKEN"])
+bolt = App(token=slack_creds["SLACK_BOT_TOKEN"])
 
 
-def add_to_queue(user_id, message, say):
+@bolt.event("app_mention")
+def ingest_event(event, message, client, say, body):
+    user_id = event["user"]
+    regex = r"(<.*> )(.*)"
+
+    prompt = re.match(regex, event["text"], re.MULTILINE)[2]
+
+    add_to_queue(user_id, prompt, say)
+
+
+def add_to_queue(user_id: str, message: str, say: callable):
+    """
+    Add a message to the queue to be sent to Slack.
+
+    Args:
+        user_id (str): The user ID of the user who sent the message.
+        message (_type_): _description_
+        say (_type_): _description_
+    """
     slack_queue.put((user_id, message, say))
 
 
@@ -38,17 +64,12 @@ def process_queue_entry(user_id, prompt, say):
     say(f"<@{user_id}>: {response}")
 
 
-@bolt.event("app_mention")
-def ingest_event(event, message, client, say, body):
-    user_id = event["user"]
-    regex = r"(<.*> )(.*)"
-
-    prompt = re.match(regex, event["text"], re.MULTILINE)[2]
-
-    add_to_queue(user_id, prompt, say)
-
-
 def process_queue():
+    """
+    Process the queue of messages to be sent to Slack until
+    the heat death of the universe. But pause for a bit
+    now and then.
+    """
     logging.info("Starting queue processing thread...")
 
     while True:
@@ -63,4 +84,4 @@ if __name__ == "__main__":
     queue_thread = threading.Thread(target=process_queue, daemon=True)
     queue_thread.start()
 
-    SocketModeHandler(bolt, config["SLACK_APP_TOKEN"]).start()
+    SocketModeHandler(bolt, slack_creds["SLACK_APP_TOKEN"]).start()
