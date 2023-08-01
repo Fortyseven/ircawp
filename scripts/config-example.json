@@ -1,0 +1,31 @@
+{
+    "chat_model_id": "default",
+    "temperature": 0.8,
+    "n_ctx": 1024,
+    "thread_sleep": 0.250,
+    "log_level": "WARNING",
+    "models": {
+        "default": "models/Wizard-Vicuna-13B-Uncensored.ggmlv3.q4_0.bin",
+        "mamba-3b_80": "models/mamba-gpt-3b-v3.ggmlv3.q8_0.bin"
+    },
+    "functions": {
+        "help": {
+            "description": "You're my only hope.",
+            "module": "HelpFunction"
+        },
+        "?": {
+            "description": "You're my only hope.",
+            "module": "HelpFunction",
+            "hide": true
+        },
+        "reverse": {
+            "description": ".gnirts a sesreveR",
+            "module": "ReverseFunction"
+        },
+        "summary": {
+            "description": "Summarizes the given text on a webpage.",
+            "module": "SummaryFunction",
+            "model_id": "mamba-3b_80"
+        }
+    }
+}

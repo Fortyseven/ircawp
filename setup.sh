@@ -30,6 +30,11 @@ if [ ! -f ".env" ]; then
     cp scripts/example.env .env
 fi
 
+if [ ! -f "config.json" ]; then
+    echo "Copying over default config.json..."
+    cp scripts/config-example.json config.json
+fi
+
 echo "* Downloading default models... ^C to abort"
 
 read -n 1 -s
