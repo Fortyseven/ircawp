@@ -30,7 +30,10 @@ class LlamaCppBackend(BaseBackend):
         print(f"Using model: {self.model}")
 
     def process_function(self, cmd_query: str) -> str:
-        cmd_key = cmd_query.split(" ")[0].strip()
+        """
+        Processes a command query, which is a string starting with a slash.
+        """
+        cmd_key = cmd_query.split(" ")[0].strip()[1:]
 
         if not cmd_key in FUNCTIONS:
             return "Unknown command. Try `/help`."
@@ -56,7 +59,7 @@ class LlamaCppBackend(BaseBackend):
 
         try:
             if user_query.startswith("/"):
-                return self.process_function(user_query[1:])
+                return self.process_function(user_query)
 
             # no function call, basic query
             if raw:
