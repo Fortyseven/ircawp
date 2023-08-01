@@ -41,6 +41,7 @@ But for now, the standard LLM weirdness is good enough for me! ;)
 ## Usage
 
 -   Run `bot.py` to start the bot. If all your configs and models are in place, and your creds are in `.env`, it should just work.
+-   Use `cli.py` to query the bot from the command line. This is useful for debugging and testing new functions.
 
 ## Functions
 
