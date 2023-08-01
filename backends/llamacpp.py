@@ -6,8 +6,6 @@ from lib.template_str import template_str
 
 # load model array from models.json
 LLM_MAX_TOKENS = 2048
-LLM_TEMP = 0.7
-LLM_TOP_P = 0
 
 
 class LlamaCppBackend(BaseBackend):
@@ -68,9 +66,8 @@ class LlamaCppBackend(BaseBackend):
             text = self.generator.create_completion(
                 prompt=full_prompt,
                 max_tokens=2048,
-                temperature=LLM_TEMP,
-                mirostat_mode=True,
-                # top_p=LLM_TOP_P,
+                temperature=config.get("temperature", 0.75),
+                # mirostat_mode=True,
                 stop=["User:"],
                 echo=True,
             )
