@@ -36,7 +36,9 @@ But for now, the standard LLM weirdness is good enough for me! ;)
 
     -   Or bring your own GGML-format model and add it to the `config.json` file.
 
--   Modify .env with your Slack API credentials
+-   You'll need to setup a Slack application. Doing that is beyond the scope of this meager README.
+
+-   Modify .env with your Slack API credentials.
 
 ## Usage
 
@@ -66,7 +68,7 @@ A couple are included just to get you started:
 
 -   This bot was designed for **small-scale** use by a handful of people. It will queue up requests and respond to them in order. If you have a large channel with a lot of people eager to talk to the bot, you may want to consider a different solution. Or maybe not. I don't know. I'm not your dad. (Unless you're my kid, in which case, I'm going out for a pack of cigs. Don't wait up.)
 
-- This software could probably be written much more efficiently, faster, etc. Feel free to fork; maybe ping me if you do and maybe I'll steal some of your ideas.
+-   This software could probably be written much more efficiently, faster, etc. Feel free to fork; maybe ping me if you do and maybe I'll steal some of your ideas.
 
 -   This software is provided as-is, with no warranty or guarantee of any kind. Use at your own risk.
 
