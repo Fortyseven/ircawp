@@ -6,7 +6,7 @@ lower quality. It is kept here for future reference.
 import requests
 from backends.BaseBackend import BaseBackend
 
-from utils.reduce import reduce_html
+from lib.reduce import reduce_html
 
 
 PROMPT = "Briefly summarize this text:\n\n"

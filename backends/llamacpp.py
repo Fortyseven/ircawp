@@ -2,8 +2,7 @@ from llama_cpp import Llama
 from backends.BaseBackend import BaseBackend
 from lib.config import config
 from functions import FUNCTIONS
-
-import datetime
+from lib.template_str import template_str
 
 # load model array from models.json
 LLM_MAX_TOKENS = 2048
@@ -46,13 +45,7 @@ class LlamaCppBackend(BaseBackend):
         )
 
     def query(self, user_query: str, raw: bool = False) -> str:
-        today = datetime.datetime.now().strftime("%A, %B %d, %Y")
-
-        PROMPT = """
-            You are a pleasant AI assistant. You will give full, detailed, helpful answers. The current date is {}.
-        """.format(
-            today
-        ).strip()
+        PROMPT = template_str(config["prompt"])
 
         response = ""
 

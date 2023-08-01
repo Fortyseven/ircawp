@@ -12,8 +12,7 @@ from langchain.chains.summarize import load_summarize_chain
 from langchain import LlamaCpp
 from langchain.text_splitter import CharacterTextSplitter
 
-from utils.reduce import reduce_html
-
+from lib.reduce import reduce_html
 from lib.config import config
 
 SUMMARY_MODEL = config["models"][config["functions"]["summary"]["model_id"]]

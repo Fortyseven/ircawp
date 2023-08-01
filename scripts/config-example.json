@@ -4,6 +4,7 @@
     "n_ctx": 1024,
     "thread_sleep": 0.250,
     "log_level": "WARNING",
+    "prompt": "You are a pleasant AI assistant. You will give full, detailed, helpful answers. The current date is {today}.",
     "models": {
         "default": "models/Wizard-Vicuna-13B-Uncensored.ggmlv3.q4_0.bin",
         "mamba-3b_80": "models/mamba-gpt-3b-v3.ggmlv3.q8_0.bin"

@@ -4,6 +4,7 @@ import sys
 from lib.config import config
 from rich import print
 from backends.llamacpp import LlamaCppBackend as ircawp
+from lib.template_str import template_str
 
 prompt = " ".join(sys.argv[1:])
 
