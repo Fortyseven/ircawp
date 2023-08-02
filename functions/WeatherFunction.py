@@ -3,6 +3,7 @@ Bot function to summarize a web page using a smaller,
 faster model than the default chat model.
 """
 
+import json
 import requests
 
 from backends.BaseBackend import BaseBackend
@@ -20,79 +21,72 @@ import requests
 SUMMARY_MODEL = config["models"][config["functions"]["summary"]["model_id"]]
 
 
+def process_weather_json(json_text: str) -> str:
+    """
+    https://wttr.in/:help
+    """
+    # decode
+    try:
+        weather_data = json.loads(json_text)
+
+        if not weather_data["current_condition"]:
+            return "Error: no current condition data."
+
+        current = weather_data["current_condition"][0]
+        feels_like_f = current["FeelsLikeF"]
+        feels_like_c = current["FeelsLikeC"]
+        temp_f = current["temp_F"]
+        temp_c = current["temp_C"]
+
+        temps = f"{temp_f}F ({temp_c}C)"
+
+        if temp_f != feels_like_f:
+            temps = f"{temps}, feels like {feels_like_f}F ({feels_like_c}C)"
+
+        humidity = current["humidity"]
+        desc = current["weatherDesc"][0]["value"]
+
+        wind_mph = current["windspeedMiles"]
+        wind_kph = current["windspeedKmph"]
+        wind_dir = current["winddir16Point"]
+
+        observed = current["localObsDateTime"]
+
+        if (
+            not weather_data.get("nearest_area", None)
+            or len(weather_data["nearest_area"]) < 1
+        ):
+            where = "Unknown...?"
+        else:
+            where = weather_data["nearest_area"][0]["areaName"][0]["value"]
+            where2 = weather_data["nearest_area"][0]["region"][0]["value"]
+
+            where = f"{where}, {where2}"
+
+        # combine and return
+
+        return f"Weather for {where}: **{desc}** at {temps}, winds {wind_dir} at {wind_mph}mph ({wind_kph}kph), humidity at {humidity}%. (As of {observed}, local.)"
+
+    except json.decoder.JSONDecodeError:
+        return "Error: could not decode JSON."
+
+
 def execute(query: str, backend: BaseBackend) -> str:
     if not query.strip():
         return "No query provided for summary function."
 
     try:
-        url_query = f"https://wttr.in/{query}?T"
-        response = requests.get(url_query, timeout=4, allow_redirects=True)
+        # with open("w.json", "r") as f:
+        #     return process_weather_json(f.read())
+
+        url_query = f"https://wttr.in/{query}?format=j1"
+        response = requests.get(url_query, timeout=12, allow_redirects=True)
 
         if response.status_code >= 400:
             return f"Error: code ({response.status_code}) for ({url_query})"
 
-        return f"```{response.text}```"
-        # # ensure query is a valid URL
-        # if query.find("://") < 0:
-        #     query = f"https://{query}"
-
-        # content = requests.get(
-        #     query,
-        #     timeout=4,
-        #     allow_redirects=True,
-        #     headers={
-        #         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.140 Safari/537.36 Edge/18.17763"
-        #     },
-        # )
-
-        # if content.status_code >= 400:
-        #     return f"Error: code ({content.status_code}) for ({query})"
-
-        # cleaned_text, title = reduce_html(content.text)
-
-        # JS_STOPPERS = [
-        #     "enable javascript",
-        #     "turn on javascript",
-        #     "javascript is disabled",
-        #     "javascript is turned off",
-        #     "javascript is required",
-        # ]
-
-        # if any([x in cleaned_text.lower() for x in JS_STOPPERS]):
-        #     return f"This site probably requires JavaScript to be enabled. Ask my owner to make a custom handler for ({query})."
-
-        # if len(cleaned_text) == 0:
-        #     return f"Error: no usable text returned for ({query})"
-
-        # if len(cleaned_text) < 20:
-        #     return f"Error: text too short for ({query}) == ({len(cleaned_text)} bytes)"
-
-        # llm = LlamaCpp(
-        #     model_path=SUMMARY_MODEL,
-        #     temperature=0.3,
-        #     # max_tokens=2048,
-        #     n_ctx=2048,
-        #     verbose=False,
-        #     n_gpu_layers=12,
-        #     n_threads=12,
-        #     n_batch=512,
-        # )
-
-        # text_splitter = CharacterTextSplitter()
-
-        # texts = text_splitter.split_text(cleaned_text)
-
-        # docs = [Document(page_content=text) for text in texts[:3]]
-
-        # summarize_chain = load_summarize_chain(
-        #     llm=llm,
-        #     chain_type="map_reduce",
-        # )
-        # return (
-        #     f"TITLE: {title} | ({query}) | ({len(cleaned_text)} bytes)\n----------------\n"
-        #     + summarize_chain.run(docs)
-        # )
+        return process_weather_json(response.text)
     except requests.exceptions.Timeout:
-        return f"Timed out while trying to fetch ({query})"
+        return f"Timed out while trying to fetch ({url_query}). wttr.in can be fussy; try again in a minute."
     except Exception as e:
-        return "Big problems: " + str(e)
+        return "BIG PROBLEMS: " + str(e)
