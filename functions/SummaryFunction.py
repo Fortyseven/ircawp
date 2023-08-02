@@ -89,4 +89,4 @@ def execute(query: str, backend: BaseBackend) -> str:
     except requests.exceptions.Timeout:
         return f"Timed out while trying to fetch ({query})"
     except Exception as e:
-        return "Big problems: " + str(e)
+        return "BIG PROBLEMS: " + str(e)
