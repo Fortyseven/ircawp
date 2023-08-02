@@ -63,9 +63,7 @@ def process_weather_json(json_text: str) -> str:
 
             where = f"{where}, {where2}"
 
-        # combine and return
-
-        return f"Weather for {where}: **{desc}** at {temps}, winds {wind_dir} at {wind_mph}mph ({wind_kph}kph), humidity at {humidity}%. (As of {observed}, local.)"
+        return f"Weather for {where}: {desc} at {temps}, winds {wind_dir} at {wind_mph}mph ({wind_kph}kph), humidity at {humidity}%. (As of {observed}, local.)"
 
     except json.decoder.JSONDecodeError:
         return "Error: could not decode JSON."
