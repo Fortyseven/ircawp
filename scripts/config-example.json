@@ -31,6 +31,10 @@
         "weather": {
             "description": "Fetches the weather for the given location using `wttr.in`.",
             "module": "WeatherFunction"
+        },
+        "askjesus": {
+            "description": "Ask Jesus for advice.",
+            "module": "AskJesusFunction"
         }
     }
 }
