@@ -31,16 +31,17 @@ class LlamaCppBackend(BaseBackend):
         """
         cmd_key = cmd_query.split(" ")[0].strip()[1:]
 
-        if not cmd_key in FUNCTIONS:
-            return "Unknown command. Try `/help`."
+        for func in FUNCTIONS:
+            if cmd_key in FUNCTIONS[func].TRIGGERS:
+                cmd_func = FUNCTIONS[func]
 
-        cmd_func = FUNCTIONS[cmd_key]
+                # strips everything before the first space
+                return cmd_func.execute(
+                    query=cmd_query[cmd_query.find(" ") :].strip(),
+                    backend=self,
+                )
 
-        # strips everything before the first space
-        return cmd_func["execute"](
-            query=cmd_query[cmd_query.find(" ") :].strip(),
-            backend=self,
-        )
+        return "Unknown command. Try `/help`."
 
     def query(self, user_query: str, raw: bool = False) -> str:
         PROMPT = template_str(config["prompt"])

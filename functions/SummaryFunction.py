@@ -3,6 +3,10 @@ Bot function to summarize a web page using a smaller,
 faster model than the default chat model.
 """
 
+TRIGGERS = ["summarize", "summary"]
+DESCRIPTION = "Summarize a web page."
+
+
 import requests
 
 from backends.BaseBackend import BaseBackend
@@ -15,7 +19,7 @@ from langchain.text_splitter import CharacterTextSplitter
 from lib.reduce import reduce_html
 from lib.config import config
 
-SUMMARY_MODEL = config["models"][config["functions"]["summary"]["model_id"]]
+SUMMARY_MODEL = config["models"]["mamba-3b_80"]
 
 
 def execute(query: str, backend: BaseBackend) -> str:

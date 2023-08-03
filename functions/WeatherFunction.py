@@ -18,8 +18,8 @@ from lib.config import config
 
 import requests
 
-SUMMARY_MODEL = config["models"][config["functions"]["summary"]["model_id"]]
-
+TRIGGERS = ["weather"]
+DESCRIPTION = "Get the weather for a location from wttr.in"
 
 def process_weather_json(json_text: str) -> str:
     """
