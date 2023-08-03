@@ -60,11 +60,17 @@ A couple are included just to get you started:
 -   `/?` and `/help` - dumps all the registered slash commands
 -   `/reverse` - reverses the text you give it; a trivial demo
 -   `/summary` - uses langchain and a smaller, faster model to summarize the website you give it (e.g. `@ircawp /summary https://www.example.com`)
+-   `/weather` - queries wttr.in for the weather in the location you give it (e.g. `@ircawp /weather 90210`)
+-   `/askjesus` - ask Jesus for advice (e.g. `@ircawp /askjesus should I buy a new car?`)
 
 ### Adding New Functions
 
 -   Follow the examples in the `functions` directory as a template for rolling your own.
--   Add the function to the `config.json` file, and restart the bot.
+    -   `TRIGGERS` is a list of `/cmd` triggers (without the slash) that will cause it to be called.
+    -   `DESCRIPTION` is what it will show up as in the `/help` output.
+    -   The primary entry point is a method called `execute` that takes signature of `(query: str, backend: BaseBackend)` and returns a string that is passed back to the channel.
+    -   Everything else is up to you.
+-   All of the `*.py` files in the `functions` directory will be loaded and registered at runtime.
 
 ## Notes
 
