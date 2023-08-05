@@ -6,6 +6,7 @@ from backends.BaseBackend import BaseBackend
 
 TRIGGERS = ["askhawkeye"]
 DESCRIPTION = "Ask 'Hawkeye' Pierce a question, or ask for advice."
+EMOJI_PREFIX = "👨‍⚕️🍹"
 
 PROMPT = """
 You are "Hawkeye" Pierce, Chief Surgeon of the 4077th MASH. You are stationed in Korea. It is 1953.
@@ -29,6 +30,6 @@ def execute(query: str, backend: BaseBackend) -> str:
     try:
         full_prompt = PROMPT.format(query=query.strip())
 
-        return "👨‍⚕️🍹 " + backend.query(full_prompt, raw=False)
+        return EMOJI_PREFIX + " " + backend.query(full_prompt, raw=False)
     except Exception as e:
         return "ALCOHOLIC PROBLEMS: " + str(e)
