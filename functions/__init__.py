@@ -1,37 +1,46 @@
-from lib.config import config
-
-# iterate through the functions directory for modules and import them
-
 import os
+from lib.config import config
+import importlib
+from rich import print
+
+"""
+iterate through the functions directory for modules and import them
+"""
 
 FUNCTIONS = {}
 
+
+def validate_function(func):
+    invalid = False
+    if not hasattr(func, "TRIGGERS"):
+        print(
+            f"[red]ERROR: Function {func} does not have a `TRIGGERS` attribute![/red]"
+        )
+        invalid = True
+
+    if not hasattr(func, "DESCRIPTION"):
+        print(
+            f"[red]ERROR: Function {func} does not have a `DESCRIPTION` attribute![/red]"
+        )
+        invalid = True
+
+    if not hasattr(func, "execute"):
+        print(f"[red]ERROR: Function {func} does not have an`execute` method![/red]")
+        invalid = True
+
+    if invalid:
+        func_name = func.__name__.split('.')[1]
+        print(f"[red bold]ERROR: Function {func_name} was ignored![/]")
+        FUNCTIONS.pop(func_name)
+
+
 for file in os.listdir("functions"):
     if file.endswith(".py") and not file.startswith("__"):
-        print("Registering function: " + file)
-        # import module from functions directory using "module" name
-        import importlib
+        print("= Registering function: " + file)
 
         mod_name = file[:-3]
 
         FUNCTIONS[mod_name] = importlib.import_module("functions." + mod_name)
-        # FUNCTIONS[mod_name]["execute"] = FUNCTIONS[mod_name]["module"].execute
+        validate_function(FUNCTIONS[mod_name])
 
-
-print(f"{FUNCTIONS=}")
-
-
-# FUNCTIONS: dict = config["functions"]
-
-# for func_key in FUNCTIONS:
-#     print("Registering function: " + func_key)
-#     # import module from functions directory using "module" name
-#     import importlib
-
-#     mod_name = FUNCTIONS[func_key]["module"]
-
-#     FUNCTIONS[func_key]["module"] = importlib.import_module(
-#         "functions." + FUNCTIONS[func_key]["module"]
-#     )
-
-#     FUNCTIONS[func_key]["execute"] = FUNCTIONS[func_key]["module"].execute
+print("=========================")
