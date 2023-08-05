@@ -16,4 +16,8 @@ def execute(query: str, backend: BaseBackend) -> str:
     now = datetime.now()
     uptime = now - START_TIME
 
-    return f"Uptime: {uptime}"
+    return f"""
+    - Uptime: {uptime}
+    - Last started: {START_TIME}
+    - Current model: {backend.model}
+    """.strip()
