@@ -1,3 +1,4 @@
+from datetime import datetime
 from llama_cpp import Llama
 from backends.BaseBackend import BaseBackend
 from lib.config import config
@@ -64,6 +65,8 @@ class LlamaCppBackend(BaseBackend):
                 else LLM_MAX_TOKENS
             )
 
+            tick = datetime.now()
+
             text = self.generator.create_completion(
                 prompt=full_prompt,
                 max_tokens=2048,
@@ -76,6 +79,10 @@ class LlamaCppBackend(BaseBackend):
                 ],
                 echo=True,
             )
+
+            tok = datetime.now()
+
+            self.last_query_time = tok - tick
 
             response = text["choices"][0]["text"].strip()
             response = response[response.find("Assistant:") + 10 :].strip()

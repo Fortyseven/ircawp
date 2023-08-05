@@ -20,4 +20,5 @@ def execute(query: str, backend: BaseBackend) -> str:
     - Uptime: {uptime}
     - Last started: {START_TIME}
     - Current model: {backend.model}
+    - Last query time: {backend.last_query_time or "None yet"}
     """.strip()
