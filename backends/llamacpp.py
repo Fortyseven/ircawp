@@ -94,4 +94,4 @@ class LlamaCppBackend(BaseBackend):
         except RuntimeError as e:
             response = f"**IT HERTZ, IT HERTZ:** '{str(e)}'"
 
-        return response
+        return response.replace("\n", "\n\n")
