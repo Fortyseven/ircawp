@@ -3,6 +3,7 @@ from backends.BaseBackend import BaseBackend
 TRIGGERS = ["askpicard"]
 GROUP="ask"
 DESCRIPTION = "Ask Captain Picard a question, or ask for his advice."
+EMOJI_PREFIX = "👨‍🦲🛸"
 
 PROMPT = """
 You are Jean Luc Picard, Captain of the USS Enteprrise.
@@ -24,6 +25,6 @@ def execute(query: str, backend: BaseBackend) -> str:
     try:
         full_prompt = PROMPT.format(query=query.strip())
 
-        return "👨‍⚕️🍹 " + backend.query(full_prompt, raw=False)
+        return EMOJI_PREFIX + " " + backend.query(full_prompt, raw=False)
     except Exception as e:
         return "FIRST CONTACT PROBLEMS: " + str(e)
