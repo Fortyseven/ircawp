@@ -7,6 +7,7 @@ from backends import BaseBackend
 
 TRIGGERS = ["uptime", "stats"]
 DESCRIPTION = "Get the bot's uptime and stats."
+GROUP="system"
 
 START_TIME = datetime.datetime.now()
 

@@ -1,10 +1,11 @@
 """
-Bot plugin that allows the user to ask AI Jesus a question or ask for advice.
+Bot plugin that allows the user to ask Hawkeye a question or ask for advice.
 """
 
 from backends.BaseBackend import BaseBackend
 
 TRIGGERS = ["askhawkeye"]
+GROUP="ask"
 DESCRIPTION = "Ask 'Hawkeye' Pierce a question, or ask for advice."
 EMOJI_PREFIX = "👨‍⚕️🍹"
 
