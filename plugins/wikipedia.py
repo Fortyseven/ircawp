@@ -14,7 +14,7 @@ from lib.config import config
 import requests
 import bs4 as BeautifulSoup
 
-TRIGGERS = ["wiki"]
+TRIGGERS = ["wiki", "wikipedia"]
 DESCRIPTION = "Pull up a stripped down Wikipedia article."
 EMOJI_PREFIX = "🌐"
 
