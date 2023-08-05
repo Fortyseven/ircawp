@@ -69,7 +69,11 @@ class LlamaCppBackend(BaseBackend):
                 max_tokens=2048,
                 temperature=config.get("temperature", 0.75),
                 # mirostat_mode=True,
-                stop=["User:"],
+                stop=[
+                    "User:",
+                    "``` \n```",
+                    "```\n ```",
+                ],
                 echo=True,
             )
 
