@@ -1,7 +1,7 @@
 from backends.BaseBackend import BaseBackend
 
 TRIGGERS = ["askpicard"]
-GROUP="ask"
+GROUP = "ask"
 DESCRIPTION = "Ask Captain Picard a question, or ask for his advice."
 EMOJI_PREFIX = "👨‍🦲🛸"
 

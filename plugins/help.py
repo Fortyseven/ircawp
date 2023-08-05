@@ -6,7 +6,8 @@ from backends import BaseBackend
 
 TRIGGERS = ["help", "?"]
 DESCRIPTION = "Returns a list of registered slash commands."
-GROUP="system"
+GROUP = "system"
+
 
 def get_triggers(trigger: list) -> str:
     return "/" + ", /".join(trigger)
@@ -31,7 +32,6 @@ def execute(query: str, backend: BaseBackend) -> str:
 
     # capitalize first letter
     groups = {k: groups[k] for k in sorted(groups.keys())}
-
 
     for group in groups:
         output += f"## {group.title()} ##\n"
