@@ -1,3 +1,6 @@
+"""
+Get the bot's uptime and stats.
+"""
 import datetime
 from backends import BaseBackend
 
@@ -5,10 +8,7 @@ from backends import BaseBackend
 TRIGGERS = ["uptime", "stats"]
 DESCRIPTION = "Get the bot's uptime and stats."
 
-# get now
 START_TIME = datetime.datetime.now()
-
-# make START_TIME prettier
 
 
 def execute(query: str, backend: BaseBackend) -> str:
@@ -21,7 +21,7 @@ def execute(query: str, backend: BaseBackend) -> str:
     uptime = str(uptime).split(".")[0]
     start_time = START_TIME.strftime("%Y-%m-%d %H:%M:%S")
 
-    return f"""
+    return f"""STATS:
     - Uptime: {uptime}
     - Last started: {start_time}
     - Current model: {backend.model}
