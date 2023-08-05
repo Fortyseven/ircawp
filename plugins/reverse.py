@@ -1,5 +1,5 @@
 """
-Bot function that reverses the query string.
+Bot plugin that reverses the query string.
 """
 from backends import BaseBackend
 
@@ -9,6 +9,6 @@ DESCRIPTION = "Reverses the query string."
 
 def execute(query: str, backend: BaseBackend) -> str:
     if not query:
-        return "No query provided for reverse function"
+        return "No query provided for reverse plugin."
 
     return query[::-1]

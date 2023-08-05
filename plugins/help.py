@@ -1,5 +1,5 @@
 """
-Help function, returns a list of registered slash commands.
+Help command, returns a list of registered slash commands.
 """
 
 from backends import BaseBackend
@@ -13,12 +13,12 @@ def get_triggers(trigger: list) -> str:
 
 
 def execute(query: str, backend: BaseBackend) -> str:
-    from functions import FUNCTIONS  # lazy load
+    from plugins import PLUGINS  # lazy load
 
     return "AVAILABLE SLASH COMMANDS :\n\n" + "\n".join(
         [
-            f"- `{get_triggers(FUNCTIONS[x].TRIGGERS)}` - {FUNCTIONS[x].DESCRIPTION}"
-            for x in FUNCTIONS
-            # if not FUNCTIONS[x].get("hide", False)
+            f"- `{get_triggers(PLUGINS[x].TRIGGERS)}` - {PLUGINS[x].DESCRIPTION}"
+            for x in PLUGINS
+            # if not PLUGINS[x].get("hide", False)
         ]
     )

@@ -1,5 +1,5 @@
 """
-Bot function that allows the user to ask AI Jesus a question or ask for advice.
+Bot plugin that allows the user to ask AI Jesus a question or ask for advice.
 """
 
 from backends.BaseBackend import BaseBackend

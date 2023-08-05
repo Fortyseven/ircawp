@@ -1,5 +1,5 @@
 """
-Bot function to summarize a web page using a smaller,
+Bot plugin to summarize a web page using a smaller,
 faster model than the default chat model.
 """
 
@@ -27,7 +27,7 @@ def execute(query: str, backend: BaseBackend) -> str:
     query = query.replace("<", "").replace(">", "").split("|")[0].strip()
 
     if not query.strip():
-        return "No query provided for summary function."
+        return "No query provided for summary query."
 
     try:
         # ensure query is a valid URL

@@ -9,7 +9,7 @@
 
 # ircawp
 
-An easy to setup Llama.cpp-based IRC bot with easily extensible functionality.
+An easy to setup Llama.cpp-based IRC bot with easily extensible plugin functionality.
 
 ## Why "ircawp"? (or "I want a the golden goose now!")
 
@@ -47,30 +47,30 @@ But for now, the standard LLM weirdness is good enough for me! ;)
 ## Usage
 
 -   Run `bot.py` to start the bot. If all your configs and models are in place, and your creds are in `.env`, it should just work.
--   Use `cli.py` to query the bot from the command line. This is useful for debugging and testing new functions.
+-   Use `cli.py` to query the bot from the command line. This is useful for debugging and manually testing plugins.
 
-## Functions
+## Plugins
 
-The bot responds to `/command` style slash commands, if the first character is a slash. These are defined in the config.json file, with the appropriate Python modules implementing them placed in the `functions` directory.
+The bot responds to `/command` style slash commands, if the first character is a slash. These are defined in the config.json file, with the appropriate Python modules implementing them placed in the `plugins` directory.
 
 Execute commands like so: `@ircawp /mycommand query value`.
 
-A couple are included just to get you started:
+A base set of plugins are included, including but not limited to:
 
 -   `/?` and `/help` - dumps all the registered slash commands
--   `/reverse` - reverses the text you give it; a trivial demo
+-   `/reverse` - reverses the text you give it (a trivial demo!)
 -   `/summary` - uses langchain and a smaller, faster model to summarize the website you give it (e.g. `@ircawp /summary https://www.example.com`)
 -   `/weather` - queries wttr.in for the weather in the location you give it (e.g. `@ircawp /weather 90210`)
 -   `/askjesus` - ask Jesus for advice (e.g. `@ircawp /askjesus should I buy a new car?`)
 
-### Adding New Functions
+### Authoring New Plugins
 
--   Follow the examples in the `functions` directory as a template for rolling your own.
+-   Follow the examples in the `/plugins` directory as a template for rolling your own.
     -   `TRIGGERS` is a list of `/cmd` triggers (without the slash) that will cause it to be called.
     -   `DESCRIPTION` is what it will show up as in the `/help` output.
     -   The primary entry point is a method called `execute` that takes signature of `(query: str, backend: BaseBackend)` and returns a string that is passed back to the channel.
     -   Everything else is up to you.
--   All of the `*.py` files in the `functions` directory will be loaded and registered at runtime.
+-   All of the `*.py` files in the `/plugins` directory will be loaded and registered at runtime.
 
 ## Notes
 

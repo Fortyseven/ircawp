@@ -2,7 +2,7 @@ from datetime import datetime
 from llama_cpp import Llama
 from backends.BaseBackend import BaseBackend
 from lib.config import config
-from functions import FUNCTIONS
+from plugins import PLUGINS
 from lib.template_str import template_str
 
 # load model array from models.json
@@ -26,18 +26,18 @@ class LlamaCppBackend(BaseBackend):
 
         print(f"Using model: {self.model}")
 
-    def process_function(self, cmd_query: str) -> str:
+    def process_plugin(self, cmd_query: str) -> str:
         """
-        Processes a command query, which is a string starting with a slash.
+        Processes a plugin query, which is a string starting with a slash.
         """
         cmd_key = cmd_query.split(" ")[0].strip()[1:]
 
-        for func in FUNCTIONS:
-            if cmd_key in FUNCTIONS[func].TRIGGERS:
-                cmd_func = FUNCTIONS[func]
+        for func in PLUGINS:
+            if cmd_key in PLUGINS[func].TRIGGERS:
+                cmd_plug = PLUGINS[func]
 
                 # strips everything before the first space
-                return cmd_func.execute(
+                return cmd_plug.execute(
                     query=cmd_query[cmd_query.find(" ") :].strip(),
                     backend=self,
                 )
@@ -51,9 +51,9 @@ class LlamaCppBackend(BaseBackend):
 
         try:
             if user_query.startswith("/"):
-                return self.process_function(user_query)
+                return self.process_plugin(user_query)
 
-            # no function call, basic query
+            # no plugin call, basic query
             if raw:
                 full_prompt = f"{user_query}"
             else:

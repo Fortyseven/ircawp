@@ -18,7 +18,7 @@ def execute(query: str, backend: BaseBackend) -> str:
     query = query.replace("<", "").replace(">", "").split("|")[0].strip()
 
     if not query.strip():
-        return "No query provided for summary function."
+        return "No query provided for summary plugin."
 
     try:
         was_truncated = False

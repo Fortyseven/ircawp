@@ -1,5 +1,5 @@
 """
-Bot function to summarize a web page using a smaller,
+Bot plugin to summarize a web page using a smaller,
 faster model than the default chat model.
 """
 
@@ -71,7 +71,7 @@ def process_weather_json(json_text: str) -> str:
 
 def execute(query: str, backend: BaseBackend) -> str:
     if not query.strip():
-        return "No query provided for summary function."
+        return "No query provided for weather plugin."
 
     try:
         # with open("w.json", "r") as f:
