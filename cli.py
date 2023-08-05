@@ -5,6 +5,9 @@ from lib.config import config
 from rich import print
 from backends.llamacpp import LlamaCppBackend as ircawp
 from lib.template_str import template_str
+from rich.traceback import install
+
+install(show_locals=False)
 
 prompt = " ".join(sys.argv[1:])
 
