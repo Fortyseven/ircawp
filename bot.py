@@ -57,7 +57,9 @@ def process_queue_entry(user_id, prompt, say):
     logging.info("==========================")
     logging.info(f"Processing queue entry for {user_id} with prompt '{prompt}'")
 
-    response = ircawp.query(prompt)
+    username = bolt.client.users_info(user=user_id)["user"]["profile"]["display_name"]
+
+    response = ircawp.query(prompt, username=username)
 
     logging.info(f"Response: '{response}'")
 

@@ -44,8 +44,9 @@ class LlamaCppBackend(BaseBackend):
 
         return "Unknown command. Try `/help`."
 
-    def query(self, user_query: str, raw: bool = False) -> str:
-        PROMPT = template_str(config["prompt"])
+    def query(self, user_query: str, raw: bool = False, username: str = "User") -> str:
+        PROMPT = template_str(config["prompt"], username=username)
+        self.username = username
 
         response = ""
 
