@@ -44,8 +44,9 @@ class LlamaCppBackend(BaseBackend):
 
         return "Unknown command. Try `/help`."
 
-    def query(self, user_query: str, raw: bool = False, username: str = "User") -> str:
-        PROMPT = template_str(config["prompt"], username=username)
+    def query(
+        self, user_query: str, raw: bool = False, username: str = "User"
+    ) -> str:
         self.username = username
 
         response = ""
@@ -54,11 +55,15 @@ class LlamaCppBackend(BaseBackend):
             if user_query.startswith("/"):
                 return self.process_plugin(user_query)
 
+            PROMPT = template_str(
+                config["prompt"], username=username, query=user_query.strip()
+            )
+
             # no plugin call, basic query
             if raw:
                 full_prompt = f"{user_query}"
             else:
-                full_prompt = f"{PROMPT}\n\nUser: {user_query}\nAssistant:"
+                full_prompt = f"{PROMPT}\nircawp: "
 
             n_ctx = (
                 len(full_prompt)
@@ -86,7 +91,8 @@ class LlamaCppBackend(BaseBackend):
             self.last_query_time = tok - tick
 
             response = text["choices"][0]["text"].strip()
-            response = response[response.find("Assistant:") + 10 :].strip()
+            # response = response[response.find("ircawp:") + 10 :].strip()
+            response = response.removeprefix(full_prompt).strip()
 
             if len(response) == 0:
                 response = "Response was empty. :("
