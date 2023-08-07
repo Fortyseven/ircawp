@@ -11,10 +11,19 @@ from backends.llamacpp import LlamaCppBackend
 
 from lib.config import config
 
-print("=-=-=-=-= BOOTING =-=-=-=-=")
+print(
+    r"""
+ __
+|__|_______   ____  _____  __  _  ________
+|  |\_  __ \_/ ___\ \__  \ \ \/ \/ /\____ \
+|  | |  | \/\  \___  / __ \_\     / |  |_) )
+|__| |__|    \___  )(____  / \/\_/  |   __/
+                 \/      \/         |__|
+-=-=-=-=-=-=-=-=-= BOOTING =-=-=-=-=-=-=-=-
+""".rstrip()
+)
 
 # config
-
 slack_creds = dotenv.dotenv_values(".env")
 if not slack_creds["SLACK_APP_TOKEN"] or not slack_creds["SLACK_BOT_TOKEN"]:
     raise "Slack credentials incomplete. Check .env file."
