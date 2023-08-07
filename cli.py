@@ -18,7 +18,10 @@ if not prompt:
 ircawp = ircawp()
 
 print("\n----------------------------\n")
-print("- USER:\n-   " + prompt)
+print(f"- USER: [red]{prompt}[/]")
+
 if not prompt.startswith("/"):
-    print("- PROMPT:\n-   " + template_str(config["prompt"]))
-print("- ASSISTANT:\n-   " + ircawp.query(prompt, raw=False) + "\n")
+    pr = template_str(config["prompt"], username="User", query=prompt.strip())
+    print(f"- PROMPT: [green]{pr}[/]")
+
+print(f"- ASSISTANT: [blue]{ircawp.query(prompt, raw=False)}[/]")
