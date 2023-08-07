@@ -8,18 +8,9 @@ import requests
 
 from backends.BaseBackend import BaseBackend
 
-from langchain.docstore.document import Document
-from langchain.chains.summarize import load_summarize_chain
-from langchain import LlamaCpp
-from langchain.text_splitter import CharacterTextSplitter
-
-from lib.reduce import reduce_html
-from lib.config import config
-
-import requests
-
 TRIGGERS = ["weather"]
 DESCRIPTION = "Get the weather for a location from wttr.in"
+
 
 def process_weather_json(json_text: str) -> str:
     """

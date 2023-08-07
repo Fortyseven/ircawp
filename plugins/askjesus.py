@@ -5,7 +5,7 @@ Bot plugin that allows the user to ask AI Jesus a question or ask for advice.
 from backends.BaseBackend import BaseBackend
 
 TRIGGERS = ["askjesus"]
-GROUP="ask"
+GROUP = "ask"
 DESCRIPTION = "Ask Jesus a question, or ask for advice."
 EMOJI_PREFIX = "🙏"
 

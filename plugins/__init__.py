@@ -1,5 +1,4 @@
 import os
-from lib.config import config
 import importlib
 from rich import print
 
@@ -13,7 +12,9 @@ PLUGINS = {}
 def validate_plugin(plug):
     invalid = False
     if not hasattr(plug, "TRIGGERS"):
-        print(f"[red]ERROR: plugin {plug} does not have a `TRIGGERS` attribute![/red]")
+        print(
+            f"[red]ERROR: plugin {plug} does not have a `TRIGGERS` attribute![/red]"
+        )
         invalid = True
 
     if not hasattr(plug, "DESCRIPTION"):
@@ -23,7 +24,9 @@ def validate_plugin(plug):
         invalid = True
 
     if not hasattr(plug, "execute"):
-        print(f"[red]ERROR: plugin {plug} does not have an`execute` method![/red]")
+        print(
+            f"[red]ERROR: plugin {plug} does not have an`execute` method![/red]"
+        )
         invalid = True
 
     if invalid:

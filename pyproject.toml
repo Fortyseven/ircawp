@@ -13,5 +13,7 @@ exclude = '''
 exclude = "venv"
 extend-ignore = """
   E203,
+  E266,
+  E501,
   F841,
 """

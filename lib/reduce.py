@@ -40,5 +40,4 @@ def reduce_html(html: str) -> str:
     # removes duplicate whitespace
     clean_text = " ".join(clean_text.split())
 
-
     return clean_text, title
