@@ -11,6 +11,8 @@
 
 An easy to setup Llama.cpp-based IRC bot with easily extensible plugin functionality.
 
+Ircawp is under *heavy development* and may undergo significant changes. I'm already planning a refactor to make it easier to port to other services, like Discord.
+
 ## Why "ircawp"? (or "I want a the golden goose now!")
 
 It's the name of an old bot we had on IRC in the late 1990s. Back then it was a more straightforward bot that would handle channel operations, bans, etc. Then it
