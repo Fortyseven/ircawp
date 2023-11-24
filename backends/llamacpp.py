@@ -36,9 +36,14 @@ class LlamaCppBackend(BaseBackend):
             if cmd_key in PLUGINS[func].TRIGGERS:
                 cmd_plug = PLUGINS[func]
 
+                query = ""
+
+                if len(cmd_query.split()) > 1:
+                    query = cmd_query[cmd_query.find(" ") :].strip()
+
                 # strips everything before the first space
                 return cmd_plug.execute(
-                    query=cmd_query[cmd_query.find(" ") :].strip(),
+                    query=query,
                     backend=self,
                 )
 
