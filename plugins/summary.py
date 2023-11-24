@@ -19,7 +19,7 @@ from langchain.text_splitter import CharacterTextSplitter
 from lib.reduce import reduce_html
 from lib.config import config
 
-SUMMARY_MODEL = config["models"]["mamba-3b_80"]
+SUMMARY_MODEL = config["models"].get("mamba-3b_80", None)
 
 
 def execute(query: str, backend: BaseBackend) -> str:
@@ -64,6 +64,9 @@ def execute(query: str, backend: BaseBackend) -> str:
 
         if len(cleaned_text) < 20:
             return f"Error: text too short for ({query}) == ({len(cleaned_text)} bytes)"
+
+        if not SUMMARY_MODEL:
+            return f"Error: no summary model defined"
 
         llm = LlamaCpp(
             model_path=SUMMARY_MODEL,
