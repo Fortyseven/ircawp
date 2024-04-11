@@ -1,6 +1,7 @@
 """
-This is an older version of SummaryFunction that does not use langchain. It's "faster" but also much
-lower quality. It is kept here for future reference.
+This is an older version of SummaryFunction that does not use langchain.
+It's "faster" but also much lower quality. It is kept here for future
+reference.
 """
 
 import requests
