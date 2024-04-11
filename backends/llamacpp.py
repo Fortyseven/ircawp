@@ -1,3 +1,4 @@
+import random
 from datetime import datetime
 from llama_cpp import Llama
 from backends.BaseBackend import BaseBackend
@@ -78,10 +79,14 @@ class LlamaCppBackend(BaseBackend):
 
             tick = datetime.now()
 
+            random_seed_number = random.randint(0, 9999999999)
+            print("- SEED: ", random_seed_number)
+
             text = self.generator.create_completion(
                 prompt=full_prompt,
                 max_tokens=2048,
                 temperature=config.get("temperature", 0.75),
+                seed=random_seed_number,
                 # mirostat_mode=True,
                 stop=[
                     "User:",
