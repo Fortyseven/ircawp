@@ -90,6 +90,11 @@ class LlamaCppBackend(BaseBackend):
                 # mirostat_mode=True,
                 stop=[
                     "User:",
+                    f"{username}:",
+                    f"{username} asks",
+                    f"{username} replies",
+                    f"{username} says",
+                    f"{username} answers",
                     "``` \n```",
                     "```\n ```",
                 ],
