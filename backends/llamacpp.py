@@ -109,6 +109,9 @@ class LlamaCppBackend(BaseBackend):
             # response = response[response.find("ircawp:") + 10 :].strip()
             response = response.removeprefix(full_prompt).strip()
 
+            # this is petty
+            response = response.replace("ChatGPT", "ircawp")
+
             # compress multiple newlines down to one
             response = "\n".join(
                 [line for line in response.split("\n") if line.strip() != ""]
