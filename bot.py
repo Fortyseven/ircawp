@@ -106,7 +106,7 @@ def process_queue_entry(user_id, channel, prompt, say):
         coupled_response = (
             f"@{username} {response}"
             if augment_with_imagegen
-            else f"@{username} > \`{media}\`"
+            else f"@{username} >`{media}`"
         )
 
         print(f"Response: '{coupled_response}', '{media}'")
