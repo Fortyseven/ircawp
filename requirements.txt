@@ -29,3 +29,5 @@ llama-cpp-python
 langchain
 beautifulsoup4
 ollama
+diffusers
+accelerate

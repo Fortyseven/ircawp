@@ -5,11 +5,16 @@ import time
 import dotenv
 import queue
 import threading
+from typing import Callable
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
-from backends import LlamaCppBackend, OllamaBackend
+from backends import BaseBackend, LlamaCppBackend, OllamaBackend
 
+
+from imagegen.BaseImageGen import BaseImageGen
+from imagegen.SDXS import SDXS
 from lib.config import config
+from backends import BaseBackend
 
 print(
     r"""
@@ -33,9 +38,10 @@ logging.basicConfig(level=config.get("log_level", "INFO"))
 
 # globals
 
-slack_queue = queue.Queue()
+slack_queue: queue.Queue = queue.Queue()
 
-backend_instance = None
+backend_instance: BaseBackend | None = None
+imagegen_instance: BaseImageGen | None = None
 
 bolt = App(token=slack_creds["SLACK_BOT_TOKEN"])
 
@@ -99,6 +105,8 @@ if __name__ == "__main__":
             backend_instance = LlamaCppBackend()
         case "ollama":
             backend_instance = OllamaBackend()
+
+    imagegen = SDXS()
 
     queue_thread = threading.Thread(target=process_queue, daemon=True)
     queue_thread.start()
