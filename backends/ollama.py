@@ -25,7 +25,7 @@ class OllamaBackend(BaseBackend):
         print(f"Using model: {self.model}")
 
     ##################
-    def process_plugin(self, cmd_query: str) -> str:
+    def process_plugin(self, cmd_query: str) -> tuple[str, str]:
         """
         Processes a plugin query, which is a string starting with a slash.
         """
@@ -46,7 +46,7 @@ class OllamaBackend(BaseBackend):
                     backend=self,
                 )
 
-        return "Unknown command. Try `/help`."
+        return "Unknown command. Try `/help`.", ""
 
     ##################
     def query(
@@ -129,4 +129,4 @@ class OllamaBackend(BaseBackend):
         except RuntimeError as e:
             response = f"**IT HERTZ, IT HERTZ:** '{str(e)}'"
 
-        return response.replace("\n", "\n\n")
+        return response.replace("\n", "\n\n"), ""

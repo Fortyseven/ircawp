@@ -19,14 +19,12 @@ def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
         return "No question for our Lord and Savior?"
 
     try:
-        full_prompt = SYSTEM_PROMPT.format(query=query.strip())
+        response, _ = backend.query(
+            user_prompt=query, system_prompt=SYSTEM_PROMPT
+        )
 
         return (
-            (
-                EMOJI_PREFIX
-                + " "
-                + backend.query(user_prompt=query, system_prompt=SYSTEM_PROMPT)
-            ),
+            (EMOJI_PREFIX + " " + response),
             "",
         )
     except Exception as e:

@@ -27,13 +27,13 @@ def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
         return "No question for Hawkeye?"
 
     try:
+        response, _ = backend.query(
+            system_prompt=SYSTEM_PROMPT, user_prompt=query
+        )
         return (
-            (
-                EMOJI_PREFIX
-                + " "
-                + backend.query(system_prompt=SYSTEM_PROMPT, user_prompt=query)
-            ),
+            EMOJI_PREFIX + " " + response,
             "",
         )
+
     except Exception as e:
         return "ALCOHOLIC PROBLEMS: " + str(e), ""
