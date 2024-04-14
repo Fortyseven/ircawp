@@ -17,9 +17,9 @@ An officer named {username} is asking for your advice.
 """.strip()
 
 
-def execute(query: str, backend: BaseBackend) -> str:
+def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
     if not query.strip():
-        return "No question?"
+        return "Stop wasting my time, Ensign.", ""
 
     try:
         return (
@@ -27,7 +27,8 @@ def execute(query: str, backend: BaseBackend) -> str:
             + " "
             + backend.query(
                 system_prompt=SYSTEM_PROMPT, user_prompt=query.strip()
-            )
+            ),
+            "",
         )
     except Exception as e:
-        return "FIRST CONTACT PROBLEMS: " + str(e)
+        return "FIRST CONTACT PROBLEMS: " + str(e), ""

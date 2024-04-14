@@ -1,6 +1,7 @@
 """
 Get the bot's uptime and stats.
 """
+
 import datetime
 from backends import BaseBackend
 
@@ -12,7 +13,7 @@ GROUP = "system"
 START_TIME = datetime.datetime.now()
 
 
-def execute(query: str, backend: BaseBackend) -> str:
+def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
     from datetime import datetime
     from datetime import timedelta
 
@@ -22,9 +23,12 @@ def execute(query: str, backend: BaseBackend) -> str:
     uptime = str(uptime).split(".")[0]
     start_time = START_TIME.strftime("%Y-%m-%d %H:%M:%S")
 
-    return f"""STATS:
+    return (
+        f"""STATS:
     - Uptime: {uptime}
     - Last started: {start_time}
     - Current model: {backend.model}
     - Last query time: {backend.last_query_time or "None yet"}
-    """.strip()
+    """.strip(),
+        "",
+    )

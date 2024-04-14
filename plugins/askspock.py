@@ -24,9 +24,9 @@ Your shipmate, {username}, is asking for your advice.
 """.strip()
 
 
-def execute(query: str, backend: BaseBackend) -> str:
+def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
     if not query.strip():
-        return "No question?"
+        return "Your silence is deafening, Ensign.", ""
 
     try:
         return (
@@ -34,7 +34,8 @@ def execute(query: str, backend: BaseBackend) -> str:
             + " "
             + backend.query(
                 system_prompt=SYSTEM_PROMPT, user_prompt=query.strip()
-            )
+            ),
+            "",
         )
     except Exception as e:
-        return "ILLOGICAL PROBLEMS: " + str(e)
+        return "ILLOGICAL PROBLEMS: " + str(e), ""

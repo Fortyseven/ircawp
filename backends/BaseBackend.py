@@ -13,5 +13,5 @@ class BaseBackend:
         system_prompt: Optional[str],
         username: Optional[str],
         raw: Optional[bool] = False,
-    ) -> str:
+    ) -> tuple[str, str]:
         raise NotImplementedError("query() not implemented")

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import sys
+from imagegen.BaseImageGen import BaseImageGen
 from imagegen.SDXS import SDXS
 from lib.config import config
 from rich import print
@@ -25,7 +26,6 @@ match config.get("backend", "llamacpp"):
     case "ollama":
         backend_instance = OllamaBackend()
 
-imagegen_instance = SDXS()
 
 print("\n----------------------------\n")
 # print(f"- USER: [red]{prompt}[/]")
@@ -36,7 +36,12 @@ print("\n----------------------------\n")
 #     )
 #     print(f"- PROMPT: [green]{pr}[/]")
 
-response = backend_instance.query(user_prompt=prompt.strip())
+response, media = backend_instance.query(user_prompt=prompt.strip())
 print(f"- ASSISTANT: [blue]{response}[/]")
 
-SDXS().generateImage(response)
+if media:
+    print(f"- MEDIA: [green]{media}[/]")
+    # dont load all this unless we _really_ need it
+    imagegen_instance: BaseImageGen = SDXS()
+    imagegen_instance.generateImage(media, "/tmp/temp.png")
+    os.system(f"catimg /tmp/temp.png")

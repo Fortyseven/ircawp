@@ -25,6 +25,7 @@ class SDXS(BaseImageGen):
             num_inference_steps=1,
             guidance_scale=0,
             generator=torch.Generator(device="cpu"),
+            safety_checker=None,
             quiet=True,
         ).images[0]
 

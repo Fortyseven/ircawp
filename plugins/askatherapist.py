@@ -14,9 +14,9 @@ You will provide a brief, but thoughtful and actionable response to the user's q
 """.strip()
 
 
-def execute(query: str, backend: BaseBackend) -> str:
+def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
     if not query.strip():
-        return "No question?"
+        return "No question?", ""
 
     try:
         return (
@@ -24,7 +24,8 @@ def execute(query: str, backend: BaseBackend) -> str:
             + " "
             + backend.query(
                 system_prompt=SYSTEM_PROMPT, user_prompt=query.strip()
-            )
+            ),
+            "",
         )
     except Exception as e:
-        return "MENTAL PROBLEMS: " + str(e)
+        return "MENTAL PROBLEMS: " + str(e), ""

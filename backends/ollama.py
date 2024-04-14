@@ -55,7 +55,7 @@ class OllamaBackend(BaseBackend):
         system_prompt: Optional[str] = config["system_prompt"],
         username: Optional[str] = "User",
         raw: Optional[bool] = False,
-    ) -> str:
+    ) -> tuple[str, str]:
         self.username = username
 
         response = ""

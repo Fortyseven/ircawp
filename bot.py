@@ -78,7 +78,13 @@ def process_queue_entry(user_id, prompt, say):
         "display_name"
     ]
 
-    response = backend_instance.query(user_prompt=prompt, username=username)
+    response, media = backend_instance.query(
+        user_prompt=prompt, username=username
+    )
+
+    if media:
+        print("Media detected. Uploading image...")
+        pass
 
     logging.info(f"Response: '{response}'")
 

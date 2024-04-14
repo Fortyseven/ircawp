@@ -60,9 +60,9 @@ def process_weather_json(json_text: str) -> str:
         return "Error: could not decode JSON."
 
 
-def execute(query: str, backend: BaseBackend) -> str:
+def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
     if not query.strip():
-        return "No query provided for weather plugin."
+        return "No query provided for weather plugin.", ""
 
     try:
         # with open("w.json", "r") as f:
@@ -72,10 +72,16 @@ def execute(query: str, backend: BaseBackend) -> str:
         response = requests.get(url_query, timeout=12, allow_redirects=True)
 
         if response.status_code >= 400:
-            return f"Error: code ({response.status_code}) for ({url_query})"
+            return (
+                f"Error: code ({response.status_code}) for ({url_query})",
+                "",
+            )
 
-        return process_weather_json(response.text)
+        return process_weather_json(response.text), ""
     except requests.exceptions.Timeout:
-        return f"Timed out while trying to fetch ({url_query}). wttr.in can be fussy; try again in a minute."
+        return (
+            f"Timed out while trying to fetch ({url_query}). wttr.in can be fussy; try again in a minute.",
+            "",
+        )
     except Exception as e:
-        return "BIG PROBLEMS: " + str(e)
+        return "BIG PROBLEMS: " + str(e), ""

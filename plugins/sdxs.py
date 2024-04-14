@@ -9,12 +9,12 @@ TRIGGERS = ["sdxs"]
 DESCRIPTION = "Pass a raw prompt to the LLM without a system preamble."
 
 
-def execute(query: str, backend: BaseBackend) -> str:
+def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
     if not query.strip():
-        return "No prompt?"
+        return "No prompt?", ""
 
     try:
         # return backend.query(system_prompt="", user_prompt=query.strip())
-        return "This feature is a WIP."
+        return ("", query.strip())
     except Exception as e:
-        return "IMG PROBLEMS: " + str(e)
+        return "IMG PROBLEMS: " + str(e), ""

@@ -22,15 +22,18 @@ An enlisted soldier named {username} is asking for your advice.
 """.strip()
 
 
-def execute(query: str, backend: BaseBackend) -> str:
+def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
     if not query.strip():
         return "No question for Hawkeye?"
 
     try:
         return (
-            EMOJI_PREFIX
-            + " "
-            + backend.query(system_prompt=SYSTEM_PROMPT, user_prompt=query)
+            (
+                EMOJI_PREFIX
+                + " "
+                + backend.query(system_prompt=SYSTEM_PROMPT, user_prompt=query)
+            ),
+            "",
         )
     except Exception as e:
-        return "ALCOHOLIC PROBLEMS: " + str(e)
+        return "ALCOHOLIC PROBLEMS: " + str(e), ""

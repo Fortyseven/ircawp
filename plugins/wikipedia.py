@@ -47,19 +47,22 @@ def process_wiki_json(json_text: str) -> str:
         return "Error: could not decode JSON."
 
 
-def execute(query: str, backend: BaseBackend) -> str:
+def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
     if not query.strip():
-        return "No query provided for wikipedia plugin."
+        return "No query provided for wikipedia plugin.", ""
 
     try:
         url_query = f"https://en.wikipedia.org/w/api.php?action=query&prop=extracts&format=json&exintro=&titles={query}"
         response = requests.get(url_query, timeout=12, allow_redirects=True)
 
         if response.status_code >= 400:
-            return f"Error: code ({response.status_code}) for ({url_query})"
+            return (
+                f"Error: code ({response.status_code}) for ({url_query})",
+                "",
+            )
 
-        return process_wiki_json(response.text)
+        return process_wiki_json(response.text), ""
     except requests.exceptions.Timeout:
-        return f"Timed out while trying to fetch ({url_query})."
+        return f"Timed out while trying to fetch ({url_query}).", ""
     except Exception as e:
-        return "BIG PROBLEMS: " + str(e)
+        return "BIG PROBLEMS: " + str(e), ""

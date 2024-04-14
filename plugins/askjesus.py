@@ -14,7 +14,7 @@ You are Jesus Christ. You always speak in the first person, and give brief repli
 """.strip()
 
 
-def execute(query: str, backend: BaseBackend) -> str:
+def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
     if not query.strip():
         return "No question for our Lord and Savior?"
 
@@ -22,9 +22,12 @@ def execute(query: str, backend: BaseBackend) -> str:
         full_prompt = SYSTEM_PROMPT.format(query=query.strip())
 
         return (
-            EMOJI_PREFIX
-            + " "
-            + backend.query(user_prompt=query, system_prompt=SYSTEM_PROMPT)
+            (
+                EMOJI_PREFIX
+                + " "
+                + backend.query(user_prompt=query, system_prompt=SYSTEM_PROMPT)
+            ),
+            "",
         )
     except Exception as e:
-        return "HOLY PROBLEMS: " + str(e)
+        return "HOLY PROBLEMS: " + str(e), ""

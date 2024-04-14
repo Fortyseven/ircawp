@@ -22,15 +22,15 @@ from lib.config import config
 SUMMARY_MODEL = config["models"].get("mamba-3b_80", None)
 
 
-def execute(query: str, backend: BaseBackend) -> str:
+def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
     if not config.get("backend", "llamacpp") == "llamacpp":
-        return "This plugin requires the `llamacpp` backend for now."
+        return "This plugin requires the `llamacpp` backend for now.", ""
 
     # remove slack url encoding e.g. <https://google.com|google.com>
     query = query.replace("<", "").replace(">", "").split("|")[0].strip()
 
     if not query.strip():
-        return "No query provided for summary query."
+        return "No query provided for summary query.", ""
 
     try:
         # ensure query is a valid URL
@@ -47,7 +47,7 @@ def execute(query: str, backend: BaseBackend) -> str:
         )
 
         if content.status_code >= 400:
-            return f"Error: code ({content.status_code}) for ({query})"
+            return f"Error: code ({content.status_code}) for ({query})", ""
 
         cleaned_text, title = reduce_html(content.text)
 
@@ -60,16 +60,22 @@ def execute(query: str, backend: BaseBackend) -> str:
         ]
 
         if any([x in cleaned_text.lower() for x in JS_STOPPERS]):
-            return f"This site probably requires JavaScript to be enabled. Ask my owner to make a custom handler for ({query})."
+            return (
+                f"This site probably requires JavaScript to be enabled. Ask my owner to make a custom handler for ({query}).",
+                "",
+            )
 
         if len(cleaned_text) == 0:
-            return f"Error: no usable text returned for ({query})"
+            return f"Error: no usable text returned for ({query})", ""
 
         if len(cleaned_text) < 20:
-            return f"Error: text too short for ({query}) == ({len(cleaned_text)} bytes)"
+            return (
+                f"Error: text too short for ({query}) == ({len(cleaned_text)} bytes)",
+                "",
+            )
 
         if not SUMMARY_MODEL:
-            return f"Error: no summary model defined"
+            return f"Error: no summary model defined", ""
 
         llm = LlamaCpp(
             model_path=SUMMARY_MODEL,
@@ -94,9 +100,10 @@ def execute(query: str, backend: BaseBackend) -> str:
         )
         return (
             f"TITLE: {title} | ({query}) | ({len(cleaned_text)} bytes)\n----------------\n"
-            + summarize_chain.run(docs)
+            + summarize_chain.run(docs),
+            "",
         )
     except requests.exceptions.Timeout:
-        return f"Timed out while trying to fetch ({query})"
+        return f"Timed out while trying to fetch ({query})", ""
     except Exception as e:
-        return "BIG PROBLEMS: " + str(e)
+        return "BIG PROBLEMS: " + str(e), ""
