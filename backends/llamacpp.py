@@ -1,5 +1,6 @@
 import random
 from datetime import datetime
+from typing import Optional
 from llama_cpp import Llama
 from backends.BaseBackend import BaseBackend
 from lib.config import config
@@ -51,25 +52,29 @@ class LlamaCppBackend(BaseBackend):
         return "Unknown command. Try `/help`."
 
     def query(
-        self, user_query: str, raw: bool = False, username: str = "User"
+        self,
+        user_prompt: str,
+        system_prompt: Optional[str] = config["system_prompt"],
+        username: Optional[str] = "User",
+        raw: Optional[bool] = False,
     ) -> str:
         self.username = username
 
         response = ""
 
         try:
-            if user_query.startswith("/"):
-                return self.process_plugin(user_query)
+            if user_prompt.startswith("/"):
+                return self.process_plugin(user_prompt)
 
             PROMPT = template_str(
                 config["system_prompt"],
                 username=username,
-                query=user_query.strip(),
+                query=user_prompt.strip(),
             )
 
             # no plugin call, basic query
             if raw:
-                full_prompt = f"{user_query}"
+                full_prompt = f"{user_prompt}"
             else:
                 full_prompt = f"{PROMPT}\nircawp: "
 

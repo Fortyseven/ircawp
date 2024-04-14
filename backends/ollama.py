@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 # from llama_cpp import Llama
 from ollama import Client
@@ -51,8 +52,9 @@ class OllamaBackend(BaseBackend):
     def query(
         self,
         user_prompt: str,
-        system_prompt: str = config["system_prompt"],
-        username: str = "User",
+        system_prompt: Optional[str] = config["system_prompt"],
+        username: Optional[str] = "User",
+        raw: Optional[bool] = False,
     ) -> str:
         self.username = username
 
@@ -62,7 +64,12 @@ class OllamaBackend(BaseBackend):
             if user_prompt.startswith("/"):
                 return self.process_plugin(user_prompt)
 
-            SYSTEM_PROMPT = template_str(system_prompt, username=username)
+            SYSTEM_PROMPT = (
+                template_str(system_prompt, username=username)
+                if system_prompt
+                else ""
+            )
+
             USER_PROMPT = user_prompt.strip()
 
             tick = datetime.now()
