@@ -31,7 +31,7 @@ print(
 # config
 slack_creds = dotenv.dotenv_values(".env")
 if not slack_creds["SLACK_APP_TOKEN"] or not slack_creds["SLACK_BOT_TOKEN"]:
-    raise "Slack credentials incomplete. Check .env file."
+    raise Exception("Slack credentials incomplete. Check .env file.")
 
 THREAD_SLEEP = config.get("thread_sleep", 0.250)
 logging.basicConfig(level=config.get("log_level", "INFO"))
@@ -56,7 +56,7 @@ def ingest_event(event, message, client, say, body):
     add_to_queue(user_id, prompt, say)
 
 
-def add_to_queue(user_id: str, message: str, say: callable):
+def add_to_queue(user_id: str, message: str, say: Callable):
     """
     Add a message to the queue to be sent to Slack.
 
@@ -78,7 +78,7 @@ def process_queue_entry(user_id, prompt, say):
         "display_name"
     ]
 
-    response = backend_instance.query(prompt, username=username)
+    response = backend_instance.query(user_prompt=prompt, username=username)
 
     logging.info(f"Response: '{response}'")
 
