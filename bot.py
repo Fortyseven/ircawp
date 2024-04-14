@@ -7,7 +7,7 @@ import queue
 import threading
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
-from backends.llamacpp import LlamaCppBackend
+from backends import LlamaCppBackend, OllamaBackend
 
 from lib.config import config
 
@@ -35,7 +35,7 @@ logging.basicConfig(level=config.get("log_level", "INFO"))
 
 slack_queue = queue.Queue()
 
-ircawp = None
+backend_instance = None
 
 bolt = App(token=slack_creds["SLACK_BOT_TOKEN"])
 
@@ -72,7 +72,7 @@ def process_queue_entry(user_id, prompt, say):
         "display_name"
     ]
 
-    response = ircawp.query(prompt, username=username)
+    response = backend_instance.query(prompt, username=username)
 
     logging.info(f"Response: '{response}'")
 
@@ -94,7 +94,11 @@ def process_queue():
 
 
 if __name__ == "__main__":
-    ircawp = LlamaCppBackend()
+    match config.get("backend", "llamacpp"):
+        case "llamacpp":
+            backend_instance = LlamaCppBackend()
+        case "ollama":
+            backend_instance = OllamaBackend()
 
     queue_thread = threading.Thread(target=process_queue, daemon=True)
     queue_thread.start()

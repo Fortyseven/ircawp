@@ -62,7 +62,9 @@ class LlamaCppBackend(BaseBackend):
                 return self.process_plugin(user_query)
 
             PROMPT = template_str(
-                config["prompt"], username=username, query=user_query.strip()
+                config["system_prompt"],
+                username=username,
+                query=user_query.strip(),
             )
 
             # no plugin call, basic query

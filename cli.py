@@ -3,7 +3,7 @@ import os
 import sys
 from lib.config import config
 from rich import print
-from backends.llamacpp import LlamaCppBackend as ircawp
+from backends import OllamaBackend, LlamaCppBackend
 from lib.template_str import template_str
 from rich.traceback import install
 
@@ -15,13 +15,22 @@ if not prompt:
     print("Huh?")
     os._exit(-1)
 
-ircawp_instance = ircawp()
+backend_instance = None
+
+match config.get("backend", "llamacpp"):
+    case "llamacpp":
+        backend_instance = LlamaCppBackend()
+    case "ollama":
+        backend_instance = OllamaBackend()
+
 
 print("\n----------------------------\n")
 print(f"- USER: [red]{prompt}[/]")
 
 if not prompt.startswith("/"):
-    pr = template_str(config["prompt"], username="User", query=prompt.strip())
+    pr = template_str(
+        config["system_prompt"], username="User", query=prompt.strip()
+    )
     print(f"- PROMPT: [green]{pr}[/]")
 
-print(f"- ASSISTANT: [blue]{ircawp_instance.query(prompt, raw=False)}[/]")
+print(f"- ASSISTANT: [blue]{backend_instance.query(prompt)}[/]")

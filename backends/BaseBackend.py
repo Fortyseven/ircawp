@@ -4,5 +4,5 @@ class BaseBackend:
     def __init__(self) -> None:
         pass
 
-    def query(self, user_query: str) -> str:
+    def query(self, user_prompt: str, system_prompt: str) -> str:
         raise NotImplementedError("query() not implemented")
