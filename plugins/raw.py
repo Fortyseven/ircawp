@@ -14,6 +14,6 @@ def execute(query: str, backend: BaseBackend) -> str:
         return "No prompt?"
 
     try:
-        return backend.query(query.strip(), raw=True)
+        return backend.query(system_prompt="", user_prompt=query.strip())
     except Exception as e:
         return "RAW PROBLEMS: " + str(e)

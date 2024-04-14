@@ -23,6 +23,9 @@ SUMMARY_MODEL = config["models"].get("mamba-3b_80", None)
 
 
 def execute(query: str, backend: BaseBackend) -> str:
+    if not config.get("backend", "llamacpp") == "llamacpp":
+        return "This plugin requires the `llamacpp` backend for now."
+
     # remove slack url encoding e.g. <https://google.com|google.com>
     query = query.replace("<", "").replace(">", "").split("|")[0].strip()
 
