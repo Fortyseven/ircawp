@@ -3,7 +3,7 @@ Bot plugin that allows the user to ask AI Jesus a question or ask for advice.
 """
 
 from backends.BaseBackend import BaseBackend
-from plugins.AskPlugin import AskPlugin
+from plugins.__AskPlugin import AskPlugin
 
 
 plugin = AskPlugin(

@@ -3,7 +3,7 @@ Help command, returns a list of registered slash commands.
 """
 
 from backends import BaseBackend
-from plugins.AskBase import AskBase
+from plugins.__AskBase import AskBase
 
 
 def get_triggers(trigger: list) -> str:

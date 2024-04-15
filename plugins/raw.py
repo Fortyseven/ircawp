@@ -3,7 +3,7 @@ Bot plugin that allows the user to ask a raw prompt of the LLM without a system 
 """
 
 from backends.BaseBackend import BaseBackend
-from plugins.AskBase import AskBase
+from plugins.__AskBase import AskBase
 
 
 def raw(prompt: str, backend: BaseBackend) -> tuple[str, str]:

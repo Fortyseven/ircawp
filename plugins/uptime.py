@@ -4,7 +4,7 @@ Get the bot's uptime and stats.
 
 import datetime
 from backends.BaseBackend import BaseBackend
-from plugins.AskBase import AskBase
+from plugins.__AskBase import AskBase
 
 
 START_TIME = datetime.datetime.now()

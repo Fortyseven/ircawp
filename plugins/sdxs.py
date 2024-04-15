@@ -3,7 +3,7 @@ Bot plugin that allows the user to pass a raw prompt to the system imagegen back
 """
 
 from backends.BaseBackend import BaseBackend
-from plugins.AskBase import AskBase
+from plugins.__AskBase import AskBase
 
 
 def sdxs(prompt: str, backend: BaseBackend) -> tuple[str, str]:

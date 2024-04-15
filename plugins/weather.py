@@ -7,7 +7,7 @@ import json
 import requests
 
 from backends.BaseBackend import BaseBackend
-from plugins.AskBase import AskBase
+from plugins.__AskBase import AskBase
 
 
 def process_weather_json(json_text: str) -> str:
