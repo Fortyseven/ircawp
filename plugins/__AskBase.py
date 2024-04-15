@@ -47,13 +47,20 @@ class AskBase:
         try:
             response, media = self.main(query, backend)
 
-            return response, (
-                ""
-                if (not self.use_imagegen and not media)
-                else {
-                    "prefix": self.imagegen_prefix,
-                    "content": response,
-                }
-            )
+            if media and isinstance(media, str):
+                media_return = media
+            else:
+                media_return = (
+                    ""
+                    if (not self.use_imagegen and not media)
+                    else {
+                        "prefix": self.imagegen_prefix,
+                        "content": response,
+                    }
+                )
+
+            print("###### AskBase response: ", response)
+            print("###### AskBase media: ", media_return)
+            return response, media_return
         except Exception as e:
             return f"{self.msg_exception_prefix}: " + str(e), ""

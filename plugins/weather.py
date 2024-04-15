@@ -5,12 +5,98 @@ faster model than the default chat model.
 
 import json
 import requests
+import datetime
+from urllib.parse import quote_plus
 
 from backends.BaseBackend import BaseBackend
 from plugins.__AskBase import AskBase
 
 
-def process_weather_json(json_text: str) -> str:
+def _estimateTimeOfDay(observed: str) -> str:
+    # 'observed' requires '10:00 AM' format
+    # 8pm to 4am is night
+    # 4am to 12pm is morning
+    # 12pm to 4pm is afternoon
+    # 4pm to 8pm is evening
+
+    if not observed:
+        return "daytime"
+
+    time = datetime.datetime.strptime(observed, "%I:%M %p").time()
+
+    if time >= datetime.time(20, 0) or time < datetime.time(4, 0):
+        return "night"
+    elif time >= datetime.time(4, 0) and time < datetime.time(12, 0):
+        return "morning"
+    elif time >= datetime.time(12, 0) and time < datetime.time(16, 0):
+        return "afternoon"
+    elif time >= datetime.time(16, 0) and time < datetime.time(20, 0):
+        return "evening"
+    else:
+        return "daytime"
+
+
+def _estimateTemperature(temp: str) -> str:
+    # 'temp' requires '10F (10C)' format
+    # 0F to 32F is cold
+    # 32F to 50F is cool
+    # 50F to 70F is warm
+    # 70F to 90F is hot
+    # 90F to 100F is very hot
+    # 100F to 120F is extremely hot
+    # 120F+ is dangerously hot
+
+    if not temp:
+        return "temperature"
+
+    temp_f = int(temp.split(" ")[0][:-1])
+    if temp_f < -20:
+        return "dangerously cold"
+    elif temp_f <= 0:
+        return "freezing"
+    elif temp_f <= 32:
+        return "cold"
+    elif temp_f <= 50:
+        return "cool"
+    elif temp_f <= 70:
+        return "warm"
+    elif temp_f <= 90:
+        return "hot"
+    elif temp_f <= 100:
+        return "very hot"
+    elif temp_f <= 120:
+        return "extremely hot"
+    else:
+        return "dangerously hot"
+
+
+def _normalizeWeatherType(weather: str) -> str:
+    weather = weather.lower()
+
+    if weather == "rain":
+        return "rainy"
+
+    return weather
+
+
+def buildImageGenPrompt(
+    where, desc, temps, wind_dir, wind_mph, wind_kph, humidity, observed
+) -> str:
+    location = where.strip()
+
+    kind_of_weather = _normalizeWeatherType(desc.strip())
+
+    temp = temps.strip()
+    temp = _estimateTemperature(temp)
+
+    # observed example: "2024-01-01 10:00 AM"; just get "10:00 AM"
+    # time_of_day = " ".join(observed.split(" ")[1:])
+    time_of_day = _estimateTimeOfDay(observed)
+
+    return f"professional photo of {location} featuring {temp} {kind_of_weather} weather at {time_of_day}"
+
+
+def process_weather_json(json_text: str) -> tuple[str, str]:
     """
     https://wttr.in/:help
     """
@@ -19,7 +105,7 @@ def process_weather_json(json_text: str) -> str:
         weather_data = json.loads(json_text)
 
         if not weather_data["current_condition"]:
-            return "Error: no current condition data."
+            return "Error: no current condition data.", ""
 
         current = weather_data["current_condition"][0]
         feels_like_f = current["FeelsLikeF"]
@@ -39,7 +125,7 @@ def process_weather_json(json_text: str) -> str:
         wind_kph = current["windspeedKmph"]
         wind_dir = current["winddir16Point"]
 
-        observed = current["localObsDateTime"]
+        observed = current["observation_time"]
 
         if (
             not weather_data.get("nearest_area", None)
@@ -52,18 +138,32 @@ def process_weather_json(json_text: str) -> str:
 
             where = f"{where}, {where2}"
 
-        return f"Weather for {where}: {desc} at 🌡 {temps}, winds 🌬 {wind_dir} at {wind_mph}mph ({wind_kph}kph), 💦 humidity at {humidity}%. (⏰ As of {observed}, local.)"
+        imagegen_prompt = buildImageGenPrompt(
+            where,
+            desc,
+            temps,
+            wind_dir,
+            wind_mph,
+            wind_kph,
+            humidity,
+            observed,
+        )
+
+        return (
+            f"Weather for {where}: {desc} at 🌡 {temps}, winds 🌬 {wind_dir} at {wind_mph}mph ({wind_kph}kph), 💦 humidity at {humidity}%. (⏰ As of {observed}, local.)",
+            imagegen_prompt,
+        )
 
     except json.decoder.JSONDecodeError:
-        return "Error: could not decode JSON."
+        return "Error: could not decode JSON.", ""
 
 
-def doWeather(query: str):
+def doWeather(query: str, backend: BaseBackend) -> tuple[str, str | dict]:
     try:
         # with open("w.json", "r") as f:
         #     return process_weather_json(f.read())
 
-        url_query = f"https://wttr.in/{query}?format=j1"
+        url_query = f"https://wttr.in/{quote_plus(query)}?format=j1"
         response = requests.get(url_query, timeout=12, allow_redirects=True)
 
         if response.status_code >= 400:
@@ -72,14 +172,14 @@ def doWeather(query: str):
                 "",
             )
 
-        return process_weather_json(response.text), ""
+        return process_weather_json(response.text)
     except requests.exceptions.Timeout:
         return (
             f"Timed out while trying to fetch ({url_query}). wttr.in can be fussy; try again in a minute.",
             "",
         )
     except Exception as e:
-        return "BIG PROBLEMS: " + str(e), ""
+        return "WTTR PROBLEMS: " + str(e), ""
 
 
 plugin = AskBase(
@@ -89,7 +189,7 @@ plugin = AskBase(
     system_prompt="Weather for a location from wttr.in",
     emoji_prefix="🌦",
     msg_empty_query="No location provided",
-    msg_exception_prefix="BIG PROBLEMS",
+    msg_exception_prefix="WTTR PROBLEMS",
     main=doWeather,
     use_imagegen=False,
 )
