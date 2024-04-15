@@ -98,34 +98,24 @@ def _simplifyPrompt(prompt: str) -> str:
 
 def say_image(
     *,
-    response,
-    media,
+    response="",
+    media_content="",
+    media_prefix="",
     username,
     channel,
-    augment_with_imagegen=False,
 ):
-    user_message = f"@{username} {response}"
-
-    if media and isinstance(media, dict):
-        # if len(media["content"]) > 77:
-        #  = _simplifyPrompt(media["content"])
-
-        imagegen_prompt = (
-            f'{media["prefix"] or ""}; {_simplifyPrompt(media["content"])}'
-        )
-    if augment_with_imagegen:
-        imagegen_prompt = f"{_simplifyPrompt(response)}"
+    if response:
+        response_message_with_username = f"@{username} {response}"
     else:
-        imagegen_prompt = media
+        response_message_with_username = ""
 
-    imagegen_prompt = imagegen_prompt.strip()
-    if not imagegen_prompt:
-        print("!!!! No imagegen prompt; skipping imagegen.")
-        return
+    if media_content:
+        imagegen_prompt = media_content or response
+        imagegen_prompt = _simplifyPrompt(imagegen_prompt)
 
-    print(
-        f"== Imagegen PROMPT was: '{imagegen_prompt}'",
-    )
+        "; ".join([media_prefix or "", imagegen_prompt])
+
+    print(f"!!! Imagegen prompt: {imagegen_prompt}")
 
     imagegen_instance.generateImage(
         imagegen_prompt,
@@ -136,7 +126,7 @@ def say_image(
         bolt.client.files_upload_v2(
             file=f.read(),
             channel=channel,
-            initial_comment=user_message,
+            initial_comment=response_message_with_username,
             title=f"{imagegen_prompt}",
         )
 
@@ -147,11 +137,12 @@ def process_queue_entry(user_id, channel, prompt, say):
         f"Processing queue entry for {user_id} with prompt '{prompt}'"
     )
 
-    augment_with_imagegen = not prompt.endswith("@@")
+    skip_imagegen = prompt.endswith("@@")
+
     prompt = prompt.replace("@@", "")
     prompt = prompt.strip()
 
-    print(">>> Prompt: ", prompt)
+    print("\n\n>>> Prompt: ", prompt)
 
     username = bolt.client.users_info(user=user_id)["user"]["profile"][
         "display_name"
@@ -160,25 +151,52 @@ def process_queue_entry(user_id, channel, prompt, say):
     response, media = backend_instance.query(prompt, username=username)
 
     logging.info(f"<<< Response: '{response}', '{media}'")
-    print(f"<<< Response: '{response}', '{media}'")
+    print(f"<<< Response: '{response}', Med: '{media}'\n\n")
 
-    if media and imagegen_instance:
+    if not skip_imagegen and response and not media:
+        media = {"content": response, "prefix": ""}
+
+    if (
+        skip_imagegen
+        # or not media
+        or (not (media["content"] if isinstance(media, dict) else media))
+        or not imagegen_instance
+    ):
+        # raw text
+        say(f"<@{user_id}>: {response}")
+    elif isinstance(media, dict):
+        # dict media
         say_image(
             response=response,
-            media=media,
-            username=username,
+            media_content=media["content"],
+            media_prefix=media["prefix"],
             channel=channel,
-        )
-    if augment_with_imagegen:
-        say_image(
-            response=response,
-            media=None,
             username=username,
-            channel=channel,
-            augment_with_imagegen=augment_with_imagegen,
         )
     else:
-        say(f"<@{user_id}>: {response}")
+        # flat string media
+        say_image(
+            response=response,
+            media_content=media,
+            channel=channel,
+            username=username,
+        )
+    # else:
+    #     say_image(
+    #         response=response,
+    #         media=None,
+    #         username=username,
+    #         channel=channel,
+    #         augment_with_imagegen=skip_imagegen,
+    #     )
+    # elif media and :
+    #     say_image(
+    #         response=response,
+    #         media=media,
+    #         username=username,
+    #         channel=channel,
+    #     )
+    # else:
 
 
 def process_queue():
