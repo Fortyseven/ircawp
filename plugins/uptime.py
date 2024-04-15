@@ -3,17 +3,14 @@ Get the bot's uptime and stats.
 """
 
 import datetime
-from backends import BaseBackend
+from backends.BaseBackend import BaseBackend
+from plugins.AskBase import AskBase
 
-
-TRIGGERS = ["uptime", "stats"]
-DESCRIPTION = "Get the bot's uptime and stats."
-GROUP = "system"
 
 START_TIME = datetime.datetime.now()
 
 
-def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
+def uptime(prompt: str, backend: BaseBackend) -> tuple[str, str]:
     from datetime import datetime
     from datetime import timedelta
 
@@ -32,3 +29,17 @@ def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
     """.strip(),
         "",
     )
+
+
+plugin = AskBase(
+    name="Uptime",
+    description="Get the bot's uptime and stats.",
+    triggers=["uptime", "stats"],
+    system_prompt="",
+    emoji_prefix="",
+    msg_empty_query="No prompt provided",
+    msg_exception_prefix="ARTISTIC PROBLEMS",
+    main=uptime,
+    use_imagegen=False,
+    prompt_required=False,
+)

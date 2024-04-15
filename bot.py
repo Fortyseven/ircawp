@@ -75,6 +75,28 @@ def add_to_queue(user_id: str, channel: str, message: str, say: Callable):
     slack_queue.put((user_id, channel, message, say))
 
 
+def say_image(*, response, media, augment_with_imagegen, username, channel):
+    if media and isinstance(media, dict):
+        user_message = f'@{username} {media["content"]}'
+        imagegen_prompt = (
+            f'{media["prefix"] or ""}; {media["content"].strip() or ""}'
+        )
+
+    print("== Imagegen PROMPT was: ", imagegen_prompt)
+
+    imagegen_instance.generateImage(
+        imagegen_prompt,
+        DEFAULT_IMG_OUTPUT,
+    )
+
+    with open(DEFAULT_IMG_OUTPUT, "rb") as f:
+        bolt.client.files_upload_v2(
+            file=f.read(),
+            channels=[channel],
+            initial_comment=user_message,
+        )
+
+
 def process_queue_entry(user_id, channel, prompt, say):
     logging.info("==========================")
     logging.info(
@@ -90,35 +112,27 @@ def process_queue_entry(user_id, channel, prompt, say):
 
     response, media = backend_instance.query(prompt, username=username)
 
-    # print(f"Response: {response}")
-    # print(f"Media: {media}")
+    logging.info(f"Response: '{response}', '{media}'")
 
-    if (media or augment_with_imagegen) and imagegen_instance:
-        imagegen_instance.generateImage(
-            response if augment_with_imagegen else media, DEFAULT_IMG_OUTPUT
-        )
-        logging.info(
-            f"Media detected, wrote to {DEFAULT_IMG_OUTPUT}; WIP: Uploading image..."
-        )
-        print(
-            f"Media detected, wrote to {DEFAULT_IMG_OUTPUT}; WIP: Uploading image..."
-        )
-        coupled_response = (
-            f"@{username} {response}"
-            if augment_with_imagegen
-            else f"@{username} >`{media}`"
-        )
+    if media and imagegen_instance:
+        # # if media is a dict
+        # media_final = ""
+        # if isinstance(media, dict):
+        #     if "prefix" in media or "content" in media:
+        #         media_final = f"{media['prefix'] or ''}; {media['content'].strip() or ''}"
+        #     elif "content" in media:
+        #         media_final = media["content"]
+        # else:
+        #     media_final = media
 
-        print(f"Response: '{coupled_response}', '{media}'")
-        with open(DEFAULT_IMG_OUTPUT, "rb") as f:
-            bolt.client.files_upload(
-                file=f.read(),
-                channels=[channel],
-                initial_comment=coupled_response,
-            )
+        say_image(
+            response=response,
+            media=media,
+            augment_with_imagegen=augment_with_imagegen,
+            username=username,
+            channel=channel,
+        )
     else:
-        logging.info(f"Response: '{response}', '{media}'")
-
         say(f"<@{user_id}>: {response}")
 
 

@@ -35,7 +35,7 @@ class LlamaCppBackend(BaseBackend):
         cmd_key = cmd_query.split(" ")[0].strip()[1:]
 
         for func in PLUGINS:
-            if cmd_key in PLUGINS[func].TRIGGERS:
+            if cmd_key in PLUGINS[func].triggers:
                 cmd_plug = PLUGINS[func]
 
                 query = ""

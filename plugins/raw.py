@@ -3,17 +3,22 @@ Bot plugin that allows the user to ask a raw prompt of the LLM without a system 
 """
 
 from backends.BaseBackend import BaseBackend
-
-TRIGGERS = ["raw"]
-GROUP = "ask"
-DESCRIPTION = "Pass a raw prompt to the LLM without a system preamble."
+from plugins.AskBase import AskBase
 
 
-def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
-    if not query.strip():
-        return "No prompt?", ""
+def raw(prompt: str, backend: BaseBackend) -> tuple[str, str]:
+    # return prompt.strip(), ""
+    return backend.query(system_prompt="", user_prompt=prompt.strip()), ""
 
-    try:
-        return backend.query(system_prompt="", user_prompt=query.strip()), ""
-    except Exception as e:
-        return "RAW PROBLEMS: " + str(e), ""
+
+plugin = AskBase(
+    name="Raw LLM query",
+    description="Pass a raw prompt to the LLM without a system preamble.",
+    triggers=["raw"],
+    system_prompt="",
+    emoji_prefix="",
+    msg_empty_query="No prompt provided",
+    msg_exception_prefix="ARTISTIC PROBLEMS",
+    main=raw,
+    use_imagegen=False,
+)

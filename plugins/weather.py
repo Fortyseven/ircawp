@@ -7,9 +7,7 @@ import json
 import requests
 
 from backends.BaseBackend import BaseBackend
-
-TRIGGERS = ["weather"]
-DESCRIPTION = "Get the weather for a location from wttr.in"
+from plugins.AskBase import AskBase
 
 
 def process_weather_json(json_text: str) -> str:
@@ -60,10 +58,7 @@ def process_weather_json(json_text: str) -> str:
         return "Error: could not decode JSON."
 
 
-def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
-    if not query.strip():
-        return "No query provided for weather plugin.", ""
-
+def doWeather(query: str):
     try:
         # with open("w.json", "r") as f:
         #     return process_weather_json(f.read())
@@ -85,3 +80,16 @@ def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
         )
     except Exception as e:
         return "BIG PROBLEMS: " + str(e), ""
+
+
+plugin = AskBase(
+    name="Weather Plugin",
+    description="Get the weather for a location from wttr.in",
+    triggers=["weather"],
+    system_prompt="Weather for a location from wttr.in",
+    emoji_prefix="🌦",
+    msg_empty_query="No location provided",
+    msg_exception_prefix="BIG PROBLEMS",
+    main=doWeather,
+    use_imagegen=False,
+)

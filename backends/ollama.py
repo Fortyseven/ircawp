@@ -32,7 +32,10 @@ class OllamaBackend(BaseBackend):
         cmd_key = cmd_query.split(" ")[0].strip()[1:]
 
         for func in PLUGINS:
-            if cmd_key in PLUGINS[func].TRIGGERS:
+            if (
+                hasattr(PLUGINS[func], "triggers")
+                and cmd_key in PLUGINS[func].triggers
+            ):
                 cmd_plug = PLUGINS[func]
 
                 query = ""
@@ -53,7 +56,7 @@ class OllamaBackend(BaseBackend):
         self,
         user_prompt: str,
         system_prompt: Optional[str] = config["system_prompt"],
-        username: Optional[str] = "User",
+        username: str | None = "User",
         raw: Optional[bool] = False,
     ) -> tuple[str, str]:
         self.username = username
@@ -107,6 +110,7 @@ class OllamaBackend(BaseBackend):
                 model=self.model,
                 messages=messages,
                 options=options,
+                keep_alive=0,
             )
 
             tok = datetime.now()

@@ -11,21 +11,9 @@ PLUGINS = {}
 
 def validate_plugin(plug):
     invalid = False
-    if not hasattr(plug, "TRIGGERS"):
+    if not hasattr(plug, "plugin"):
         print(
-            f"[red]ERROR: plugin {plug} does not have a `TRIGGERS` attribute![/red]"
-        )
-        invalid = True
-
-    if not hasattr(plug, "DESCRIPTION"):
-        print(
-            f"[red]ERROR: plugin {plug} does not have a `DESCRIPTION` attribute![/red]"
-        )
-        invalid = True
-
-    if not hasattr(plug, "execute"):
-        print(
-            f"[red]ERROR: plugin {plug} does not have an`execute` method![/red]"
+            f"[red]ERROR: plugin {plug} does not have `plugin` object![/red]"
         )
         invalid = True
 
@@ -33,6 +21,8 @@ def validate_plugin(plug):
         plug_name = plug.__name__.split(".")[1]
         print(f"[red bold]ERROR: plugin {plug_name} was ignored![/]")
         PLUGINS.pop(plug_name)
+    else:
+        PLUGINS[mod_name] = PLUGINS[mod_name].plugin
 
 
 for file in os.listdir("plugins"):
@@ -42,6 +32,8 @@ for file in os.listdir("plugins"):
         mod_name = file[:-3]
 
         PLUGINS[mod_name] = importlib.import_module("plugins." + mod_name)
+
         validate_plugin(PLUGINS[mod_name])
+
 
 print("=========================")

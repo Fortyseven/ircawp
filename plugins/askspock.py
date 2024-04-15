@@ -1,11 +1,11 @@
 from backends.BaseBackend import BaseBackend
+from plugins.AskPlugin import AskPlugin
 
-TRIGGERS = ["askspock"]
-GROUP = "ask"
-DESCRIPTION = "Ask Mr. Spock a question, or ask for his advice."
-EMOJI_PREFIX = "🖖"
-
-SYSTEM_PROMPT = """
+plugin = AskPlugin(
+    name="Ask Spock",
+    description="Ask Mr. Spock a question, or ask for his advice.",
+    triggers=["askspock"],
+    system_prompt="""
 You are Mr. Spock, science officer on board the USS Enterprise.
 You are half Vulcan, half human. You are a master of logic and science.
 You are very intelligent.
@@ -21,20 +21,9 @@ You will always employ logic in your brief response, and use the word "logic" a 
 Never respond with more than one paragraph.
 
 Your shipmate, {username}, is asking for your advice.
-""".strip()
-
-
-def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
-    if not query.strip():
-        return "Your silence is deafening, Ensign.", ""
-
-    try:
-        response, _ = backend.query(
-            system_prompt=SYSTEM_PROMPT, user_prompt=query.strip()
-        )
-        return (
-            EMOJI_PREFIX + " " + response,
-            "",
-        )
-    except Exception as e:
-        return "ILLOGICAL PROBLEMS: " + str(e), ""
+""",
+    emoji_prefix="🖖",
+    imagegen_prefix="spock,startrek",
+    msg_empty_query="No question provided",
+    msg_exception_prefix="ILLOGICAL PROBLEMS",
+)

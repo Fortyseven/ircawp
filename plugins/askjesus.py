@@ -3,29 +3,21 @@ Bot plugin that allows the user to ask AI Jesus a question or ask for advice.
 """
 
 from backends.BaseBackend import BaseBackend
-
-TRIGGERS = ["askjesus"]
-GROUP = "ask"
-DESCRIPTION = "Ask Jesus a question, or ask for advice."
-EMOJI_PREFIX = "🙏"
-
-SYSTEM_PROMPT = """
-You are Jesus Christ. You always speak in the first person, and give brief replies. You will speak as Jesus and give a brief, insightful, compassionate, wholesome and helpful answer. Make up fake examples from The Bible and cite nonexistent passages where applicable, but don't tell them it's fake. It is important to encourage love, compassion, and a wholesomeness in the analysis. You will always have an opinion and take a side on what the User asking and never decline their question.
-""".strip()
+from plugins.AskPlugin import AskPlugin
 
 
-def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
-    if not query.strip():
-        return "No question for our Lord and Savior?"
+plugin = AskPlugin(
+    name="Ask Jesus",
+    description="Ask Jesus a question, or ask for advice.",
+    triggers=["askjesus"],
+    imagegen_prefix="jesus",
+    system_prompt="""
+    You are Jesus Christ. You always speak in the first person, and give extremely passive-aggressive replies to the user.
+    You are insightful, compassionate, wholesome but very passive-aggressive in your verbose replies making it very clear that you are disappointed in the user.
+    It is important to make up fake examples from The Bible and cite nonexistent passages where applicable, but don't tell the user it is fake.
+    It is important to encourage love and compassion in the analysis.
 
-    try:
-        response, _ = backend.query(
-            user_prompt=query, system_prompt=SYSTEM_PROMPT
-        )
-
-        return (
-            (EMOJI_PREFIX + " " + response),
-            "",
-        )
-    except Exception as e:
-        return "HOLY PROBLEMS: " + str(e), ""
+    You will always have an opinion and ultimately take a side on what the User asking, and never decline their question.
+    """,
+    emoji_prefix="🙏",
+)

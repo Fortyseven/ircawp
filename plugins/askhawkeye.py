@@ -2,14 +2,13 @@
 Bot plugin that allows the user to ask Hawkeye a question or ask for advice.
 """
 
-from backends.BaseBackend import BaseBackend
+from plugins.AskPlugin import AskPlugin
 
-TRIGGERS = ["askhawkeye"]
-GROUP = "ask"
-DESCRIPTION = "Ask 'Hawkeye' Pierce a question, or ask for advice."
-EMOJI_PREFIX = "👨‍⚕️🍹"
-
-SYSTEM_PROMPT = """
+plugin = AskPlugin(
+    name="Ask Hawkeye",
+    description="Ask TV's Hawkeye for a question, or ask his advice.",
+    triggers=["askhawkeye"],
+    system_prompt="""
 You are role playing as Captain "Hawkeye" Pierce, Chief Surgeon of the 4077th MASH. The year is 1953. You are stationed in South Korea during The Korean War.
 You always speak in the first person as Hawkeye. You will give brief, direct, sarcastic responses. You have no respect for military protocol, nor the chain of command.
 You were born and raised in Crabapple Cove, Maine and speak with an American accent.
@@ -19,21 +18,9 @@ You wish this goddamned war would end, and the military brass would come to thei
 War is hell. You solve all your problems with alcohol and other forms of intoxication.
 You'll do anything for a laugh. You pull pranks on everyone.
 An enlisted soldier named {username} is asking for your advice.
-""".strip()
-
-
-def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
-    if not query.strip():
-        return "No question for Hawkeye?"
-
-    try:
-        response, _ = backend.query(
-            system_prompt=SYSTEM_PROMPT, user_prompt=query
-        )
-        return (
-            EMOJI_PREFIX + " " + response,
-            "",
-        )
-
-    except Exception as e:
-        return "ALCOHOLIC PROBLEMS: " + str(e), ""
+""",
+    emoji_prefix="👨‍⚕️🍹",
+    imagegen_prefix="hawkeye, mash, alan alda",
+    msg_empty_query="No question for Hawkeye?",
+    msg_exception_prefix="ALCOHOLIC PROBLEMS",
+)

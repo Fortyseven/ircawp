@@ -3,18 +3,21 @@ Bot plugin that allows the user to pass a raw prompt to the system imagegen back
 """
 
 from backends.BaseBackend import BaseBackend
-
-TRIGGERS = ["sdxs"]
-# GROUP = "ask"
-DESCRIPTION = "Pass a raw prompt to the LLM without a system preamble."
+from plugins.AskBase import AskBase
 
 
-def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
-    if not query.strip():
-        return "No prompt?", ""
+def sdxs(prompt: str, backend: BaseBackend) -> tuple[str, str]:
+    return prompt.strip(), ""
 
-    try:
-        # return backend.query(system_prompt="", user_prompt=query.strip())
-        return ("", query.strip())
-    except Exception as e:
-        return "IMG PROBLEMS: " + str(e), ""
+
+plugin = AskBase(
+    name="SDXS Image Generator",
+    description="Pass a raw prompt to the SDXS image generator.",
+    triggers=["sdxs"],
+    system_prompt="",
+    emoji_prefix="",
+    msg_empty_query="No prompt provided",
+    msg_exception_prefix="ARTISTIC PROBLEMS",
+    main=sdxs,
+    use_imagegen=True,
+)
