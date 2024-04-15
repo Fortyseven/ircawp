@@ -20,11 +20,12 @@ class SDXS(BaseImageGen):
         self.pipe.to("cpu")
 
     def generateImage(self, prompt: str, output_file: str = DEFAULT_FILENAME):
+        seed = random.randint(0, 100000)
         image = self.pipe(
             prompt,
             num_inference_steps=1,
             guidance_scale=0,
-            generator=torch.Generator(device="cpu"),
+            generator=torch.Generator(device="cpu").manual_seed(seed),
             safety_checker=None,
             quiet=True,
         ).images[0]
