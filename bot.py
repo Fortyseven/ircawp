@@ -75,13 +75,14 @@ def add_to_queue(user_id: str, channel: str, message: str, say: Callable):
     slack_queue.put((user_id, channel, message, say))
 
 
+SIMPLIFIER_THRESHOLD = 120
 PROMPT_SIMPLIFIER_IMAGEGEN = """
-Summarize the content of this text to under 77 characters for use in an image generator prompt. Greatly simplify the concept to it's basics.
+Summarize the content of this text to under 120 characters for use in an image generator prompt. Greatly simplify the concept to it's basics.
 """
 
 
 def _simplifyPrompt(prompt: str) -> str:
-    if len(prompt) < 77 or not prompt:
+    if len(prompt) < SIMPLIFIER_THRESHOLD or not prompt:
         return prompt.strip()
 
     print("\n\n!!! Truncating imagegen prompt")
