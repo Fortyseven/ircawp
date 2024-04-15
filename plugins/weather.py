@@ -98,7 +98,7 @@ def buildImageGenPrompt(
     time_of_day = " ".join(observed.split(" ")[1:])
     time_of_day = _estimateTimeOfDay(time_of_day)
 
-    return f"professional photo of {location} featuring {temp} {kind_of_weather} weather at {time_of_day}"
+    return f"professional street-level photo of {location} featuring {temp} {kind_of_weather} weather at {time_of_day}"
 
 
 def process_weather_json(json_text: str) -> tuple[str, str]:
