@@ -102,7 +102,7 @@ def say_image(*, response, media, augment_with_imagegen, username, channel):
     with open(DEFAULT_IMG_OUTPUT, "rb") as f:
         bolt.client.files_upload_v2(
             file=f.read(),
-            channels=[channel],
+            channel=channel,
             initial_comment=user_message,
         )
 
