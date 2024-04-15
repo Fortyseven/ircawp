@@ -75,10 +75,29 @@ def add_to_queue(user_id: str, channel: str, message: str, say: Callable):
     slack_queue.put((user_id, channel, message, say))
 
 
+PROMPT_SIMPLIFIER_IMAGEGEN = """
+Summarize the content of this text to under 77 characters for use in an image generator prompt. Greatly simplify the concept to it's basics.
+"""
+
+
+def _simplifyPrompt(prompt: str) -> str:
+    ##
+    result, _ = backend_instance.query(
+        prompt,
+        system_prompt=f"/raw {PROMPT_SIMPLIFIER_IMAGEGEN}\n\n{prompt}",
+    )
+    return result.strip()
+
+
 def say_image(*, response, media, augment_with_imagegen, username, channel):
     user_message = f"@{username} {response}"
 
     if media and isinstance(media, dict):
+        if len(media["content"]) > 77:
+            print("!!! Truncating imagegen prompt")
+            media["content"] = _simplifyPrompt(media["content"])
+            print("!!! NEW PROMPT: ", media["content"])
+
         imagegen_prompt = (
             f'{media["prefix"] or ""}; {media["content"].strip() or ""}'
         )
