@@ -81,26 +81,39 @@ Summarize the content of this text to under 77 characters for use in an image ge
 
 
 def _simplifyPrompt(prompt: str) -> str:
-    ##
+    if len(prompt) < 77 or not prompt:
+        return prompt.strip()
+
+    print("\n\n!!! Truncating imagegen prompt")
+
     result, _ = backend_instance.query(
         prompt,
         system_prompt=f"/raw {PROMPT_SIMPLIFIER_IMAGEGEN}\n\n{prompt}",
     )
+
+    print(f"!!! NEW PROMPT: {result}\n\n)")
     return result.strip()
 
 
-def say_image(*, response, media, augment_with_imagegen, username, channel):
+def say_image(
+    *,
+    response,
+    media,
+    username,
+    channel,
+    augment_with_imagegen=False,
+):
     user_message = f"@{username} {response}"
 
     if media and isinstance(media, dict):
-        if len(media["content"]) > 77:
-            print("!!! Truncating imagegen prompt")
-            media["content"] = _simplifyPrompt(media["content"])
-            print("!!! NEW PROMPT: ", media["content"])
+        # if len(media["content"]) > 77:
+        #  = _simplifyPrompt(media["content"])
 
         imagegen_prompt = (
-            f'{media["prefix"] or ""}; {media["content"].strip() or ""}'
+            f'{media["prefix"] or ""}; {_simplifyPrompt(media["content"])}'
         )
+    if augment_with_imagegen:
+        imagegen_prompt = f"{_simplifyPrompt(response)}"
     else:
         imagegen_prompt = media
 
@@ -123,6 +136,7 @@ def say_image(*, response, media, augment_with_imagegen, username, channel):
             file=f.read(),
             channel=channel,
             initial_comment=user_message,
+            title=f"{imagegen_prompt}",
         )
 
 
@@ -132,7 +146,7 @@ def process_queue_entry(user_id, channel, prompt, say):
         f"Processing queue entry for {user_id} with prompt '{prompt}'"
     )
 
-    augment_with_imagegen = prompt.endswith("@@")
+    augment_with_imagegen = not prompt.endswith("@@")
     prompt = prompt.replace("@@", "")
     prompt = prompt.strip()
 
@@ -151,9 +165,16 @@ def process_queue_entry(user_id, channel, prompt, say):
         say_image(
             response=response,
             media=media,
-            augment_with_imagegen=augment_with_imagegen,
             username=username,
             channel=channel,
+        )
+    if augment_with_imagegen:
+        say_image(
+            response=response,
+            media=None,
+            username=username,
+            channel=channel,
+            augment_with_imagegen=augment_with_imagegen,
         )
     else:
         say(f"<@{user_id}>: {response}")
