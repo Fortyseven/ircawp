@@ -89,9 +89,14 @@ def buildImageGenPrompt(
     temp = temps.strip()
     temp = _estimateTemperature(temp)
 
-    # observed example: "2024-01-01 10:00 AM"; just get "10:00 AM"
-    # time_of_day = " ".join(observed.split(" ")[1:])
-    time_of_day = _estimateTimeOfDay(observed)
+    # NOTE: observed is NOT the current time, meaning it might show night
+    # time even if it's currently daytime; I can't help this without doing
+    # my own time zone lookups, etc. Nothing in wttr.in's JSON response
+    # gives me the current time at the locale. If you want this, it will be
+    # much more work. Probably. I didn't look into it.
+
+    time_of_day = " ".join(observed.split(" ")[1:])
+    time_of_day = _estimateTimeOfDay(time_of_day)
 
     return f"professional photo of {location} featuring {temp} {kind_of_weather} weather at {time_of_day}"
 
@@ -125,7 +130,7 @@ def process_weather_json(json_text: str) -> tuple[str, str]:
         wind_kph = current["windspeedKmph"]
         wind_dir = current["winddir16Point"]
 
-        observed = current["observation_time"]
+        observed = current["localObsDateTime"]
 
         if (
             not weather_data.get("nearest_area", None)
