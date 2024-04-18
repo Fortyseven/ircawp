@@ -7,9 +7,11 @@ if TYPE_CHECKING:
 
 
 class Ircawp_Frontend:
-    def __init__(self, *, console, parent: Ircawp):
+    def __init__(self, *, console, parent: Ircawp, config: dict):
         self.console = console
         self.parent = parent
+        self.config = config
+        self.console.log(f"Frontend config: {self.config}")
         pass
 
     @abc.abstractmethod
