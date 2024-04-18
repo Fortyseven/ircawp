@@ -1,7 +1,7 @@
 from datetime import datetime
 from .Ircawp_Backend import Ircawp_Backend
 from ollama import Client
-from lib.template_str import template_str
+from app.lib.template_str import template_str
 
 # TEMP
 config = {

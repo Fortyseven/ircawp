@@ -2,7 +2,7 @@ import threading
 import queue
 import time
 import importlib
-from lib.config import config
+from app.lib.config import config
 
 from rich import console
 
