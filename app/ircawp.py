@@ -2,6 +2,7 @@ import threading
 import queue
 import time
 import importlib
+from lib.config import config
 
 from rich import console
 
@@ -17,10 +18,6 @@ BANNER = r"""
 """.rstrip()
 
 # temp config
-config = {
-    "frontend": "slack",
-    "backend": "ollama",
-}
 
 import app.frontends.slack as slack
 
@@ -34,34 +31,46 @@ class Ircawp:
     queue = None
     console = None
 
-    def __init__(self):
+    def __init__(self, config):
         self.console = console.Console()
 
         self.console.log(BANNER)
+        self.config = config
 
         # get config options, set up frontend, backend, and imagegen
         # process plugins, run setup for those needing it
 
-        self.console.log(
-            f"- [yellow]Using frontend: {config['frontend']}[/yellow]"
-        )
+        frontend_id = self.config.get("frontend")
+
+        self.console.log(f"- [yellow]Using frontend: {frontend_id}[/yellow]")
+
         frontend = getattr(
-            importlib.import_module(f"app.frontends.{config['frontend']}"),
-            config["frontend"].capitalize(),
+            importlib.import_module(f"app.frontends.{frontend_id}"),
+            frontend_id.capitalize(),
         )
 
-        self.frontend = frontend(console=self.console, parent=self)
-
-        self.console.log(
-            f"- [yellow]Using backend: {config['backend']}[/yellow]"
+        self.frontend = frontend(
+            console=self.console,
+            parent=self,
+            config=self.config.get("frontends", {}).get(frontend_id, {}),
         )
+
+        #####
+
+        backend_id = self.config.get("backend")
+
+        self.console.log(f"- [yellow]Using backend: {backend_id}[/yellow]")
 
         backend = getattr(
-            importlib.import_module(f"app.backends.{config['backend']}"),
-            config["backend"].capitalize(),
+            importlib.import_module(f"app.backends.{backend_id}"),
+            backend_id.capitalize(),
         )
 
-        self.backend = backend(console=self.console, parent=self)
+        self.backend = backend(
+            console=self.console,
+            parent=self,
+            config=self.config.get("backends", {}).get(backend_id, {}),
+        )
 
     def ingest_message(self, message, username, aux=None):
         """
@@ -95,10 +104,17 @@ class Ircawp:
             time.sleep(thread_sleep)
             if not self.queue.empty():
                 message, user_id, aux = self.queue.get()
-                # self.console.log("[green]hello...[/green]", message, aux)
-                self.egest_message(
-                    f"Says, you, {user_id}! '{message}'", None, aux
-                )
+
+                if message.startswith("/"):
+                    # TODO: process plugins
+                    response, media = self.process_plugin(message, user_id)
+                else:
+                    response, media = self.backend.runInference(
+                        user_prompt=message,
+                        system_prompt=None,
+                        username=user_id,
+                    )
+                self.egest_message(response, None, aux)
 
     def start(self):
         self.console.log("Here we go...")
@@ -112,5 +128,5 @@ class Ircawp:
 
 
 def __main__():
-    ircawp = Ircawp()
+    ircawp = Ircawp(config)
     ircawp.start()
