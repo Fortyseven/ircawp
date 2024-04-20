@@ -1,7 +1,7 @@
 import json
 import requests
 
-from backends.BaseBackend import BaseBackend
+from app.backends.Ircawp_Backend import Ircawp_Backend
 
 from langchain.docstore.document import Document
 from langchain.chains.summarize import load_summarize_chain
@@ -47,7 +47,7 @@ def process_wiki_json(json_text: str) -> str:
         return "Error: could not decode JSON."
 
 
-def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
+def execute(query: str, backend: Ircawp_Backend) -> tuple[str, str]:
     if not query.strip():
         return "No query provided for wikipedia plugin.", ""
 

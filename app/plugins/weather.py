@@ -8,8 +8,8 @@ import requests
 import datetime
 from urllib.parse import quote_plus
 
-from backends.BaseBackend import BaseBackend
-from plugins.__AskBase import AskBase
+from app.backends.Ircawp_Backend import Ircawp_Backend
+from .__AskBase import AskBase
 
 
 def _estimateTimeOfDay(observed: str) -> str:
@@ -163,7 +163,7 @@ def process_weather_json(json_text: str) -> tuple[str, str]:
         return "Error: could not decode JSON.", ""
 
 
-def doWeather(query: str, backend: BaseBackend) -> tuple[str, str | dict]:
+def doWeather(query: str, backend: Ircawp_Backend) -> tuple[str, str | dict]:
     try:
         # with open("w.json", "r") as f:
         #     return process_weather_json(f.read())

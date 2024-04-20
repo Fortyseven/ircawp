@@ -1,5 +1,5 @@
 from typing import Optional
-from backends.BaseBackend import BaseBackend
+from app.backends.Ircawp_Backend import Ircawp_Backend
 
 
 class AskBase:
@@ -38,7 +38,7 @@ class AskBase:
     def execute(
         self,
         query: str,
-        backend: BaseBackend,
+        backend: Ircawp_Backend,
     ) -> tuple[str, str | dict]:
         print("= AskBase execute: ", self, query)
 

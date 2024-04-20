@@ -1,5 +1,5 @@
 from typing import Optional
-from backends.BaseBackend import BaseBackend
+from app.backends.Ircawp_Backend import Ircawp_Backend
 
 
 class AskPlugin:
@@ -29,7 +29,7 @@ class AskPlugin:
     def execute(
         self,
         query: str,
-        backend: BaseBackend,
+        backend: Ircawp_Backend,
     ) -> tuple[str, str | dict]:
         if not query.strip():
             return self.msg_empty_query, ""

@@ -9,7 +9,7 @@ DESCRIPTION = "Summarize a web page."
 
 import requests
 
-from backends.BaseBackend import BaseBackend
+from app.backends.Ircawp_Backend import Ircawp_Backend
 
 from langchain.docstore.document import Document
 from langchain.chains.summarize import load_summarize_chain
@@ -22,7 +22,7 @@ from lib.config import config
 SUMMARY_MODEL = config["models"].get("mamba-3b_80", None)
 
 
-def execute(query: str, backend: BaseBackend) -> tuple[str, str]:
+def execute(query: str, backend: Ircawp_Backend) -> tuple[str, str]:
     if not config.get("backend", "llamacpp") == "llamacpp":
         return "This plugin requires the `llamacpp` backend for now.", ""
 

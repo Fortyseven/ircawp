@@ -2,6 +2,7 @@ import threading
 import queue
 import time
 import importlib
+import app.plugins as plugins
 from app.lib.config import config
 
 from rich import console
@@ -71,6 +72,9 @@ class Ircawp:
             parent=self,
             config=self.config.get("backends", {}).get(backend_id, {}),
         )
+
+        #####
+        plugins.load(self.console)
 
     def ingest_message(self, message, username, aux=None):
         """

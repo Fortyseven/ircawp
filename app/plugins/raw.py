@@ -2,11 +2,11 @@
 Bot plugin that allows the user to ask a raw prompt of the LLM without a system preamble.
 """
 
-from backends.BaseBackend import BaseBackend
-from plugins.__AskBase import AskBase
+from app.backends.Ircawp_Backend import Ircawp_Backend
+from .__AskBase import AskBase
 
 
-def raw(prompt: str, backend: BaseBackend) -> tuple[str, str]:
+def raw(prompt: str, backend: Ircawp_Backend) -> tuple[str, str]:
     # return prompt.strip(), ""
     return backend.query(system_prompt="", user_prompt=prompt.strip()), ""
 

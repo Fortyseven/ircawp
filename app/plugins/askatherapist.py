@@ -1,4 +1,4 @@
-from plugins.__AskPlugin import AskPlugin
+from .__AskPlugin import AskPlugin
 
 
 plugin = AskPlugin(

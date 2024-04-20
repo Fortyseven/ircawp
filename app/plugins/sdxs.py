@@ -2,11 +2,11 @@
 Bot plugin that allows the user to pass a raw prompt to the system imagegen backend and post a response.
 """
 
-from backends.BaseBackend import BaseBackend
-from plugins.__AskBase import AskBase
+from app.backends.Ircawp_Backend import Ircawp_Backend
+from .__AskBase import AskBase
 
 
-def sdxs(prompt: str, backend: BaseBackend) -> tuple[str, str]:
+def sdxs(prompt: str, backend: Ircawp_Backend) -> tuple[str, str]:
     return prompt.strip(), ""
 
 
