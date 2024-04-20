@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 import os
 import sys
+
+from rich.traceback import install
+
 from imagegen.BaseImageGen import BaseImageGen
 from imagegen.SDXS import SDXS
 from lib.config import config
 from rich import print
 from backends import OllamaBackend, LlamaCppBackend
-from backends.BaseBackend import BaseBackend
-from lib.template_str import template_str
-from rich.traceback import install
+from app.backends.Ircawp_Backend import Ircawp_Backend
+from app.lib.template_str import template_str
 
 install(show_locals=False)
 
@@ -18,7 +20,7 @@ if not prompt:
     print("Huh?")
     os._exit(-1)
 
-backend_instance: BaseBackend | None = None
+backend_instance: Ircawp_Backend | None = None
 
 match config.get("backend", "llamacpp"):
     case "llamacpp":
