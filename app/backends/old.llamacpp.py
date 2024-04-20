@@ -1,11 +1,14 @@
 import random
 from datetime import datetime
 from typing import Optional
+
 from llama_cpp import Llama
-from backends.BaseBackend import BaseBackend
-from lib.config import config
-from plugins import PLUGINS
-from lib.template_str import template_str
+from llama_cpp import Llama
+
+from app.backends.Ircawp_Backend import Ircawp_Backend
+from app.lib.config import config
+from app.plugins import PLUGINS
+from app.lib.template_str import template_str
 
 # load model array from models.json
 LLM_MAX_TOKENS = 2048
