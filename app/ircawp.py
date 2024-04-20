@@ -6,6 +6,9 @@ import app.plugins as plugins
 from app.lib.config import config
 
 from rich import console
+from rich.traceback import install
+
+install(show_locals=True)
 
 BANNER = r"""
 [red] __
