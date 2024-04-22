@@ -3,12 +3,16 @@ Bot plugin that allows the user to ask a raw prompt of the LLM without a system 
 """
 
 from app.backends.Ircawp_Backend import Ircawp_Backend
+from app.types import InfResponse
 from .__PluginBase import PluginBase
 
 
-def raw(prompt: str, backend: Ircawp_Backend) -> tuple[str, str]:
+def raw(prompt: str, backend: Ircawp_Backend) -> InfResponse:
     # return prompt.strip(), ""
-    return backend.query(system_prompt="", user_prompt=prompt.strip()), ""
+    response = backend.runInference(
+        system_prompt="", user_prompt=prompt.strip()
+    )
+    return response, ()
 
 
 plugin = PluginBase(

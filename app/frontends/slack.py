@@ -61,5 +61,23 @@ class Slack(Ircawp_Frontend):
 
     def egestEvent(self, message, media, aux={}):
         user_id, channel, say, body = aux
-        say(f"<@{user_id}>: {message}")
+        if not media:
+            say(f"<@{user_id}>: {message}")
+        else:
+            self.postMedia(message, media, aux)
         pass
+
+    def postMedia(self, message, media, aux):
+        user_id, channel, say, body = aux
+        if message:
+            response_message_with_username = f"<@{user_id}> {message}"
+        else:
+            response_message_with_username = ""
+
+        with open(media, "rb") as f:
+            self.bolt.client.files_upload_v2(
+                file=f.read(),
+                channel=channel,
+                initial_comment=response_message_with_username,
+                # title=f"{imagegen_prompt}",
+            )

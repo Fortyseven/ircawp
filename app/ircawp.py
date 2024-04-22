@@ -1,3 +1,4 @@
+import os
 import threading
 import queue as q
 import time
@@ -7,7 +8,12 @@ from rich import console as rich_console
 from rich.traceback import install
 
 from app.backends.Ircawp_Backend import InfResponse, Ircawp_Backend
+from app.media_backends.__MediaBackend import MediaBackend
+from app.media_backends.sdxs import SDXS
+
 import app.plugins as plugins
+from app.plugins import PLUGINS
+
 from app.lib.config import config
 
 install(show_locals=True)
@@ -32,7 +38,7 @@ import app.frontends.slack as slack
 class Ircawp:
     frontend: Ircawp_Frontend
     backend: Ircawp_Backend
-    imagegen = None
+    imagegen: MediaBackend
     queue_thread: threading.Thread
     queue: q.Queue
     console: rich_console.Console
@@ -79,6 +85,15 @@ class Ircawp:
         )
 
         #####
+
+        self.console.log("- [yellow]Setting up image generator[/yellow]")
+
+        self.imagegen = SDXS(self.backend)
+
+        #####
+
+        self.console.log("- [yellow]Setting up plugins[/yellow]")
+
         plugins.load(self.console)
 
     def ingestMessage(self, message, username, aux=None):
@@ -103,11 +118,31 @@ class Ircawp:
             aux (list, optional): Bundle of optional data needed to route the message back to the user.
         """
         # this sends a response back to the frontend
-        self.frontend.egest_event(message, media, aux)
+        self.frontend.egestEvent(message, media, aux)
 
-    def processMessage(
-        self, message: str, user_id: str, aux: dict
+    def processMessagePlugin(
+        self, plugin: str, message: str, user_id: str
     ) -> InfResponse:
+        """
+        Process a message from the queue.
+
+        Args:
+            message (str): _description_
+            user_id (str): _description_
+
+        Returns:
+            InfResponse: _description_
+        """
+        self.console.log(f"Processing plugin: {plugin}")
+        message = message.replace(f"/{plugin} ", "").strip()
+        response, media = PLUGINS[plugin].execute(
+            query=message,
+            backend=self.backend,
+        )
+
+        return response, media
+
+    def processMessageText(self, message: str, user_id: str, aux: dict):
         """
         Process a message from the queue.
 
@@ -119,30 +154,47 @@ class Ircawp:
         Returns:
             InfResponse: _description_
         """
-        response, media = self.backend.runInference(
+        response = self.backend.runInference(
             user_prompt=message,
             system_prompt=None,
             username=user_id,
         )
 
-        return response, media
+        return response
 
     def messageQueueLoop(self):
         self.console.log("Starting message queue thread...")
 
         thread_sleep = config.get("thread_sleep", 0.250)
         while True:
+            response: str = ""
+            media: str = ""
+
             time.sleep(thread_sleep)
             if not self.queue.empty():
                 message, user_id, aux = self.queue.get()
 
                 if message.startswith("/"):
-                    # TODO: process plugins
-                    response, media = self.processPlugin(message, user_id)
+                    plugin_name = message.split(" ")[0][1:]
+                    if plugin_name in PLUGINS:
+                        response, media = self.processMessagePlugin(
+                            plugin_name, message=message, user_id=user_id
+                        )
+                    else:
+                        response = f"Plugin {plugin_name} not found."
+                        media = ""
                 else:
-                    response, media = self.processMessage(
-                        message, user_id, aux
-                    )
+                    response = self.processMessageText(message, user_id, aux)
+
+                self.console.log(f"media: {media}")
+
+                if os.path.exists(media):
+                    pass
+                else:
+                    # otherwise pass it as a prompt and save that filename
+                    media = self.imagegen.execute(media)
+
+                self.console.log(f"media2: {media}")
                 self.egestMessage(response, media, aux)
 
     def start(self):

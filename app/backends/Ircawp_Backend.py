@@ -27,7 +27,7 @@ class Ircawp_Backend:
         user_prompt: str,
         system_prompt: str | None = None,
         username: str = "",
-    ) -> InfResponse:
+    ) -> str:
         pass
 
     def templateReplace(self, user_prompt: str, username: str) -> str:

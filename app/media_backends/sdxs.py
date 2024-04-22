@@ -2,14 +2,16 @@ import torch
 import time
 import random
 
-from .BaseImageGen import BaseImageGen
+from .__MediaBackend import MediaBackend
 from diffusers import StableDiffusionPipeline, AutoencoderKL
 
 DEFAULT_FILENAME = "/tmp/ircawp.sdxs.png"
 
 
-class SDXS(BaseImageGen):
-    def __init__(self):
+class SDXS(MediaBackend):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
         self.repo = "IDKiro/sdxs-512-dreamshaper"
         self.weight_type = torch.float32
         self.pipe = StableDiffusionPipeline.from_pretrained(
@@ -19,7 +21,7 @@ class SDXS(BaseImageGen):
         )
         self.pipe.to("cpu")
 
-    def generateImage(self, prompt: str, output_file: str = DEFAULT_FILENAME):
+    def execute(self, prompt: str, output_file: str = DEFAULT_FILENAME) -> str:
         seed = random.randint(0, 100000)
         image = self.pipe(
             prompt,
@@ -31,3 +33,5 @@ class SDXS(BaseImageGen):
         ).images[0]
 
         image.save(output_file)
+
+        return output_file

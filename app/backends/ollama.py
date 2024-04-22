@@ -1,6 +1,7 @@
 from datetime import datetime
+from typing import Sequence
 from .Ircawp_Backend import Ircawp_Backend, InfResponse
-from ollama import Client
+from ollama import Client, Message
 from app.lib.template_str import template_str
 
 # TEMP
@@ -30,7 +31,7 @@ class Ollama(Ircawp_Backend):
         user_prompt: str,
         system_prompt: str | None = None,
         username: str = "",
-    ) -> InfResponse:
+    ) -> str:
         response = ""
 
         try:
@@ -51,6 +52,8 @@ class Ollama(Ircawp_Backend):
             user_prompt = user_prompt.strip()
 
             tick = datetime.now()
+
+            messages: Sequence[Message] = []
 
             if system_prompt:
                 messages = [
@@ -96,4 +99,4 @@ class Ollama(Ircawp_Backend):
         except RuntimeError as e:
             response = f"**IT HERTZ, IT HERTZ:** '{str(e)}'"
 
-        return response.replace("\n", "\n\n"), ()
+        return response.replace("\n", "\n\n")

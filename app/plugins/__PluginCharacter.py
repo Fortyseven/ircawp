@@ -31,10 +31,11 @@ class PluginCharacter:
         query: str,
         backend: Ircawp_Backend,
     ) -> tuple[str, str | dict]:
+        print("STEALTH: PluginCharacter execute: ", query)
         if not query.strip():
             return self.msg_empty_query, ""
         try:
-            response, _ = backend.query(
+            response, _ = backend.runInference(
                 user_prompt=query, system_prompt=self.system_prompt.strip()
             )
 
