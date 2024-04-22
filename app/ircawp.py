@@ -2,6 +2,7 @@ import threading
 import queue
 import time
 import importlib
+from app.backends.Ircawp_Backend import InfResponse, Ircawp_Backend
 import app.plugins as plugins
 from app.lib.config import config
 
@@ -28,7 +29,7 @@ import app.frontends.slack as slack
 
 class Ircawp:
     frontend = None
-    backend = None
+    backend: Ircawp_Backend = None
     imagegen = None
 
     queue_thread = None
@@ -79,7 +80,7 @@ class Ircawp:
         #####
         plugins.load(self.console)
 
-    def ingest_message(self, message, username, aux=None):
+    def ingestMessage(self, message, username, aux=None):
         """
         Receives a message from the frontend and puts it into the
         queue.
@@ -91,7 +92,7 @@ class Ircawp:
         """
         self.queue.put((message, username, aux))
 
-    def egest_message(self, message, media, aux):
+    def egestMessage(self, message: str, media: list, aux: dict):
         """
         Returns a response to the frontend.
 
@@ -114,20 +115,20 @@ class Ircawp:
 
                 if message.startswith("/"):
                     # TODO: process plugins
-                    response, media = self.process_plugin(message, user_id)
+                    response, media = self.processPlugin(message, user_id)
                 else:
                     response, media = self.backend.runInference(
                         user_prompt=message,
                         system_prompt=None,
                         username=user_id,
                     )
-                self.egest_message(response, None, aux)
+                self.egestMessage(response, media, aux)
 
     def start(self):
         self.console.log("Here we go...")
         self.queue = queue.Queue()
         self.queue_thread = threading.Thread(
-            target=self.process_queue, daemon=True
+            target=self.messageQueueLoop, daemon=True
         )
 
         self.queue_thread.start()

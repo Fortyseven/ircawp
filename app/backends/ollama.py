@@ -1,5 +1,5 @@
 from datetime import datetime
-from .Ircawp_Backend import Ircawp_Backend
+from .Ircawp_Backend import Ircawp_Backend, InfResponse
 from ollama import Client
 from app.lib.template_str import template_str
 
@@ -30,7 +30,7 @@ class Ollama(Ircawp_Backend):
         user_prompt: str,
         system_prompt: str = None,
         username: str = None,
-    ) -> str:
+    ) -> InfResponse:
         response = ""
 
         try:
@@ -96,4 +96,4 @@ class Ollama(Ircawp_Backend):
         except RuntimeError as e:
             response = f"**IT HERTZ, IT HERTZ:** '{str(e)}'"
 
-        return response.replace("\n", "\n\n"), ""
+        return response.replace("\n", "\n\n"), ()

@@ -5,6 +5,9 @@ import abc
 if TYPE_CHECKING:
     from ircawp import Ircawp
 
+MediaResponse = tuple[str, set[str]]
+InfResponse = tuple[str, MediaResponse]
+
 
 class Ircawp_Backend:
     def __init__(self, *, console, parent: Ircawp, config: dict):
@@ -25,5 +28,5 @@ class Ircawp_Backend:
     @abc.abstractmethod
     def runInference(
         self, *, user_prompt: str, system_prompt: str, username: str = None
-    ):
+    ) -> InfResponse:
         pass

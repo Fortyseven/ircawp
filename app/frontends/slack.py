@@ -52,7 +52,7 @@ class Slack(Ircawp_Frontend):
             "profile"
         ]["display_name"]
 
-        self.parent.ingest_message(
+        self.parent.ingestMessage(
             prompt, username, (user_id, channel, say, body)
         )
 
