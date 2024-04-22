@@ -188,7 +188,7 @@ class Ircawp:
 
                 self.console.log(f"media: {media}")
 
-                if os.path.exists(media):
+                if os.path.exists(media) or not media:
                     pass
                 else:
                     # otherwise pass it as a prompt and save that filename
