@@ -56,7 +56,7 @@ class Slack(Ircawp_Frontend):
         ]["display_name"]
 
         self.parent.ingestMessage(
-            prompt, username, (user_id, channel, say, body)
+            prompt.strip(), username, (user_id, channel, say, body)
         )
 
     def egestEvent(self, message, media, aux={}):
