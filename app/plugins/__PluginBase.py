@@ -45,7 +45,7 @@ class PluginBase:
         query: str,
         backend: Ircawp_Backend,
     ) -> tuple[str, str | dict]:
-        print("= PluginBase execute: ", self, query)
+        # print("= PluginBase execute: ", self, query)
 
         if not query.strip() and self.prompt_required:
             return self.msg_empty_query, ""
@@ -64,8 +64,8 @@ class PluginBase:
                     }
                 )
 
-            print("###### PluginBase response: ", response)
-            print("###### PluginBase media: ", media_return)
+            # print("###### PluginBase response: ", response)
+            # print("###### PluginBase media: ", media_return)
             return response, media_return
         except Exception as e:
             return f"{self.msg_exception_prefix}: " + str(e), ""
