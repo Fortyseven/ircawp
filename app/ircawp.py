@@ -104,8 +104,30 @@ class Ircawp:
         # this sends a response back to the frontend
         self.frontend.egest_event(message, media, aux)
 
-    def process_queue(self):
-        self.console.log("Starting queue processing thread...")
+    def processMessage(
+        self, message: str, user_id: str, aux: dict
+    ) -> InfResponse:
+        """
+        Process a message from the queue.
+
+        Args:
+            message (str): _description_
+            user_id (str): _description_
+            aux (Any): _description_
+
+        Returns:
+            InfResponse: _description_
+        """
+        response, media = self.backend.runInference(
+            user_prompt=message,
+            system_prompt=None,
+            username=user_id,
+        )
+
+        return response, media
+
+    def messageQueueLoop(self):
+        self.console.log("Starting message queue thread...")
 
         thread_sleep = config.get("thread_sleep", 0.250)
         while True:
@@ -117,10 +139,8 @@ class Ircawp:
                     # TODO: process plugins
                     response, media = self.processPlugin(message, user_id)
                 else:
-                    response, media = self.backend.runInference(
-                        user_prompt=message,
-                        system_prompt=None,
-                        username=user_id,
+                    response, media = self.processMessage(
+                        message, user_id, aux
                     )
                 self.egestMessage(response, media, aux)
 
