@@ -61,6 +61,10 @@ class Slack(Ircawp_Frontend):
 
     def egestEvent(self, message, media, aux={}):
         user_id, channel, say, body = aux
+
+        # HACK:
+        media = media[0]
+
         if not media:
             say(f"<@{user_id}>: {message}")
         else:
@@ -73,9 +77,6 @@ class Slack(Ircawp_Frontend):
             response_message_with_username = f"<@{user_id}> {message}"
         else:
             response_message_with_username = ""
-
-        # HACK:
-        media = media[0]
 
         with open(media, "rb") as f:
             self.bolt.client.files_upload_v2(
