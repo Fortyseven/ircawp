@@ -13,7 +13,7 @@ CORE_PLUGINS = [
     "askspock",
     "help",
     "raw",
-    "sdxs",
+    "img",
     "uptime",
     "weather",
 ]

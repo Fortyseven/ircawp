@@ -7,7 +7,7 @@ from .__PluginBase import PluginBase
 
 
 def sdxs(prompt: str, backend: Ircawp_Backend) -> tuple[str, str]:
-    return prompt.strip(), ""
+    return "", prompt.strip()
 
 
 plugin = PluginBase(
