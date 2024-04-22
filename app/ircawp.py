@@ -174,6 +174,8 @@ class Ircawp:
             if not self.queue.empty():
                 message, user_id, aux = self.queue.get()
 
+                message = message.strip()
+
                 if message.startswith("/"):
                     plugin_name = message.split(" ")[0][1:]
                     if plugin_name in PLUGINS:
