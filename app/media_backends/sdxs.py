@@ -3,7 +3,7 @@ import time
 import random
 
 from .__MediaBackend import MediaBackend
-from diffusers import StableDiffusionPipeline, AutoencoderKL
+from diffusers import StableDiffusionPipeline, AutoencoderKL  # type: ignore
 
 DEFAULT_FILENAME = "/tmp/ircawp.sdxs.png"
 
@@ -26,10 +26,9 @@ class SDXS(MediaBackend):
         image = self.pipe(
             prompt,
             num_inference_steps=1,
-            guidance_scale=0,
+            guidance_scale=0.5,
             generator=torch.Generator(device="cpu").manual_seed(seed),
             safety_checker=None,
-            quiet=True,
         ).images[0]
 
         image.save(output_file)

@@ -6,4 +6,4 @@ class MediaBackend:
         self.backend = backend
 
     def execute(self, query: str) -> str:
-        pass
+        return ""
