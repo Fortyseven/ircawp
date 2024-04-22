@@ -74,6 +74,9 @@ class Slack(Ircawp_Frontend):
         else:
             response_message_with_username = ""
 
+        # HACK:
+        media = media[0]
+
         with open(media, "rb") as f:
             self.bolt.client.files_upload_v2(
                 file=f.read(),
