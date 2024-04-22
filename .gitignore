@@ -2,3 +2,4 @@ venv
 .env*
 config.json
 models
+app/plugins/vendor/xtts_api_server/xtts_models/*

@@ -186,16 +186,13 @@ class Ircawp:
                 else:
                     response = self.processMessageText(message, user_id, aux)
 
-                self.console.log(f"media: {media}")
-
                 if os.path.exists(media) or not media:
                     pass
                 else:
                     # otherwise pass it as a prompt and save that filename
                     media = self.imagegen.execute(media)
 
-                self.console.log(f"media2: {media}")
-                self.egestMessage(response, media, aux)
+                self.egestMessage(response, [media], aux)
 
     def start(self):
         self.console.log("Here we go...")

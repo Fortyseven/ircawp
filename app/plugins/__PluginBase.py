@@ -16,6 +16,8 @@ class PluginBase:
         msg_exception_prefix: Optional[str] = "GENERIC PROBLEMS",
         prompt_required: bool = True,
         use_imagegen: bool = False,
+        backend: Ircawp_Backend | None = None,
+        init=None,
         main=None,
     ):
         self.system_prompt = system_prompt
@@ -29,8 +31,11 @@ class PluginBase:
         self.group = group
         self.use_imagegen = use_imagegen
         self.prompt_required = prompt_required
+        self.backend: Ircawp_Backend = backend
         self.setMain(main)
-        pass
+
+        if init:
+            init(self.backend)
 
     def setMain(self, main):
         self.main = main

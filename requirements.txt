@@ -31,3 +31,5 @@ beautifulsoup4
 ollama
 diffusers
 accelerate
+
+tts==0.21.3

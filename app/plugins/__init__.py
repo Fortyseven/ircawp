@@ -12,8 +12,9 @@ CORE_PLUGINS = [
     "askjesus",
     "askspock",
     "help",
-    "raw",
     "img",
+    "raw",
+    "saysforty",
     "uptime",
     "weather",
 ]
