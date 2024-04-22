@@ -21,3 +21,11 @@ class Ircawp_Frontend:
     @abc.abstractmethod
     def start():
         pass
+
+    @abc.abstractmethod
+    def ingestEvent(self, event, message, client, say, body):
+        pass
+
+    @abc.abstractmethod
+    def egestEvent(self, message, media, aux=None):
+        pass

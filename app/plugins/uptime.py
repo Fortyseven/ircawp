@@ -4,7 +4,7 @@ Get the bot's uptime and stats.
 
 import datetime
 from app.backends.Ircawp_Backend import Ircawp_Backend
-from .__AskBase import AskBase
+from .__PluginBase import PluginBase
 
 
 START_TIME = datetime.datetime.now()
@@ -31,7 +31,7 @@ def uptime(prompt: str, backend: Ircawp_Backend) -> tuple[str, str]:
     )
 
 
-plugin = AskBase(
+plugin = PluginBase(
     name="Uptime",
     description="Get the bot's uptime and stats.",
     triggers=["uptime", "stats"],

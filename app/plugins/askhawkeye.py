@@ -2,9 +2,9 @@
 Bot plugin that allows the user to ask Hawkeye a question or ask for advice.
 """
 
-from .__AskPlugin import AskPlugin
+from .__PluginCharacter import PluginCharacter
 
-plugin = AskPlugin(
+plugin = PluginCharacter(
     name="Ask Hawkeye",
     description="Ask TV's Hawkeye for a question, or ask his advice.",
     triggers=["askhawkeye"],

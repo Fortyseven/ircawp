@@ -2,10 +2,10 @@
 Bot plugin that allows the user to ask AI Jesus a question or ask for advice.
 """
 
-from .__AskPlugin import AskPlugin
+from .__PluginCharacter import PluginCharacter
 
 
-plugin = AskPlugin(
+plugin = PluginCharacter(
     name="Ask Jesus",
     description="Ask Jesus a question, or ask for advice.",
     triggers=["askjesus"],

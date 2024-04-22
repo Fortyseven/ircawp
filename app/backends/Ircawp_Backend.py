@@ -2,11 +2,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import abc
 
+from app.types import InfResponse
+
 if TYPE_CHECKING:
     from ircawp import Ircawp
-
-MediaResponse = tuple[str, set[str]]
-InfResponse = tuple[str, MediaResponse]
 
 
 class Ircawp_Backend:
@@ -21,12 +20,16 @@ class Ircawp_Backend:
     def start():
         pass
 
+    @abc.abstractmethod
+    def runInference(
+        self,
+        *,
+        user_prompt: str,
+        system_prompt: str | None = None,
+        username: str = "",
+    ) -> InfResponse:
+        pass
+
     def templateReplace(self, user_prompt: str, username: str) -> str:
         user_prompt = user_prompt.replace("{username}", username)
         return user_prompt
-
-    @abc.abstractmethod
-    def runInference(
-        self, *, user_prompt: str, system_prompt: str, username: str = None
-    ) -> InfResponse:
-        pass

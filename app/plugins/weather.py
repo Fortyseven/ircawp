@@ -9,7 +9,7 @@ import datetime
 from urllib.parse import quote_plus
 
 from app.backends.Ircawp_Backend import Ircawp_Backend
-from .__AskBase import AskBase
+from .__PluginBase import PluginBase
 
 
 def _estimateTimeOfDay(observed: str) -> str:
@@ -187,7 +187,7 @@ def doWeather(query: str, backend: Ircawp_Backend) -> tuple[str, str | dict]:
         return "WTTR PROBLEMS: " + str(e), ""
 
 
-plugin = AskBase(
+plugin = PluginBase(
     name="Weather Plugin",
     description="Get the weather for a location from wttr.in",
     triggers=["weather"],

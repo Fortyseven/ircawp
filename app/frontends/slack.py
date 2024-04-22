@@ -29,7 +29,7 @@ class Slack(Ircawp_Frontend):
 
         # self.bolt.action("app_mention")(self.ingest_event)
         # self.bolt.action("event_callback")(self.ingest_event)
-        self.bolt.event("app_mention")(self.ingest_event)
+        self.bolt.event("app_mention")(self.ingestEvent)
 
         self.console.log("Slack frontend starting.")
 
@@ -38,13 +38,16 @@ class Slack(Ircawp_Frontend):
         ).start()
 
     # @bolt.event("app_mention")
-    def ingest_event(self, event, message, client, say, body):
+    def ingestEvent(self, event, message, client, say, body):
         user_id = event["user"]
         channel = event["channel"]
 
         regex = r"(<.*> )(.*)"
 
-        prompt = re.match(regex, event["text"], re.MULTILINE)[2]
+        prompt: re.Match | None = re.match(regex, event["text"], re.MULTILINE)
+
+        if prompt:
+            prompt = prompt[2]
 
         self.console.log(f"[red]Received message: {prompt}[/red]")
 
@@ -56,7 +59,7 @@ class Slack(Ircawp_Frontend):
             prompt, username, (user_id, channel, say, body)
         )
 
-    def egest_event(self, message, media, aux=None):
+    def egestEvent(self, message, media, aux={}):
         user_id, channel, say, body = aux
         say(f"<@{user_id}>: {message}")
         pass

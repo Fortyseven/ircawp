@@ -1,6 +1,6 @@
-from .__AskPlugin import AskPlugin
+from .__PluginCharacter import PluginCharacter
 
-plugin = AskPlugin(
+plugin = PluginCharacter(
     name="Ask Spock",
     description="Ask Mr. Spock a question, or ask for his advice.",
     triggers=["askspock"],

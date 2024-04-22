@@ -3,14 +3,14 @@ Bot plugin that allows the user to pass a raw prompt to the system imagegen back
 """
 
 from app.backends.Ircawp_Backend import Ircawp_Backend
-from .__AskBase import AskBase
+from .__PluginBase import PluginBase
 
 
 def sdxs(prompt: str, backend: Ircawp_Backend) -> tuple[str, str]:
     return prompt.strip(), ""
 
 
-plugin = AskBase(
+plugin = PluginBase(
     name="SDXS Image Generator",
     description="Pass a raw prompt to the SDXS image generator.",
     triggers=["sdxs"],

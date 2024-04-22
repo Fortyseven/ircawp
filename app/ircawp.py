@@ -1,13 +1,14 @@
 import threading
-import queue
+import queue as q
 import time
 import importlib
+
+from rich import console as rich_console
+from rich.traceback import install
+
 from app.backends.Ircawp_Backend import InfResponse, Ircawp_Backend
 import app.plugins as plugins
 from app.lib.config import config
-
-from rich import console
-from rich.traceback import install
 
 install(show_locals=True)
 
@@ -24,20 +25,20 @@ BANNER = r"""
 
 # temp config
 
+from app.frontends.Ircawp_Frontend import Ircawp_Frontend
 import app.frontends.slack as slack
 
 
 class Ircawp:
-    frontend = None
-    backend: Ircawp_Backend = None
+    frontend: Ircawp_Frontend
+    backend: Ircawp_Backend
     imagegen = None
-
-    queue_thread = None
-    queue = None
-    console = None
+    queue_thread: threading.Thread
+    queue: q.Queue
+    console: rich_console.Console
 
     def __init__(self, config):
-        self.console = console.Console()
+        self.console = rich_console.Console()
 
         self.console.log(BANNER)
         self.config = config
@@ -146,7 +147,7 @@ class Ircawp:
 
     def start(self):
         self.console.log("Here we go...")
-        self.queue = queue.Queue()
+        self.queue = q.Queue()
         self.queue_thread = threading.Thread(
             target=self.messageQueueLoop, daemon=True
         )

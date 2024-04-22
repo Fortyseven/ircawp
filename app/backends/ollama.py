@@ -28,8 +28,8 @@ class Ollama(Ircawp_Backend):
         self,
         *,
         user_prompt: str,
-        system_prompt: str = None,
-        username: str = None,
+        system_prompt: str | None = None,
+        username: str = "",
     ) -> InfResponse:
         response = ""
 

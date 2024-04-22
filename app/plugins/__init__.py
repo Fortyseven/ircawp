@@ -1,5 +1,6 @@
 import os
 import importlib
+from typing import Any
 
 """
 iterate through the plugins directory for modules and import them
@@ -17,10 +18,10 @@ CORE_PLUGINS = [
     "weather",
 ]
 
-PLUGINS = {}
+PLUGINS: dict[str, Any] = {}
 
 
-def validate_plugin(plug, mod_name, console):
+def validatePlugin(plug, mod_name, console):
     invalid = False
     if not hasattr(plug, "plugin"):
         console.log(
@@ -47,7 +48,7 @@ def load(console):
             "app.plugins",
         )
 
-        validate_plugin(PLUGINS[plugin], plugin, console)
+        validatePlugin(PLUGINS[plugin], plugin, console)
 
     # load user plugins
     # for file in os.listdir("plugins"):

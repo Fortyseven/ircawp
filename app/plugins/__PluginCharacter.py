@@ -2,7 +2,7 @@ from typing import Optional
 from app.backends.Ircawp_Backend import Ircawp_Backend
 
 
-class AskBase:
+class PluginCharacter:
     def __init__(
         self,
         name: str = "Unnamed Ask Plugin",
@@ -14,9 +14,6 @@ class AskBase:
         imagegen_prefix: str | None = None,
         msg_empty_query: str = "No question provided",
         msg_exception_prefix: Optional[str] = "GENERIC PROBLEMS",
-        prompt_required: bool = True,
-        use_imagegen: bool = False,
-        main=None,
     ):
         self.system_prompt = system_prompt
         self.emoji_prefix = emoji_prefix
@@ -27,40 +24,23 @@ class AskBase:
         self.description = description
         self.triggers = triggers
         self.group = group
-        self.use_imagegen = use_imagegen
-        self.prompt_required = prompt_required
-        self.setMain(main)
         pass
-
-    def setMain(self, main):
-        self.main = main
 
     def execute(
         self,
         query: str,
         backend: Ircawp_Backend,
     ) -> tuple[str, str | dict]:
-        print("= AskBase execute: ", self, query)
-
-        if not query.strip() and self.prompt_required:
+        if not query.strip():
             return self.msg_empty_query, ""
         try:
-            response, media = self.main(query, backend)
+            response, _ = backend.query(
+                user_prompt=query, system_prompt=self.system_prompt.strip()
+            )
 
-            if media and isinstance(media, str):
-                media_return = media
-            else:
-                media_return = (
-                    ""
-                    if (not self.use_imagegen and not media)
-                    else {
-                        "prefix": self.imagegen_prefix,
-                        "content": response,
-                    }
-                )
-
-            print("###### AskBase response: ", response)
-            print("###### AskBase media: ", media_return)
-            return response, media_return
+            return (
+                (self.emoji_prefix + " " + response),
+                {"prefix": self.imagegen_prefix, "content": response},
+            )
         except Exception as e:
             return f"{self.msg_exception_prefix}: " + str(e), ""

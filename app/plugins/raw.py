@@ -3,7 +3,7 @@ Bot plugin that allows the user to ask a raw prompt of the LLM without a system 
 """
 
 from app.backends.Ircawp_Backend import Ircawp_Backend
-from .__AskBase import AskBase
+from .__PluginBase import PluginBase
 
 
 def raw(prompt: str, backend: Ircawp_Backend) -> tuple[str, str]:
@@ -11,7 +11,7 @@ def raw(prompt: str, backend: Ircawp_Backend) -> tuple[str, str]:
     return backend.query(system_prompt="", user_prompt=prompt.strip()), ""
 
 
-plugin = AskBase(
+plugin = PluginBase(
     name="Raw LLM query",
     description="Pass a raw prompt to the LLM without a system preamble.",
     triggers=["raw"],

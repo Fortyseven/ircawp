@@ -3,7 +3,7 @@ Help command, returns a list of registered slash commands.
 """
 
 from app.backends.Ircawp_Backend import Ircawp_Backend
-from .__AskBase import AskBase
+from .__PluginBase import PluginBase
 
 
 def get_triggers(trigger: list) -> str:
@@ -38,7 +38,7 @@ def help(query: str, backend: Ircawp_Backend) -> tuple[str, str]:
     return "AVAILABLE SLASH COMMANDS :\n\n" + output, ""
 
 
-plugin = AskBase(
+plugin = PluginBase(
     name="Help screen",
     description="Returns a list of registered /slash commands.",
     triggers=["help", "?"],
