@@ -9,7 +9,7 @@ from rich.traceback import install
 
 from app.backends.Ircawp_Backend import InfResponse, Ircawp_Backend
 from app.media_backends.__MediaBackend import MediaBackend
-from app.media_backends.sdxs import SDXS
+from app.media_backends.hyper_sdxl import HyperSDXL as MediaBackendImpl
 
 import app.plugins as plugins
 from app.plugins import PLUGINS
@@ -88,7 +88,7 @@ class Ircawp:
 
         self.console.log("- [yellow]Setting up image generator[/yellow]")
 
-        self.imagegen = SDXS(self.backend)
+        self.imagegen = MediaBackendImpl(self.backend)
 
         #####
 
