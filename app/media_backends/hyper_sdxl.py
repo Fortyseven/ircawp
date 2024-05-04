@@ -45,6 +45,8 @@ class HyperSDXL(MediaBackend):
             generator=torch.Generator(device="cpu").manual_seed(seed),
         ).images[0]
 
+        print(f"HyperSDXL saving")
+
         image.save(output_file)
 
         print(f"HyperSDXL done")
