@@ -19,14 +19,14 @@ class HyperSDXL(MediaBackend):
         # Load model.
         unet = UNet2DConditionModel.from_config(
             BASE_MODEL_ID, subfolder="unet"
-        ).to("cuda", torch.float16)
+        ).to("cpu", torch.float32)
 
         # unet.load_state_dict(load_file(hf_hub_download(repo_name, ckpt_name), device="cuda"))
-        unet.load_state_dict(load_file(CKPT_LOCAL_PATH, device="cuda"))
+        unet.load_state_dict(load_file(CKPT_LOCAL_PATH, device="cpu"))
 
         self.pipe = DiffusionPipeline.from_pretrained(
-            BASE_MODEL_ID, unet=unet, torch_dtype=torch.float16, variant="fp16"
-        ).to("cuda")
+            BASE_MODEL_ID, unet=unet, torch_dtype=torch.float32, variant="fp16"
+        ).to("cpu")
 
         # Use LCM scheduler instead of ddim scheduler to support specific timestep number inputs
         self.pipe.scheduler = LCMScheduler.from_config(
