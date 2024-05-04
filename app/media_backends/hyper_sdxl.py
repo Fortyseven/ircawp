@@ -47,4 +47,6 @@ class HyperSDXL(MediaBackend):
 
         image.save(output_file)
 
+        print(f"HyperSDXL done")
+
         return output_file
