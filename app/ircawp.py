@@ -8,6 +8,7 @@ from rich import console as rich_console
 from rich.traceback import install
 
 from app.backends.Ircawp_Backend import InfResponse, Ircawp_Backend
+
 from app.media_backends.__MediaBackend import MediaBackend
 from app.media_backends.hyper_sdxl import HyperSDXL as MediaBackendImpl
 
@@ -19,11 +20,11 @@ from app.lib.config import config
 install(show_locals=True)
 
 BANNER = r"""
-[red] __
-[orange]|__|_______   ____  _____  __  _  ________
-[yellow]|  |\_  __ \_/ ___\ \__  \ \ \/ \/ /\____ \
-[green]|  | |  | \/\  \___  / __ \_\     / |  |_) )
-[blue]|__| |__|    \___  )(____  / \/\_/  |   __/
+[red] __[/red]
+[red]|__|_______   ____  _____  __  _  ________[/red]
+[bright_yellow]|  |\_  __ \_/ ___\ \__  \ \ \/ \/ /\____ \\[/bright_yellow]
+[green]|  | |  | \/\  \___  / __ \_\     / |  |_) )[/green]
+[blue]|__| |__|    \___  )(____  / \/\_/  |   __/[/blue]
 [purple]                 \/      \/         |__|[/purple]
 
 -=-=-=-=-=-=-=-=-= BOOTING =-=-=-=-=-=-=-=-
@@ -86,9 +87,12 @@ class Ircawp:
 
         #####
 
-        self.console.log("- [yellow]Setting up image generator[/yellow]")
+        if config["use_imagegen"]:
+            self.console.log("- [yellow]Setting up image generator[/yellow]")
 
-        self.imagegen = MediaBackendImpl(self.backend)
+            self.imagegen = MediaBackendImpl(self.backend)
+        else:
+            self.console.log("- [red]Image generator disabled[/red]")
 
         #####
 
@@ -155,7 +159,7 @@ class Ircawp:
             InfResponse: _description_
         """
         response = self.backend.runInference(
-            user_prompt=message,
+            prompt=message,
             system_prompt=None,
             username=user_id,
         )
@@ -188,7 +192,11 @@ class Ircawp:
                 else:
                     response = self.processMessageText(message, user_id, aux)
 
-                if os.path.exists(media) or not media:
+                if (
+                    config["use_imagegen"]
+                    and os.path.exists(media)
+                    or not media
+                ):
                     pass
                 else:
                     # otherwise pass it as a prompt and save that filename

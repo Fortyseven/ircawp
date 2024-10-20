@@ -2,33 +2,29 @@ from datetime import datetime
 from typing import Sequence
 from .Ircawp_Backend import Ircawp_Backend, InfResponse
 from ollama import Client, Message
-from app.lib.template_str import template_str
-
-# TEMP
-config = {
-    "ollama": {
-        "model": "spooknik/westlake-7b-v2-laser:q8",
-        "api_endpoint": "http://127.0.0.1:11434",
-    }
-}
+from app.lib.config import config
 
 
 class Ollama(Ircawp_Backend):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # self.model = DEFAULT_MODEL
-        self.model = config["ollama"][
-            "model"
-        ]  # or "spooknik/westlake-7b-v2-laser:q8"
-        self.api_endpoint = config["ollama"]["api_endpoint"]
-        self.client = Client(host=self.api_endpoint)
+
+        if not config["llm"]["model"]:
+            raise ValueError("No model specified in config")
+
+        if not config["llm"]["api_endpoint"]:
+            raise ValueError("No API endpoint specified in config")
+
+        self.config = config
+        self.model = config["llm"]["model"]
+        self.api_endpoint = config["llm"]["api_endpoint"]
+        self.ollama = Client(host=self.api_endpoint)
 
         self.console.log(f"Using model: {self.model}")
 
     def runInference(
         self,
-        *,
-        user_prompt: str,
+        prompt: str,
         system_prompt: str | None = None,
         username: str = "",
     ) -> str:
@@ -36,20 +32,14 @@ class Ollama(Ircawp_Backend):
 
         try:
             if system_prompt == None:
-                system_prompt = self.config.get("system_prompt", "")
+                system_prompt = self.config["llm"].get("system_prompt", None)
 
             if system_prompt:
                 system_prompt = self.templateReplace(
                     system_prompt, username=username
                 )
 
-            # SYSTEM_PROMPT = (
-            #     self.templateReplace(system_prompt, username=username)
-            #     if system_prompt
-            #     else ""
-            # )
-
-            user_prompt = user_prompt.strip()
+            prompt = prompt.strip()
 
             tick = datetime.now()
 
@@ -63,22 +53,22 @@ class Ollama(Ircawp_Backend):
                     },
                     {
                         "role": "user",
-                        "content": user_prompt,
+                        "content": prompt,
                     },
                 ]
             else:
                 messages = [
                     {
                         # NOTE: pulling system from user_prompt is intentional
-                        "role": "system",
-                        "content": user_prompt,
+                        "role": "user",
+                        "content": prompt,
                     },
                 ]
 
-            response = self.client.chat(
+            response = self.ollama.chat(
                 model=self.model,
                 messages=messages,
-                options=self.config.get("options"),
+                options=self.config.get("options", {}),
                 keep_alive=0,
             )
 

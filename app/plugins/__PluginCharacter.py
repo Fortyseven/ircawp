@@ -36,7 +36,7 @@ class PluginCharacter:
             return self.msg_empty_query, ""
         try:
             response, _ = backend.runInference(
-                user_prompt=query, system_prompt=self.system_prompt.strip()
+                prompt=query, system_prompt=self.system_prompt.strip()
             )
 
             return (

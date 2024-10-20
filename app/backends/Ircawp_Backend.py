@@ -23,13 +23,12 @@ class Ircawp_Backend:
     @abc.abstractmethod
     def runInference(
         self,
-        *,
-        user_prompt: str,
+        prompt: str,
         system_prompt: str | None = None,
         username: str = "",
     ) -> str:
         pass
 
-    def templateReplace(self, user_prompt: str, username: str) -> str:
-        user_prompt = user_prompt.replace("{username}", username)
-        return user_prompt
+    def templateReplace(self, prompt: str, username: str) -> str:
+        prompt = prompt.replace("{username}", username)
+        return prompt
