@@ -11,7 +11,6 @@ from rich.console import Console
 from app.lib.config import config
 from app.backends.ollama import Ollama
 from app.backends.Ircawp_Backend import Ircawp_Backend
-from app.lib.template_str import template_str
 
 console = Console()
 
@@ -20,33 +19,28 @@ install(show_locals=False)
 prompt = " ".join(sys.argv[1:])
 
 if not prompt:
-    print("Huh?")
+    print("Need a prompt.")
     os._exit(-1)
 
 backend_instance: Ircawp_Backend | None = None
 
-match config.get("backend", "llamacpp"):
-    # case "llamacpp":
-    #     backend_instance = LlamaCppBackend()
+match config.get("backend", "ollama"):
     case "ollama":
         backend_instance = Ollama(console=console, config=config, parent=None)
-
+    case _:
+        raise ValueError(f"Invalid backend: {config['backend']}")
 
 print("\n----------------------------\n")
-# print(f"- USER: [red]{prompt}[/]")
 
-# if not prompt.startswith("/"):
-#     pr = template_str(
-#         config["system_prompt"], username="User", query=prompt.strip()
-#     )
-#     print(f"- PROMPT: [green]{pr}[/]")
+response = backend_instance.runInference(
+    system_prompt=config["llm"]["system_prompt"], prompt=prompt.strip()
+)
 
-response, media = backend_instance.runInference(user_prompt=prompt.strip())
 print(f"- ASSISTANT: [blue]{response}[/]")
 
-if media:
-    print(f"- MEDIA: [green]{media}[/]")
-    # dont load all this unless we _really_ need it
-    # imagegen_instance: BaseImageGen = SDXS()
-    # imagegen_instance.generateImage(media, "/tmp/temp.png")
-    # os.system(f"catimg /tmp/temp.png")
+# if media:
+# print(f"- MEDIA: [green]{media}[/]")
+# dont load all this unless we _really_ need it
+# imagegen_instance: BaseImageGen = SDXS()
+# imagegen_instance.generateImage(media, "/tmp/temp.png")
+# os.system(f"catimg /tmp/temp.png")
