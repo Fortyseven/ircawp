@@ -14,6 +14,7 @@ CORE_PLUGINS = [
     "help",
     "img",
     "raw",
+    "hn",
     # "saysforty",
     "uptime",
     "weather",
