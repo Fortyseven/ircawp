@@ -82,7 +82,7 @@ class Ircawp:
         self.backend = backend(
             console=self.console,
             parent=self,
-            config=self.config.get("backends", {}).get(backend_id, {}),
+            config=self.config,
         )
 
         #####
@@ -128,7 +128,8 @@ class Ircawp:
         self, plugin: str, message: str, user_id: str
     ) -> InfResponse:
         """
-        Process a message from the queue.
+        Process a message from the queue, directed towards a plugin
+        instead of the standard inference backend.
 
         Args:
             message (str): _description_

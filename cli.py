@@ -10,6 +10,7 @@ from rich.console import Console
 # from imagegen.SDXS import SDXS
 from app.lib.config import config
 from app.backends.ollama import Ollama
+from app.backends.openai import Openai
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.plugins import PLUGINS
 
@@ -52,7 +53,17 @@ backend_instance: Ircawp_Backend | None = None
 
 match config.get("backend", "ollama"):
     case "ollama":
-        backend_instance = Ollama(console=console, config=config, parent=None)
+        backend_instance = Ollama(
+            console=console,
+            config=config,
+            parent=None
+        )
+    case "openai":
+        backend_instance = Openai(
+            console=console,
+            config=config,
+            parent=None
+        )
     case _:
         raise ValueError(f"Invalid backend: {config['backend']}")
 
