@@ -36,9 +36,9 @@ BANNER = r"""
 
 
 class Ircawp:
-    frontend: Ircawp_Frontend
-    backend: Ircawp_Backend
-    imagegen: MediaBackend
+    frontend: Ircawp_Frontend = None
+    backend: Ircawp_Backend = None
+    imagegen: MediaBackend = None
     queue_thread: threading.Thread
     queue: q.Queue
     console: rich_console.Console
@@ -199,7 +199,7 @@ class Ircawp:
         thread_sleep = config.get("thread_sleep", 0.250)
         while True:
             inf_response: str = ""
-            media_filename: str = ""
+            final_media_filename: str = ""
 
             time.sleep(thread_sleep)
 
@@ -214,35 +214,45 @@ class Ircawp:
                 if message.startswith("/"):
                     plugin_name = message.split(" ")[0][1:]
                     if plugin_name in PLUGINS:
-                        inf_response, media_filename = self.processMessagePlugin(
+                        inf_response, final_media_filename = self.processMessagePlugin(
                             plugin_name, message=message, user_id=user_id
                         )
                         if plugin_name == "img":
                             is_img_plugin = True
                     else:
                         inf_response = f"Plugin {plugin_name} not found."
-                        media_filename = ""
+                        final_media_filename = ""
                 # otherwise, process it as a regular text message
                 else:
                     inf_response = self.processMessageText(message, user_id)
-                    media_filename = None
+                    final_media_filename = None
 
-                self.console.log(f"[yellow]Media filename: {media_filename}[/yellow]")
+                if final_media_filename:
+                    self.console.log(
+                        f"[yellow]Media filename: {final_media_filename}[/yellow]"
+                    )
 
-                if not media_filename and not config.get("use_imagegen", False):
-                    # skip dealing with media if it's not enabled or the file doesn't exist
-                    pass
                 # we have a media filename and it exists, so we're good
-                elif media_filename and os.path.exists(media_filename):
+                if final_media_filename and os.path.exists(final_media_filename):
+                    self.console.log(
+                        f"[green]Media file provided from plugin:[/green] {final_media_filename}"
+                    )
                     pass
                 else:
                     # otherwise pass the response as a prompt and save the resulting filename
-                    imagegen_summary = self.generateImageSummary(inf_response)
-                    if is_img_plugin:
-                        inf_response = imagegen_summary
-                    media_filename = self.imagegen.execute(prompt=imagegen_summary)
+                    self.console.log(
+                        f"[yellow]Media file {final_media_filename} not found, generating from response using {self.imagegen}.[/yellow]"
+                    )
+                    if self.imagegen:
+                        self.console.log("[yellow]Generating image...[/yellow]")
+                        imagegen_summary = self.generateImageSummary(inf_response)
+                        if is_img_plugin:
+                            inf_response = imagegen_summary
+                        final_media_filename = self.imagegen.execute(
+                            prompt=imagegen_summary
+                        )
 
-                self.egestMessage(inf_response, [media_filename], aux)
+                self.egestMessage(inf_response, [final_media_filename or None], aux)
 
     def start(self):
         self.console.log("Here we go...")

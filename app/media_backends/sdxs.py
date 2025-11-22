@@ -1,7 +1,16 @@
+if __name__ == "__main__":
+    import sys
+
+    print("Running as script")
+    sys.path.append(".")
+    from MediaBackend import MediaBackend
+
+else:
+    from .MediaBackend import MediaBackend
+
 import torch
 import random
 
-from .MediaBackend import MediaBackend
 from diffusers import StableDiffusionPipeline
 
 DEFAULT_FILENAME = "/tmp/ircawp.sdxs.png"
@@ -12,10 +21,9 @@ class sdxs(MediaBackend):
         super().__init__(*args, **kwargs)
 
         self.repo = "IDKiro/sdxs-512-dreamshaper"
-        self.weight_type = torch.float32
         self.pipe = StableDiffusionPipeline.from_pretrained(
             self.repo,
-            torch_dtype=self.weight_type,
+            torch_dtype=torch.float32,
             safety_checker=None,
         )
         self.pipe.to("cpu")
@@ -33,4 +41,12 @@ class sdxs(MediaBackend):
 
         image.save(output_file)
 
+        print(f"[green]SDXS wrote:[/green] {output_file}")
+
         return output_file
+
+
+if __name__ == "__main__":
+    backend = sdxs(None)
+    saved_to = backend.execute("A beautiful landscape with mountains and a river")
+    print(f"Image saved to {saved_to}")

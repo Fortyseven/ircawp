@@ -41,7 +41,7 @@ class hyper_sdxl(MediaBackend):
         self.pipe.scheduler = LCMScheduler.from_config(self.pipe.scheduler.config)
 
     def execute(self, prompt: str, output_file: str = DEFAULT_FILENAME) -> str:
-        print(f"HyperSDXL: Prompt: {prompt}")
+        print(f"[yellow]HyperSDXL prompt: {prompt}[/yellow]")
         seed = random.randint(0, 100000)
 
         image = self.pipe(
@@ -53,15 +53,16 @@ class hyper_sdxl(MediaBackend):
             generator=torch.Generator(device=DEVICE).manual_seed(seed),
         ).images[0]
 
-        print(f"HyperSDXL saving to {output_file}")
+        print(f"[green]HyperSDXL wrote: {output_file}[/green]")
 
         image.save(output_file)
 
-        print("HyperSDXL done")
+        print("[green]HyperSDXL done[/green]")
 
         return output_file
 
 
 if __name__ == "__main__":
-    backend = HyperSDXL(None)
-    backend.execute("A fat cat in a field of flowers")
+    backend = hyper_sdxl(None)
+    saved_to = backend.execute("A fat cat in a field of flowers")
+    print(f"Image saved to {saved_to}")
