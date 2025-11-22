@@ -15,7 +15,7 @@ CORE_PLUGINS = [
     "img",
     "raw",
     "hn",
-    # "saysforty",
+    "summarize",
     "uptime",
     "weather",
 ]
@@ -26,9 +26,7 @@ PLUGINS: dict[str, Any] = {}
 def validatePlugin(plug, mod_name, console):
     invalid = False
     if not hasattr(plug, "plugin"):
-        console.log(
-            f"[red]ERROR: plugin {plug} does not have `plugin` object![/red]"
-        )
+        console.log(f"[red]ERROR: plugin {plug} does not have `plugin` object![/red]")
         invalid = True
 
     if invalid:
