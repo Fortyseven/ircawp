@@ -28,6 +28,11 @@ class Openai(Ircawp_Backend):
         self.options['temperature'] = self.oai_config.get("temperature", 0.7)
         self.options['max_tokens'] = self.oai_config.get("max_tokens", 1024)
 
+        self.console.log(f"- [yellow]OpenAI API URL: {self.api_url}[/yellow]")
+        self.console.log(f"- [yellow]OpenAI Model: {self.model}[/yellow]")
+        self.console.log(f"- [yellow]OpenAI Temperature: {self.options['temperature']}[/yellow]")
+        self.console.log(f"- [yellow]OpenAI Max Tokens: {self.options['max_tokens']}[/yellow]")
+
         self.system_prompt = self.config.get("llm", {}).get("system_prompt", None)
 
         if not self.system_prompt:

@@ -1,14 +1,13 @@
 import torch
-import time
 import random
 
-from .__MediaBackend import MediaBackend
-from diffusers import StableDiffusionPipeline, AutoencoderKL  # type: ignore
+from .MediaBackend import MediaBackend
+from diffusers import StableDiffusionPipeline
 
 DEFAULT_FILENAME = "/tmp/ircawp.sdxs.png"
 
 
-class SDXS(MediaBackend):
+class sdxs(MediaBackend):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -22,9 +21,10 @@ class SDXS(MediaBackend):
         self.pipe.to("cpu")
 
     def execute(self, prompt: str, output_file: str = DEFAULT_FILENAME) -> str:
+        print(f"[yellow]SDXS prompt: {prompt}[/yellow]")
         seed = random.randint(0, 100000)
         image = self.pipe(
-            prompt,
+            prompt=prompt,
             num_inference_steps=1,
             guidance_scale=0.5,
             generator=torch.Generator(device="cpu").manual_seed(seed),

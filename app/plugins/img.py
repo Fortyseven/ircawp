@@ -6,8 +6,11 @@ from app.backends.Ircawp_Backend import Ircawp_Backend
 from .__PluginBase import PluginBase
 
 
-def sdxs(prompt: str, backend: Ircawp_Backend) -> tuple[str, str]:
-    return "", prompt.strip()
+def img(prompt: str, backend: Ircawp_Backend) -> tuple[str, str]:
+    # we don't run the imagegen here, we just pass it all back
+    # to ircawp to process without inference
+
+    return prompt.strip(), ""
 
 
 plugin = PluginBase(
@@ -18,6 +21,6 @@ plugin = PluginBase(
     emoji_prefix="",
     msg_empty_query="No prompt provided",
     msg_exception_prefix="ARTISTIC PROBLEMS",
-    main=sdxs,
+    main=img,
     use_imagegen=True,
 )

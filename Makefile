@@ -7,6 +7,7 @@ push-to-wheeljack:
 	rsync -azr -v  \
 		--exclude='__pycache__' \
 		--exclude '/venv' \
+		--exclude '/.venv' \
 		--exclude '/.env' \
 		--exclude='/.git' \
 		--exclude='/.gitignore' \

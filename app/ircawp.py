@@ -7,15 +7,17 @@ import importlib
 from rich import console as rich_console
 from rich.traceback import install
 
+
 from app.backends.Ircawp_Backend import InfResponse, Ircawp_Backend
 
-from app.media_backends.__MediaBackend import MediaBackend
-from app.media_backends.hyper_sdxl import HyperSDXL as MediaBackendImpl
+# Import MediaBackend base class for type hinting
+from app.media_backends.MediaBackend import MediaBackend
 
 import app.plugins as plugins
 from app.plugins import PLUGINS
 
 from app.lib.config import config
+from app.frontends.Ircawp_Frontend import Ircawp_Frontend
 
 install(show_locals=True)
 
@@ -31,9 +33,6 @@ BANNER = r"""
 """.rstrip()
 
 # temp config
-
-from app.frontends.Ircawp_Frontend import Ircawp_Frontend
-import app.frontends.slack as slack
 
 
 class Ircawp:
@@ -87,10 +86,18 @@ class Ircawp:
 
         #####
 
-        if config["use_imagegen"]:
-            self.console.log("- [yellow]Setting up image generator[/yellow]")
+        if config["imagegen_backend"]:
+            self.console.log(
+                f"- [yellow]Setting up image generator:[/yellow] {config['imagegen_backend']}"
+            )
+            # import and set up image generation backend
+            imagegen_backend_id = config["imagegen_backend"]
+            imagegen_backend = getattr(
+                importlib.import_module(f"app.media_backends.{imagegen_backend_id}"),
+                imagegen_backend_id,
+            )
 
-            self.imagegen = MediaBackendImpl(self.backend)
+            self.imagegen = imagegen_backend(self.backend)
         else:
             self.console.log("- [red]Image generator disabled[/red]")
 
@@ -147,14 +154,13 @@ class Ircawp:
 
         return response, media
 
-    def processMessageText(self, message: str, user_id: str, aux: dict):
+    def processMessageText(self, message: str, user_id: str):
         """
         Process a message from the queue.
 
         Args:
             message (str): _description_
             user_id (str): _description_
-            aux (Any): _description_
 
         Returns:
             InfResponse: _description_
@@ -167,50 +173,81 @@ class Ircawp:
 
         return response
 
+    def generateImageSummary(self, text: str) -> str:
+        """
+        Generate a summary prompt for image generation based on the
+        given text.
+
+        Args:
+            text (str): The text to summarize.
+        """
+        summary_prompt = f"{config['llm'].get('imagegen_prompt')}\n####\n{text}\n"
+
+        summary = self.backend.runInference(
+            prompt=summary_prompt,
+            system_prompt="You are an expert at creating vivid image descriptions.",
+            username="imagegen_summary_bot",
+        )
+
+        self.console.log(f"[green]Generated image summary prompt:[/green] {summary}")
+
+        return summary
+
     def messageQueueLoop(self):
         self.console.log("Starting message queue thread...")
 
         thread_sleep = config.get("thread_sleep", 0.250)
         while True:
-            response: str = ""
-            media: str = ""
+            inf_response: str = ""
+            media_filename: str = ""
 
             time.sleep(thread_sleep)
+
             if not self.queue.empty():
+                is_img_plugin = False
+
                 message, user_id, aux = self.queue.get()
 
                 message = message.strip()
 
+                # is it a plugin?
                 if message.startswith("/"):
                     plugin_name = message.split(" ")[0][1:]
                     if plugin_name in PLUGINS:
-                        response, media = self.processMessagePlugin(
+                        inf_response, media_filename = self.processMessagePlugin(
                             plugin_name, message=message, user_id=user_id
                         )
+                        if plugin_name == "img":
+                            is_img_plugin = True
                     else:
-                        response = f"Plugin {plugin_name} not found."
-                        media = ""
+                        inf_response = f"Plugin {plugin_name} not found."
+                        media_filename = ""
+                # otherwise, process it as a regular text message
                 else:
-                    response = self.processMessageText(message, user_id, aux)
+                    inf_response = self.processMessageText(message, user_id)
+                    media_filename = None
 
-                if (
-                    config["use_imagegen"]
-                    and os.path.exists(media)
-                    or not media
-                ):
+                self.console.log(f"[yellow]Media filename: {media_filename}[/yellow]")
+
+                if not media_filename and not config.get("use_imagegen", False):
+                    # skip dealing with media if it's not enabled or the file doesn't exist
+                    pass
+                # we have a media filename and it exists, so we're good
+                elif media_filename and os.path.exists(media_filename):
                     pass
                 else:
-                    # otherwise pass it as a prompt and save that filename
-                    media = self.imagegen.execute(media)
+                    # otherwise pass the response as a prompt and save the resulting filename
+                    imagegen_summary = self.generateImageSummary(inf_response)
+                    if is_img_plugin:
+                        inf_response = imagegen_summary
+                    media_filename = self.imagegen.execute(prompt=imagegen_summary)
 
-                self.egestMessage(response, [media], aux)
+                self.egestMessage(inf_response, [media_filename], aux)
 
     def start(self):
         self.console.log("Here we go...")
         self.queue = q.Queue()
-        self.queue_thread = threading.Thread(
-            target=self.messageQueueLoop, daemon=True
-        )
+        self.queue_thread = threading.Thread(target=self.messageQueueLoop, daemon=True)
 
         self.queue_thread.start()
         self.frontend.start()
