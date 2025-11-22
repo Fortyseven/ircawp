@@ -1,4 +1,3 @@
-import os
 import importlib
 from typing import Any
 
@@ -12,9 +11,10 @@ CORE_PLUGINS = [
     "askjesus",
     "askspock",
     "help",
-    "img",
-    "raw",
     "hn",
+    "img",
+    "news",
+    "raw",
     "summarize",
     "uptime",
     "weather",

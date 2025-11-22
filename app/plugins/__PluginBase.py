@@ -44,14 +44,14 @@ class PluginBase:
         self,
         query: str,
         backend: Ircawp_Backend,
-    ) -> tuple[str, str | dict]:
+    ) -> tuple[str, str | dict, bool]:
         print("= PluginBase execute: ", self, query)
 
         if not query.strip() and self.prompt_required:
-            return self.msg_empty_query, ""
+            return self.msg_empty_query, "", True
         try:
             media_return = ""
-            response, media = self.main(query, backend)
+            response, media, skip_imagegen = self.main(query, backend)
 
             if media and isinstance(media, str):
                 media_return = media
@@ -64,6 +64,6 @@ class PluginBase:
             #             "content": response,
             #         }
             #     )
-            return (response, media_return)
+            return (response, media_return, skip_imagegen)
         except Exception as e:
-            return f"{self.msg_exception_prefix}: " + str(e), ""
+            return f"{self.msg_exception_prefix}: " + str(e), "", True

@@ -35,7 +35,7 @@ def help(query: str, backend: Ircawp_Backend) -> tuple[str, str]:
             output += f"`{get_triggers(PLUGINS[plugin].triggers)}` - {PLUGINS[plugin].description}\n"
         output += "\n"
 
-    return "AVAILABLE SLASH COMMANDS :\n\n" + output, ""
+    return "AVAILABLE SLASH COMMANDS :\n\n" + output, "", True
 
 
 plugin = PluginBase(

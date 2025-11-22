@@ -147,14 +147,18 @@ class Ircawp:
         """
         self.console.log(f"Processing plugin: {plugin}")
         message = message.replace(f"/{plugin} ", "").strip()
-        response, media = PLUGINS[plugin].execute(
+        response, media, skip_imagegen = PLUGINS[plugin].execute(
             query=message,
             backend=self.backend,
         )
 
-        return response, media
+        self.console.log(
+            f"Plugin response: {response[0:10]}, media: {media}, skip_imagegen: {skip_imagegen}"
+        )
 
-    def processMessageText(self, message: str, user_id: str):
+        return response, media, skip_imagegen
+
+    def processMessageText(self, message: str, user_id: str) -> InfResponse:
         """
         Process a message from the queue.
 
@@ -193,7 +197,7 @@ class Ircawp:
 
         return summary
 
-    def messageQueueLoop(self):
+    def messageQueueLoop(self) -> None:
         self.console.log("Starting message queue thread...")
 
         thread_sleep = config.get("thread_sleep", 0.250)
@@ -204,7 +208,10 @@ class Ircawp:
             time.sleep(thread_sleep)
 
             if not self.queue.empty():
+                self.console.log("=================================================")
+
                 is_img_plugin = False
+                skip_imagegen = False
 
                 message, user_id, aux = self.queue.get()
 
@@ -214,8 +221,10 @@ class Ircawp:
                 if message.startswith("/"):
                     plugin_name = message.split(" ")[0][1:]
                     if plugin_name in PLUGINS:
-                        inf_response, final_media_filename = self.processMessagePlugin(
-                            plugin_name, message=message, user_id=user_id
+                        inf_response, final_media_filename, skip_imagegen = (
+                            self.processMessagePlugin(
+                                plugin_name, message=message, user_id=user_id
+                            )
                         )
                         if plugin_name == "img":
                             is_img_plugin = True
@@ -227,10 +236,17 @@ class Ircawp:
                     inf_response = self.processMessageText(message, user_id)
                     final_media_filename = None
 
-                if final_media_filename:
+                if not skip_imagegen and final_media_filename:
                     self.console.log(
                         f"[yellow]Media filename: {final_media_filename}[/yellow]"
                     )
+
+                if skip_imagegen:
+                    self.console.log(
+                        "[yellow]Skipping image generation as requested.[/yellow]"
+                    )
+
+                self.console.log(f"[red]Plugin returned {final_media_filename}.[/red]")
 
                 # we have a media filename and it exists, so we're good
                 if final_media_filename and os.path.exists(final_media_filename):
@@ -243,7 +259,7 @@ class Ircawp:
                     self.console.log(
                         f"[yellow]Media file {final_media_filename} not found, generating from response using {self.imagegen}.[/yellow]"
                     )
-                    if self.imagegen:
+                    if self.imagegen and not skip_imagegen:
                         self.console.log("[yellow]Generating image...[/yellow]")
                         imagegen_summary = self.generateImageSummary(inf_response)
                         if is_img_plugin:

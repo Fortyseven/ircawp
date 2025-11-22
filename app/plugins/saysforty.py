@@ -13,12 +13,8 @@ from .vendor.xtts_api_server.tts_funcs import TTSWrapper
 # defaults
 DEVICE = "cpu"
 OUTPUT_FOLDER = "/tmp"
-SPEAKER_FOLDER = (
-    f"{ os.path.dirname(__file__)}/vendor/xtts_api_server/speakers"
-)
-MODEL_FOLDER = (
-    f"{ os.path.dirname(__file__)}/vendor/xtts_api_server/xtts_models"
-)
+SPEAKER_FOLDER = f"{os.path.dirname(__file__)}/vendor/xtts_api_server/speakers"
+MODEL_FOLDER = f"{os.path.dirname(__file__)}/vendor/xtts_api_server/xtts_models"
 MODEL_SOURCE = os.getenv("MODEL_SOURCE", "local")
 MODEL_VERSION = os.getenv("MODEL_VERSION", "v2.0.2")
 LOWVRAM_MODE = os.getenv("LOWVRAM_MODE") == "true"
@@ -85,7 +81,7 @@ def saysforty(prompt: str, backend: Ircawp_Backend) -> InfResponse:
     except Exception as e:
         print(e)
 
-    return "", "/tmp/ircawp-saysforty.wav"
+    return "", "/tmp/ircawp-saysforty.wav", True
 
 
 plugin = PluginBase(

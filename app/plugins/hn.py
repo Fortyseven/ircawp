@@ -12,7 +12,7 @@ START_TIME = datetime.datetime.now()
 RSS_URL = "https://hnrss.org/frontpage"
 
 
-def hn(prompt: str, backend: Ircawp_Backend) -> tuple[str, str]:
+def hn(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
     url = RSS_URL
     feed = feedparser.parse(url)
 
@@ -20,11 +20,12 @@ def hn(prompt: str, backend: Ircawp_Backend) -> tuple[str, str]:
         f"Top stories from Hacker News as of {START_TIME.strftime('%Y-%m-%d %H:%M:%S')}"
         + "\n".join(
             [
-                f"{i+1}. {feed.entries[i].title} - {feed.entries[i].link}"
+                f"{i + 1}. {feed.entries[i].title} - {feed.entries[i].link}"
                 for i in range(5)
             ]
         ),
         "",
+        False,
     )
 
 

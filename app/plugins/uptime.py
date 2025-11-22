@@ -28,6 +28,7 @@ def uptime(prompt: str, backend: Ircawp_Backend) -> tuple[str, str]:
     - Last query time: {backend.last_query_time or "None yet"}
     """.strip(),
         "",
+        True,
     )
 
 

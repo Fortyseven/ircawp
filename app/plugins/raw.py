@@ -10,7 +10,7 @@ from .__PluginBase import PluginBase
 def raw(prompt: str, backend: Ircawp_Backend) -> InfResponse:
     # return prompt.strip(), ""
     response = backend.runInference(system_prompt="", prompt=prompt.strip())
-    return response, ()
+    return response, (), False
 
 
 plugin = PluginBase(

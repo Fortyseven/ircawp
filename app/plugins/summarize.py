@@ -4,7 +4,6 @@ Pulls an HTML page and provides a summary
 
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from .__PluginBase import PluginBase
-import feedparser
 from bs4 import BeautifulSoup
 
 SYSTEM_PROMPT = """
@@ -25,13 +24,30 @@ SYSTEM_PROMPT_EI5 = """
 Summarize the following text in a way that a 5-year-old would understand. Use simple language and concepts that a young child can grasp. It should be brief and easy to understand.
 """
 
+SYSTEM_PROMPT_ROAST = """
+Summarize the following text in a acidic, sarcastic manner, poking fun at the content. Highlight the flaws, inaccuracies, or logical fallacies in the text. The summary should be witty, cynical, and entertaining, while still capturing the main points of the text. Return only the summary text, without any additional commentary. Keep it at most 2 paragraphs.
+"""
 
-def summarize(prompt: str, backend: Ircawp_Backend) -> tuple[str, str]:
-    # prompt will have the URL to summarize in this format: `<https://example.com>`
+DISABLE_IMAGEGEN = True
 
-    # Handle /x flag at start or end of prompt
+
+def summarize(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
     special_mode = None
     import re
+
+    if prompt.startswith("/?"):
+        return (
+            (
+                "Here are the available summarize modes:\n\n"
+                "By defeault the summarize plugin provides a concise summary of the content.\n\n"
+                "• `/r`: Roast mode - provides a sarcastic summary of the content.\n"
+                "• `/f`: Full mode - provides a detailed summary with key points.\n"
+                "• `/5`: Explain Like I'm 5 mode - summarizes the content in a way a 5-year-old would understand.\n\n"
+                "You can use these modes by adding the corresponding flag at the start of your summarize command, e.g., `/summarize /r <URL>`"
+            ),
+            "",
+            True,
+        )
 
     match = re.match(r"^/(\w)\s+(.+)$", prompt)
     if match:
@@ -58,13 +74,18 @@ def summarize(prompt: str, backend: Ircawp_Backend) -> tuple[str, str]:
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
     except Exception as e:
-        return f"Error fetching URL: {e}", ""
+        return f"Error fetching URL: {e}", "", True
 
     soup = BeautifulSoup(resp.text, "html.parser")
     text = soup.get_text(separator="\n", strip=True)
 
     match special_mode:
-        case "full":
+        case "r":
+            summary = backend.runInference(
+                system_prompt=SYSTEM_PROMPT_ROAST,
+                prompt=text,
+            )
+        case "f":
             summary = backend.runInference(
                 system_prompt=SYSTEM_PROMPT_FULL,
                 prompt=text,
@@ -91,6 +112,7 @@ def summarize(prompt: str, backend: Ircawp_Backend) -> tuple[str, str]:
         # "",
         summary,
         "",
+        DISABLE_IMAGEGEN,
     )
 
 
