@@ -86,7 +86,7 @@ class Ircawp:
 
         #####
 
-        if config["imagegen_backend"]:
+        if "imagegen_backend" in config:
             self.console.log(
                 f"- [yellow]Setting up image generator:[/yellow] {config['imagegen_backend']}"
             )
