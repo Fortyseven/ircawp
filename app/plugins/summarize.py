@@ -6,11 +6,14 @@ from app.backends.Ircawp_Backend import Ircawp_Backend
 from .__PluginBase import PluginBase
 from bs4 import BeautifulSoup
 
-SYSTEM_PROMPT = """
+DISCLAIMER = """IMPORTANT: Do NOT include opinion, interpretations, or infer additional context where it does not exist in the provided text or your subsequent summary. Only use the information provided in the text. Do not invent information. Strive for accuracy using ONLY the information provided. This is true for the summary, or for follow-up questions asked by the user about the text: only use what is provided."""
+
+SYSTEM_PROMPT = f"""
 Summarize the following text. Provide a brief summary of the text. Return only the summary text, without any additional commentary. Ensure the summary is interesting and includes the main points and key details, and is concise and to the point.
+{DISCLAIMER}
 """
 
-SYSTEM_PROMPT_FULL = """
+SYSTEM_PROMPT_FULL = f"""
 Summarize the following text. Provide a brief summary of the text, including the main points and key details. The summary should be concise and to the point.
 
 After the summary, provide a short list of bullet points highlighting the overall key details.
@@ -18,6 +21,8 @@ After the summary, provide a short list of bullet points highlighting the overal
 Also note any unusual, worrying, or unethical content.
 
 Write the summary taking advantage of Markdown formatting.
+
+{DISCLAIMER}
 """
 
 SYSTEM_PROMPT_EI5 = """
