@@ -28,6 +28,7 @@ dependencies = [
     "ollama>=0.5.3",
     "optimum-quanto>=0.2.7",
     "packaging>=25.0",
+    "playwright>=1.56.0",
     "pycodestyle>=2.14.0",
     "pygments>=2.19.2",
     "pyparsing>=3.2.3",

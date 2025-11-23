@@ -75,7 +75,7 @@ def summarize(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
 
     skip_imagegen = True
 
-    text = fetchHtml(url, text_only=True)
+    text = fetchHtml(url, text_only=True, use_js=True)
 
     sprompt = None
 

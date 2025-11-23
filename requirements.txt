@@ -12,6 +12,7 @@ idna
 multidict
 numpy
 packaging
+playwright
 pycodestyle
 Pygments
 pyparsing
