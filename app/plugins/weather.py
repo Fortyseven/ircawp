@@ -165,7 +165,7 @@ def doWeather(query: str, backend: Ircawp_Backend) -> tuple[str, str | dict]:
     try:
         url_query = f"https://wttr.in/{quote_plus(query)}?format=j1"
         # response = requests.get(url_query, timeout=12, allow_redirects=True)
-        content = fetchHtml(url_query)
+        content = fetchHtml(url_query, bypass_cache=True)
         return process_weather_json(content), "", False
 
     except Exception as e:
