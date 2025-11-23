@@ -1,9 +1,11 @@
 """
 Backend for OpenAI-compatible endpoints (e.g., api.openai.com, local LLMs with OpenAI API).
 """
+
 import requests
 import json
 from .Ircawp_Backend import Ircawp_Backend
+
 
 class Openai(Ircawp_Backend):
     def __init__(self, *args, **kwargs):
@@ -16,27 +18,32 @@ class Openai(Ircawp_Backend):
 
         self.oai_config = self.config.get("openai", {})
 
-
-        if (not "api_url" in self.oai_config):
+        if "api_url" not in self.oai_config:
             raise ValueError("Missing OpenAI endpoint ('config.openai.api_url')")
 
         self.api_url = self.oai_config["api_url"].rstrip("/")
-        self.api_key = self.oai_config.get("api_key", '')
-        self.model = self.oai_config.get("model", '')
+        self.api_key = self.oai_config.get("api_key", "")
+        self.model = self.oai_config.get("model", "")
 
         self.options = {}
-        self.options['temperature'] = self.oai_config.get("temperature", 0.7)
-        self.options['max_tokens'] = self.oai_config.get("max_tokens", 1024)
+        self.options["temperature"] = self.oai_config.get("temperature", 0.7)
+        self.options["max_tokens"] = self.oai_config.get("max_tokens", 1024)
 
         self.console.log(f"- [yellow]OpenAI API URL: {self.api_url}[/yellow]")
         self.console.log(f"- [yellow]OpenAI Model: {self.model}[/yellow]")
-        self.console.log(f"- [yellow]OpenAI Temperature: {self.options['temperature']}[/yellow]")
-        self.console.log(f"- [yellow]OpenAI Max Tokens: {self.options['max_tokens']}[/yellow]")
+        self.console.log(
+            f"- [yellow]OpenAI Temperature: {self.options['temperature']}[/yellow]"
+        )
+        self.console.log(
+            f"- [yellow]OpenAI Max Tokens: {self.options['max_tokens']}[/yellow]"
+        )
 
         self.system_prompt = self.config.get("llm", {}).get("system_prompt", None)
 
         if not self.system_prompt:
-            self.console.log("[yellow]Warning: No system prompt set in config ('config.llm.system_prompt')[/yellow]")
+            self.console.log(
+                "[yellow]Warning: No system prompt set in config ('config.llm.system_prompt')[/yellow]"
+            )
 
         self.console.log("System prompt: ", self.system_prompt)
 
@@ -49,13 +56,13 @@ class Openai(Ircawp_Backend):
         payload = {
             "model": self.model,
             "messages": messages,
-            "temperature": self.options['temperature'],
+            "temperature": self.options["temperature"],
             # "max_tokens": self.options['max_tokens'],
         }
         response = requests.post(
             f"{self.api_url}/v1/chat/completions",
             headers=headers,
-            data=json.dumps(payload)
+            data=json.dumps(payload),
         )
         response.raise_for_status()
         return response.json()
@@ -66,12 +73,16 @@ class Openai(Ircawp_Backend):
         system_prompt: str | None = None,
         username: str = "",
     ) -> str:
+        if type(prompt) is not str:
+            self.console.log(f"= OpenAI runInference: prompt='{prompt}...'")
+            prompt = str(prompt)
+
         response = ""
         try:
             # System prompt handling
-            if prompt[0] == '!':
+            if prompt[0] == "!":
                 # use no prompt if starts with !
-                system_prompt = ''
+                system_prompt = ""
             else:
                 if system_prompt is None:
                     system_prompt = self.system_prompt
@@ -79,7 +90,12 @@ class Openai(Ircawp_Backend):
                 if system_prompt:
                     # If templateReplace exists, use it
                     if hasattr(self, "templateReplace"):
-                        system_prompt = self.templateReplace(system_prompt, username=username)
+                        system_prompt = self.templateReplace(
+                            system_prompt, username=username
+                        )
+
+            if not prompt or prompt == "":
+                prompt = "_Empty response from LLM._"
 
             prompt = prompt.strip()
 
@@ -98,12 +114,17 @@ class Openai(Ircawp_Backend):
             # Call OpenAI chat endpoint
             result = self.chat(messages)
             # Extract response text
-            response = result["choices"][0]["message"]["content"].strip()
+            if "choices" in result and len(result["choices"]) > 0:
+                response = result["choices"][0]["message"]["content"]
+                response = response.strip()
 
-            # Compress multiple newlines down to one
-            response = "\n".join([line for line in response.split("\n") if line.strip() != ""])
-            if len(response) == 0:
+                # Compress multiple newlines down to one
+                response = "\n".join(
+                    [line for line in response.split("\n") if line.strip() != ""]
+                )
+            if not response or len(response) == 0:
                 response = "Response was empty. :("
         except Exception as e:
-            response = f"**IT HERTZ, IT HERTZ (openai):** '{str(e)}'"
+            response = f"**IT HERTZ, IT HERTZ (openai):** '{e}'"
+            self.console.log(f"[red]Exception in OpenAI backend: {e}[/red] {str(e)}")
         return response.replace("\n", "\n\n")
