@@ -1,4 +1,7 @@
 import requests
+from . import cache
+import hashlib
+
 
 DEFAULT_UA = "Mozilla/5.0 (X11; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0"
 
@@ -37,6 +40,13 @@ def fetchHtmlWithJs(url, timeout=12, headers=None):
         return f"Error fetching URL with JS: {e}", "", True
 
 
+def _make_cache_key(url, timeout, allow_redirects, headers, text_only, use_js):
+    # Normalize headers for key stability
+    headers_tuple = tuple(sorted((headers or {}).items()))
+    raw = f"{url}|{timeout}|{allow_redirects}|{headers_tuple}|{text_only}|{use_js}"
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
 def fetchHtml(
     url,
     timeout=12,
@@ -44,19 +54,53 @@ def fetchHtml(
     headers=None,
     text_only=False,
     use_js=False,
+    bypass_cache=False,
 ):
+    """Fetch HTML (optionally rendered with JS) with optional caching.
+
+    Successful responses are cached for ~10 minutes. Cache key factors:
+    url, timeout, allow_redirects, headers, text_only, use_js.
+
+    Args:
+        url: Target URL.
+        timeout: Seconds before timing out.
+        allow_redirects: Follow redirects when using requests.
+        headers: Optional dict of headers.
+        text_only: If True, returns extracted visible text.
+        use_js: If True, uses Playwright to render.
+        bypass_cache: If True, forces a fresh fetch and updates cache.
+    Returns:
+        str on success, or (error_message, "", True) tuple on error.
+    """
+    cache_key = _make_cache_key(
+        url, timeout, allow_redirects, headers, text_only, use_js
+    )
+    if not bypass_cache:
+        cached = cache.get_cache(cache_key)
+        if cached is not None:
+            print(f"[fetchHtml] cache hit: {url}")
+            return cached
+        else:
+            print(f"[fetchHtml] cache miss: {url}")
+    else:
+        print(f"[fetchHtml] cache bypass requested: {url}")
     if use_js:
         content = fetchHtmlWithJs(url, timeout=timeout, headers=headers)
         if isinstance(content, tuple):
-            return content
+            return content  # Error; do not cache
 
         if text_only:
             from bs4 import BeautifulSoup
 
             soup = BeautifulSoup(content, "html.parser")
-            return soup.get_text(separator="\n", strip=True)
+            result = soup.get_text(separator="\n", strip=True)
         else:
-            return content
+            result = content
+
+        # Cache successful result
+        print(f"[fetchHtml] cache store: {url}")
+        cache.set_cache(cache_key, result)
+        return result
 
     try:
         if headers is None:
@@ -72,9 +116,13 @@ def fetchHtml(
             from bs4 import BeautifulSoup
 
             soup = BeautifulSoup(resp.text, "html.parser")
-            return soup.get_text(separator="\n", strip=True)
+            result = soup.get_text(separator="\n", strip=True)
         else:
-            return resp.text
+            result = resp.text
+
+        cache.set_cache(cache_key, result)
+        print(f"[fetchHtml] cache store: {url}")
+        return result
 
     except Exception as e:
         return f"Error fetching URL: {e}", "", True
