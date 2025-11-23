@@ -76,7 +76,10 @@ def summarize(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
     try:
         import requests
 
-        resp = requests.get(url, timeout=10)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0",
+        }
+        resp = requests.get(url, timeout=10, headers=headers)
         resp.raise_for_status()
     except Exception as e:
         return f"Error fetching URL: {e}", "", True
