@@ -64,7 +64,16 @@ class Slack(Ircawp_Frontend):
         media = media[0]
 
         if not media:
-            say(f"<@{user_id}>: {message}")
+            # say(f"<@{user_id}>: {message}")
+            say(
+                # text=f"<@{user_id}> {message}",
+                blocks=[
+                    {
+                        "type": "section",
+                        "text": {"type": "mrkdwn", "text": f"<@{user_id}> {message}"},
+                    }
+                ],
+            )
         else:
             self.postMedia(message, media, aux)
         pass
@@ -76,10 +85,19 @@ class Slack(Ircawp_Frontend):
         else:
             response_message_with_username = ""
 
+        say(
+            # text=f"<@{user_id}> {message}",
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": response_message_with_username},
+                }
+            ],
+        )
         with open(media, "rb") as f:
             self.bolt.client.files_upload_v2(
                 file=f.read(),
                 channel=channel,
-                initial_comment=response_message_with_username,
+                # initial_comment=response_message_with_username,
                 # title=f"{imagegen_prompt}",
             )
