@@ -3,13 +3,15 @@ import requests
 DEFAULT_UA = "Mozilla/5.0 (X11; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0"
 
 
-def fetchHtml(url, timeout=10, headers=None, text_only=False):
+def fetchHtml(url, timeout=12, allow_redirects=True, headers=None, text_only=False):
     try:
         if headers is None:
             headers = {
                 "User-Agent": DEFAULT_UA,
             }
-        resp = requests.get(url, timeout=timeout, headers=headers)
+        resp = requests.get(
+            url, timeout=timeout, headers=headers, allow_redirects=allow_redirects
+        )
         resp.raise_for_status()
 
         if text_only:
@@ -22,3 +24,10 @@ def fetchHtml(url, timeout=10, headers=None, text_only=False):
 
     except Exception as e:
         return f"Error fetching URL: {e}", "", True
+
+    except requests.exceptions.Timeout:
+        return (
+            f"Timed out while trying to fetch ({url}). Sites can be fussy; try again in a minute.",
+            "",
+            True,
+        )

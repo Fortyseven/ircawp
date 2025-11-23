@@ -4,11 +4,11 @@ faster model than the default chat model.
 """
 
 import json
-import requests
 import datetime
 from urllib.parse import quote_plus
 
 from app.backends.Ircawp_Backend import Ircawp_Backend
+from app.lib.network import fetchHtml
 from .__PluginBase import PluginBase
 
 
@@ -163,25 +163,11 @@ def process_weather_json(json_text: str) -> tuple[str, str]:
 
 def doWeather(query: str, backend: Ircawp_Backend) -> tuple[str, str | dict]:
     try:
-        # with open("w.json", "r") as f:
-        #     return process_weather_json(f.read())
-
         url_query = f"https://wttr.in/{quote_plus(query)}?format=j1"
-        response = requests.get(url_query, timeout=12, allow_redirects=True)
+        # response = requests.get(url_query, timeout=12, allow_redirects=True)
+        content = fetchHtml(url_query)
+        return process_weather_json(content), "", False
 
-        if response.status_code >= 400:
-            return (
-                f"Error: code ({response.status_code}) for ({url_query})",
-                "",
-            )
-
-        return process_weather_json(response.text), "", False
-    except requests.exceptions.Timeout:
-        return (
-            f"Timed out while trying to fetch ({url_query}). wttr.in can be fussy; try again in a minute.",
-            "",
-            True,
-        )
     except Exception as e:
         return "WTTR PROBLEMS: " + str(e), "", True
 

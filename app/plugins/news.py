@@ -3,6 +3,7 @@ Basic News Summary
 """
 
 from app.backends.Ircawp_Backend import Ircawp_Backend
+from app.lib.network import fetchHtml
 from .__PluginBase import PluginBase
 from bs4 import BeautifulSoup, Comment
 import datetime
@@ -13,13 +14,7 @@ SITE_URL = "https://drudgereport.com/"
 
 
 def news(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
-    try:
-        import requests
-
-        resp = requests.get(SITE_URL, timeout=10)
-        resp.raise_for_status()
-    except Exception as e:
-        return f"Error fetching Drudge Report: {e}", "", True
+    content = fetchHtml(SITE_URL)
 
     # page has HTML comments bracketing sections of the site:
     # <! TOP LEFT STARTS HERE >
@@ -29,7 +24,7 @@ def news(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
     # then there's one <table> tag with all the other headlines inside
     headlines = []
 
-    soup = BeautifulSoup(resp.text, "html.parser")
+    soup = BeautifulSoup(content, "html.parser")
 
     # Find all comments
     comments = soup.find_all(string=lambda text: isinstance(text, Comment))
