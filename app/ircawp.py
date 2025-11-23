@@ -158,6 +158,42 @@ class Ircawp:
 
         return response, media, skip_imagegen
 
+    def extractUrl(self, text: str) -> list:
+        """
+        Extract URLs from the given text.
+
+        Args:
+            text (str): The text to extract URLs from.
+        Returns:
+            list: A list of extracted URLs.
+        """
+        import re
+
+        # Exclude < and > which are common delimiters (e.g. in Slack)
+        url_pattern = re.compile(r"(https?://[^\s<>]+)")
+
+        # FIXME: let's just grab the first one; we're having issues with the
+        # message getting mangled if there's multiple...?!
+        urls = url_pattern.findall(text)
+
+        if not urls:
+            return None
+
+        url = urls[0]
+
+        # Strip common trailing punctuation
+        while url and url[-1] in ".,!?:;":
+            url = url[:-1]
+
+        # Handle trailing parenthesis (e.g. inside brackets)
+        if url.endswith(")"):
+            opens = url.count("(")
+            closes = url.count(")")
+            if closes > opens:
+                url = url[:-1]
+
+        return url
+
     def processMessageText(self, message: str, user_id: str) -> InfResponse:
         """
         Process a message from the queue.
@@ -169,6 +205,18 @@ class Ircawp:
         Returns:
             InfResponse: _description_
         """
+
+        # extract URLs from prompt
+
+        url = self.extractUrl(message)
+
+        if url:
+            from app.lib.network import fetchHtml
+
+            content = fetchHtml(url, text_only=True, use_js=True)
+
+            message = f"####{url} content: ```\n{content}\n```\n####\n\n{message}"
+
         response = self.backend.runInference(
             prompt=message,
             system_prompt=None,
@@ -216,6 +264,8 @@ class Ircawp:
                 message, user_id, aux = self.queue.get()
 
                 message = message.strip()
+
+                self.console.log(f'[blue]Processing message:[/blue] "{message}"')
 
                 # is it a plugin?
                 if message.startswith("/"):
