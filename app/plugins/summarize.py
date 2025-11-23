@@ -73,6 +73,8 @@ def summarize(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
     if not (url.startswith("http://") or url.startswith("https://") or "." in url):
         return "Invalid URL provided.", ""
 
+    skip_imagegen = True
+
     try:
         import requests
 
@@ -93,6 +95,7 @@ def summarize(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
                 system_prompt=SYSTEM_PROMPT_ROAST,
                 prompt=text,
             )
+            skip_imagegen = False
         case "f":
             summary = backend.runInference(
                 system_prompt=SYSTEM_PROMPT_FULL,
@@ -120,7 +123,7 @@ def summarize(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
         # "",
         summary,
         "",
-        DISABLE_IMAGEGEN,
+        skip_imagegen,
     )
 
 
