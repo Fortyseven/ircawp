@@ -33,9 +33,7 @@ class Slack(Ircawp_Frontend):
 
         self.console.log("Slack frontend starting.")
 
-        SocketModeHandler(
-            self.bolt, self.slack_creds["SLACK_APP_TOKEN"]
-        ).start()
+        SocketModeHandler(self.bolt, self.slack_creds["SLACK_APP_TOKEN"]).start()
 
     # @bolt.event("app_mention")
     def ingestEvent(self, event, message, client, say, body):
@@ -51,9 +49,9 @@ class Slack(Ircawp_Frontend):
 
         self.console.log(f"[red]Received message: {prompt}[/red]")
 
-        username = self.bolt.client.users_info(user=user_id)["user"][
-            "profile"
-        ]["display_name"]
+        username = self.bolt.client.users_info(user=user_id)["user"]["profile"][
+            "display_name"
+        ]
 
         self.parent.ingestMessage(
             prompt.strip(), username, (user_id, channel, say, body)
