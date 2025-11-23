@@ -44,7 +44,8 @@ def summarize(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
         return (
             (
                 "Here are the available summarize modes:\n\n"
-                "By defeault the summarize plugin provides a concise summary of the content.\n\n"
+                "By default the summarize plugin provides a concise summary of the content.\n\n"
+                "• `/i`: Image mode - provides the basic summary with an imagegen run.\n"
                 "• `/r`: Roast mode - provides a sarcastic summary of the content.\n"
                 "• `/f`: Full mode - provides a detailed summary with key points.\n"
                 "• `/5`: Explain Like I'm 5 mode - summarizes the content in a way a 5-year-old would understand.\n\n"
@@ -87,6 +88,9 @@ def summarize(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
             sprompt = SYSTEM_PROMPT_FULL
         case "5":
             sprompt = SYSTEM_PROMPT_EI5
+        case "i":
+            sprompt = SYSTEM_PROMPT
+            skip_imagegen = False
         case _:
             sprompt = SYSTEM_PROMPT
 
@@ -96,14 +100,6 @@ def summarize(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
     )
 
     return (
-        # f"Top stories from Hacker News as of {START_TIME.strftime('%Y-%m-%d %H:%M:%S')}"
-        # + "\n".join(
-        #     [
-        #         f"{i + 1}. {feed.entries[i].title} - {feed.entries[i].link}"
-        #         for i in range(5)
-        #     ]
-        # ),
-        # "",
         summary,
         "",
         skip_imagegen,
