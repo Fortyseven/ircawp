@@ -2,9 +2,9 @@
 Pulls an HTML page and provides a summary
 """
 
+from app.lib.network import fetchHtml
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from .__PluginBase import PluginBase
-from bs4 import BeautifulSoup
 
 DISCLAIMER = """IMPORTANT: Do NOT include opinion, interpretations, or infer additional context where it does not exist in the provided text or your subsequent summary. Only use the information provided in the text. Do not invent information. Strive for accuracy using ONLY the information provided. This is true for the summary, or for follow-up questions asked by the user about the text: only use what is provided."""
 
@@ -75,42 +75,25 @@ def summarize(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
 
     skip_imagegen = True
 
-    try:
-        import requests
+    text = fetchHtml(url, text_only=True)
 
-        headers = {
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0",
-        }
-        resp = requests.get(url, timeout=10, headers=headers)
-        resp.raise_for_status()
-    except Exception as e:
-        return f"Error fetching URL: {e}", "", True
-
-    soup = BeautifulSoup(resp.text, "html.parser")
-    text = soup.get_text(separator="\n", strip=True)
+    sprompt = None
 
     match special_mode:
         case "r":
-            summary = backend.runInference(
-                system_prompt=SYSTEM_PROMPT_ROAST,
-                prompt=text,
-            )
+            sprompt = SYSTEM_PROMPT_ROAST
             skip_imagegen = False
         case "f":
-            summary = backend.runInference(
-                system_prompt=SYSTEM_PROMPT_FULL,
-                prompt=text,
-            )
+            sprompt = SYSTEM_PROMPT_FULL
         case "5":
-            summary = backend.runInference(
-                system_prompt=SYSTEM_PROMPT_EI5,
-                prompt=text,
-            )
+            sprompt = SYSTEM_PROMPT_EI5
         case _:
-            summary = backend.runInference(
-                system_prompt=SYSTEM_PROMPT,
-                prompt=text,
-            )
+            sprompt = SYSTEM_PROMPT
+
+    summary = backend.runInference(
+        system_prompt=sprompt,
+        prompt=text,
+    )
 
     return (
         # f"Top stories from Hacker News as of {START_TIME.strftime('%Y-%m-%d %H:%M:%S')}"
