@@ -16,6 +16,7 @@ CORE_PLUGINS = [
     "news",
     "raw",
     "summarize",
+    "translate",
     "uptime",
     "weather",
 ]
