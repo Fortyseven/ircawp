@@ -107,7 +107,7 @@ class Ircawp:
 
         plugins.load(self.console)
 
-    def ingestMessage(self, message, username, aux=None):
+    def ingestMessage(self, message, username, media=[], aux=None):
         """
         Receives a message from the frontend and puts it into the
         queue.
@@ -115,9 +115,10 @@ class Ircawp:
         Args:
             message (str): Incoming message from the frontend.
             username (str): The username of the user who sent the message.
+            media (list): Local file paths to attached media
             aux (List, optional): Bundle of optional data needed to route the message back to the user.
         """
-        self.queue.put((message, username, aux))
+        self.queue.put((message, username, media, aux))
 
     def egestMessage(self, message: str, media: list, aux: dict):
         """
@@ -194,13 +195,16 @@ class Ircawp:
 
         return url
 
-    def processMessageText(self, message: str, user_id: str) -> InfResponse:
+    def processMessageText(
+        self, message: str, user_id: str, incoming_media: list
+    ) -> InfResponse:
         """
         Process a message from the queue.
 
         Args:
             message (str): _description_
             user_id (str): _description_
+            incoming_media (list): An array of local file path strings to incoming media.
 
         Returns:
             InfResponse: _description_
@@ -221,6 +225,7 @@ class Ircawp:
             prompt=message,
             system_prompt=None,
             username=user_id,
+            media=incoming_media,
         )
 
         return response
@@ -251,7 +256,7 @@ class Ircawp:
         thread_sleep = config.get("thread_sleep", 0.250)
         while True:
             inf_response: str = ""
-            final_media_filename: str = ""
+            outgoing_media_filename: str = ""
 
             time.sleep(thread_sleep)
 
@@ -261,17 +266,18 @@ class Ircawp:
                 is_img_plugin = False
                 skip_imagegen = False
 
-                message, user_id, aux = self.queue.get()
+                message, user_id, incoming_media, aux = self.queue.get()
 
                 message = message.strip()
 
-                self.console.log(f'[blue]Processing message:[/blue] "{message}"')
+                self.console.log(f'[blue]Incoming message:[/blue] "{message}"')
+                self.console.log(f"[blue]Incoming media:[/blue] {incoming_media}")
 
                 # is it a plugin?
                 if message.startswith("/"):
                     plugin_name = message.split(" ")[0][1:]
                     if plugin_name in PLUGINS:
-                        inf_response, final_media_filename, skip_imagegen = (
+                        inf_response, outgoing_media_filename, skip_imagegen = (
                             self.processMessagePlugin(
                                 plugin_name, message=message, user_id=user_id
                             )
@@ -280,15 +286,17 @@ class Ircawp:
                             is_img_plugin = True
                     else:
                         inf_response = f"Plugin {plugin_name} not found."
-                        final_media_filename = ""
+                        outgoing_media_filename = ""
                 # otherwise, process it as a regular text message
                 else:
-                    inf_response = self.processMessageText(message, user_id)
-                    final_media_filename = None
+                    inf_response = self.processMessageText(
+                        message, user_id, incoming_media
+                    )
+                    outgoing_media_filename = None
 
-                if not skip_imagegen and final_media_filename:
+                if not skip_imagegen and outgoing_media_filename:
                     self.console.log(
-                        f"[yellow]Media filename: {final_media_filename}[/yellow]"
+                        f"[yellow]Media filename: {outgoing_media_filename}[/yellow]"
                     )
 
                 if skip_imagegen:
@@ -296,29 +304,31 @@ class Ircawp:
                         "[yellow]Skipping image generation as requested.[/yellow]"
                     )
 
-                self.console.log(f"[red]Plugin returned {final_media_filename}.[/red]")
+                self.console.log(
+                    f"[red]Plugin returned {outgoing_media_filename}.[/red]"
+                )
 
                 # we have a media filename and it exists, so we're good
-                if final_media_filename and os.path.exists(final_media_filename):
+                if outgoing_media_filename and os.path.exists(outgoing_media_filename):
                     self.console.log(
-                        f"[green]Media file provided from plugin:[/green] {final_media_filename}"
+                        f"[green]Media file provided from plugin:[/green] {outgoing_media_filename}"
                     )
                     pass
                 else:
                     # otherwise pass the response as a prompt and save the resulting filename
                     self.console.log(
-                        f"[yellow]Media file {final_media_filename} not found, generating from response using {self.imagegen}.[/yellow]"
+                        f"[yellow]Media file {outgoing_media_filename} not found, generating from response using {self.imagegen}.[/yellow]"
                     )
                     if self.imagegen and not skip_imagegen:
                         self.console.log("[yellow]Generating image...[/yellow]")
                         imagegen_summary = self.generateImageSummary(inf_response)
                         if is_img_plugin:
                             inf_response = imagegen_summary
-                        final_media_filename = self.imagegen.execute(
+                        outgoing_media_filename = self.imagegen.execute(
                             prompt=imagegen_summary
                         )
 
-                self.egestMessage(inf_response, [final_media_filename or None], aux)
+                self.egestMessage(inf_response, [outgoing_media_filename or None], aux)
 
     def start(self):
         self.console.log("Here we go...")

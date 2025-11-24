@@ -1,5 +1,8 @@
 import re
+import os
+import uuid
 import dotenv
+import requests
 from .Ircawp_Frontend import Ircawp_Frontend
 
 from slack_bolt import App
@@ -37,6 +40,9 @@ class Slack(Ircawp_Frontend):
 
     # @bolt.event("app_mention")
     def ingestEvent(self, event, message, client, say, body):
+        self.console.log(
+            f"[yellow]:alert: :smile: Ingesting Slack event: {event}[/yellow]"
+        )
         user_id = event["user"]
         channel = event["channel"]
 
@@ -47,14 +53,40 @@ class Slack(Ircawp_Frontend):
         if prompt:
             prompt = prompt[2]
 
-        self.console.log(f"[red]Received message: {prompt}[/red]")
-
         username = self.bolt.client.users_info(user=user_id)["user"]["profile"][
             "display_name"
         ]
 
+        incoming_media = []
+
+        # get save user-provided media if present
+        if "files" in event:
+            # take first file
+            file_info = event["files"][0]
+            file_url = file_info["url_private_download"]
+            try:
+                resp = requests.get(
+                    file_url,
+                    headers={
+                        "Authorization": f"Bearer {self.slack_creds['SLACK_BOT_TOKEN']}"
+                    },
+                    timeout=30,
+                )
+                resp.raise_for_status()
+                media_content = resp.content
+            except Exception as e:
+                self.console.log(f"[red]Failed to download media: {e}[/red]")
+                media_content = b""
+            # dump to /tmp with uuid prefix to avoid collisions
+            safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", file_info["name"])
+            media_path = os.path.join("/tmp", f"{uuid.uuid4()}_{safe_name}")
+            with open(media_path, "wb") as f:
+                f.write(media_content)
+            self.console.log(f"[blue]Saved media temp file: {media_path}[/blue]")
+            incoming_media.append(media_path)
+
         self.parent.ingestMessage(
-            prompt.strip(), username, (user_id, channel, say, body)
+            prompt.strip(), username, incoming_media, (user_id, channel, say, body)
         )
 
     def egestEvent(self, message, media, aux={}):
@@ -75,10 +107,10 @@ class Slack(Ircawp_Frontend):
                 ],
             )
         else:
-            self.postMedia(message, media, aux)
+            self._postMedia(message, media, aux)
         pass
 
-    def postMedia(self, message, media, aux):
+    def _postMedia(self, message, media, aux):
         user_id, channel, say, body = aux
         if message:
             response_message_with_username = f"<@{user_id}> {message}"

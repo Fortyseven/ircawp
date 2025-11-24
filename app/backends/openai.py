@@ -1,9 +1,24 @@
 """
 Backend for OpenAI-compatible endpoints (e.g., api.openai.com, local LLMs with OpenAI API).
+
+Adds support for multimodal prompts (text + images) when local image file paths
+are passed via the `media` argument to `runInference`.
+
+Implementation notes:
+ - For each readable image path we create an OpenAI content part of type
+     "image_url" with a data URI (base64) payload.
+ - If at least one image is present, the user message content becomes a list of
+     parts: first the text, then each image part. Otherwise content remains a
+     simple string (backwards compatible for pure text models / endpoints).
+ - Failures to read individual image files are logged and skipped without
+     aborting the entire inference.
 """
 
 import requests
 import json
+import base64
+import mimetypes
+from pathlib import Path
 from .Ircawp_Backend import Ircawp_Backend
 
 
@@ -13,7 +28,7 @@ class Openai(Ircawp_Backend):
 
         self.config = kwargs.get("config", {})
 
-        if not "openai" in self.config:
+        if "openai" not in self.config:
             raise ValueError("Missing OpenAI backend configuration ('config.openai')")
 
         self.oai_config = self.config.get("openai", {})
@@ -67,11 +82,35 @@ class Openai(Ircawp_Backend):
         response.raise_for_status()
         return response.json()
 
+    def _image_to_data_uri(self, img_path: str) -> str | None:
+        """Read local image file and return a data URI suitable for OpenAI image_url content part.
+
+        Returns None if file cannot be read or is not an image.
+        """
+        try:
+            p = Path(img_path)
+            if not p.is_file():
+                self.console.log(f"[yellow]Media file not found: {img_path}[/yellow]")
+                return None
+            mime, _ = mimetypes.guess_type(p.name)
+            if not mime or not mime.startswith("image/"):
+                self.console.log(
+                    f"[yellow]Skipping non-image media: {img_path} (mime={mime})[/yellow]"
+                )
+                return None
+            data = p.read_bytes()
+            b64 = base64.b64encode(data).decode("utf-8")
+            return f"data:{mime};base64,{b64}"
+        except Exception as e:
+            self.console.log(f"[yellow]Failed reading image '{img_path}': {e}[/yellow]")
+            return None
+
     def runInference(
         self,
         prompt: str,
         system_prompt: str | None = None,
         username: str = "",
+        media: list = [],
     ) -> str:
         if type(prompt) is not str:
             self.console.log(f"= OpenAI runInference: prompt='{prompt}...'")
@@ -101,14 +140,34 @@ class Openai(Ircawp_Backend):
 
             # Compose messages for chat endpoint
             messages = []
+
+            # Build user content (supports multimodal if media provided)
+            user_content: str | list = prompt
+            image_parts = []
+            if media and isinstance(media, list):
+                for img_path in media:
+                    data_uri = self._image_to_data_uri(str(img_path))
+                    if not data_uri:
+                        continue
+                    image_parts.append(
+                        {"type": "image_url", "image_url": {"url": data_uri}}
+                    )
+
+            if image_parts:
+                # Text part first, then images
+                user_content = [
+                    {"type": "text", "text": prompt},
+                    *image_parts,
+                ]
+
             if system_prompt:
                 messages = [
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt},
+                    {"role": "user", "content": user_content},
                 ]
             else:
                 messages = [
-                    {"role": "user", "content": prompt},
+                    {"role": "user", "content": user_content},
                 ]
 
             # Call OpenAI chat endpoint
@@ -127,4 +186,20 @@ class Openai(Ircawp_Backend):
         except Exception as e:
             response = f"**IT HERTZ, IT HERTZ (openai):** '{e}'"
             self.console.log(f"[red]Exception in OpenAI backend: {e}[/red] {str(e)}")
+        finally:
+            # clean up media files; they are no longer needed
+            for img_path in media:
+                try:
+                    p = Path(img_path)
+                    if p.is_file():
+                        p.unlink()
+                        self.console.log(
+                            f"[blue]Deleted temp media file: {img_path}[/blue]"
+                        )
+                except Exception as e:
+                    self.console.log(
+                        f"[yellow]Failed to delete temp media file '{img_path}': {e}[/yellow]"
+                    )
+                    continue
+
         return response.replace("\n", "\n\n")
