@@ -62,16 +62,29 @@ class Openai(Ircawp_Backend):
 
         self.console.log("System prompt: ", self.system_prompt)
 
-    def chat(self, messages):
+    def chat(self, messages, temperature: float | None = None):
         headers = {
             "Content-Type": "application/json",
         }
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
+        # Choose temperature: per-call override else default option
+        if temperature is None:
+            use_temperature = self.options["temperature"]
+        else:
+            # Clamp to reasonable OpenAI range 0.0 - 2.0
+            try:
+                use_temperature = float(temperature)
+            except (TypeError, ValueError):
+                use_temperature = self.options["temperature"]
+            if use_temperature < 0.0:
+                use_temperature = 0.0
+            if use_temperature > 2.0:
+                use_temperature = 2.0
         payload = {
             "model": self.model,
             "messages": messages,
-            "temperature": self.options["temperature"],
+            "temperature": use_temperature,
             # "max_tokens": self.options['max_tokens'],
         }
         response = requests.post(
@@ -110,6 +123,7 @@ class Openai(Ircawp_Backend):
         prompt: str,
         system_prompt: str | None = None,
         username: str = "",
+        temperature: float = 0.7,
         media: list = [],
     ) -> str:
         if type(prompt) is not str:
@@ -170,8 +184,8 @@ class Openai(Ircawp_Backend):
                     {"role": "user", "content": user_content},
                 ]
 
-            # Call OpenAI chat endpoint
-            result = self.chat(messages)
+            # Call OpenAI chat endpoint with possible temperature override
+            result = self.chat(messages, temperature=temperature)
             # Extract response text
             if "choices" in result and len(result["choices"]) > 0:
                 response = result["choices"][0]["message"]["content"]
@@ -186,20 +200,5 @@ class Openai(Ircawp_Backend):
         except Exception as e:
             response = f"**IT HERTZ, IT HERTZ (openai):** '{e}'"
             self.console.log(f"[red]Exception in OpenAI backend: {e}[/red] {str(e)}")
-        finally:
-            # clean up media files; they are no longer needed
-            for img_path in media:
-                try:
-                    p = Path(img_path)
-                    if p.is_file():
-                        p.unlink()
-                        self.console.log(
-                            f"[blue]Deleted temp media file: {img_path}[/blue]"
-                        )
-                except Exception as e:
-                    self.console.log(
-                        f"[yellow]Failed to delete temp media file '{img_path}': {e}[/yellow]"
-                    )
-                    continue
 
         return response.replace("\n", "\n\n")
