@@ -43,27 +43,19 @@ class PluginBase:
     def execute(
         self,
         query: str,
+        media: list,
         backend: Ircawp_Backend,
     ) -> tuple[str, str | dict, bool]:
-        print("= PluginBase execute: ", self, query)
+        print("= PluginBase execute: ", query, media)
 
         if not query.strip() and self.prompt_required:
             return self.msg_empty_query, "", True
         try:
             media_return = ""
-            response, media, skip_imagegen = self.main(query, backend)
+            response, outgoing_media, skip_imagegen = self.main(query, media, backend)
 
-            if media and isinstance(media, str):
-                media_return = media
-            # else:
-            #     media_return = (
-            #         ""
-            #         if (not self.use_imagegen and not media)
-            #         else {
-            #             "prefix": self.imagegen_prefix,
-            #             "content": response,
-            #         }
-            #     )
+            if outgoing_media and isinstance(outgoing_media, str):
+                media_return = outgoing_media
             return (response, media_return, skip_imagegen)
         except Exception as e:
             return (

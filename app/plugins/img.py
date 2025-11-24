@@ -6,7 +6,7 @@ from app.backends.Ircawp_Backend import Ircawp_Backend
 from .__PluginBase import PluginBase
 
 
-def img(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
+def img(prompt: str, media: list, backend: Ircawp_Backend) -> tuple[str, str, bool]:
     # we don't run the imagegen here, we just pass it all back
     # to ircawp to process without inference
 

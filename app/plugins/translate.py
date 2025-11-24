@@ -28,7 +28,9 @@ Notes: $TRANSLATION_NOTES
 DISABLE_IMAGEGEN = True
 
 
-def translate(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
+def translate(
+    prompt: str, media: list, backend: Ircawp_Backend
+) -> tuple[str, str, bool]:
     inf_response = backend.runInference(
         system_prompt=SYSTEM_PROMPT,
         prompt=prompt.strip(),

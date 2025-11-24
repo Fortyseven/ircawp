@@ -10,7 +10,7 @@ def get_triggers(trigger: list) -> str:
     return "/" + ", /".join(trigger)
 
 
-def help(query: str, backend: Ircawp_Backend) -> tuple[str, str]:
+def help(query: str, media: list, backend: Ircawp_Backend) -> tuple[str, str]:
     from app.plugins import PLUGINS  # lazy load
 
     groups = {}

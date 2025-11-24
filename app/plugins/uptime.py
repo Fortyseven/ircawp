@@ -10,7 +10,7 @@ from .__PluginBase import PluginBase
 START_TIME = datetime.datetime.now()
 
 
-def uptime(prompt: str, backend: Ircawp_Backend) -> tuple[str, str]:
+def uptime(prompt: str, media: list, backend: Ircawp_Backend) -> tuple[str, str]:
     from datetime import datetime
     from datetime import timedelta
 

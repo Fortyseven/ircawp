@@ -12,7 +12,7 @@ START_TIME = datetime.datetime.now()
 RSS_URL = "https://hnrss.org/frontpage"
 
 
-def hn(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
+def hn(prompt: str, media: list, backend: Ircawp_Backend) -> tuple[str, str, bool]:
     url = RSS_URL
     feed = feedparser.parse(url)
 

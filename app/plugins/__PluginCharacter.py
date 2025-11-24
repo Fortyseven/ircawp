@@ -29,6 +29,7 @@ class PluginCharacter:
     def execute(
         self,
         query: str,
+        media: list,
         backend: Ircawp_Backend,
     ) -> tuple[str, str | dict]:
         print("STEALTH: PluginCharacter execute: ", query)

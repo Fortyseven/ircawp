@@ -50,7 +50,7 @@ def initTTS(backend: Ircawp_Backend):
     XTTS.load_model()
 
 
-def saysforty(prompt: str, backend: Ircawp_Backend) -> InfResponse:
+def saysforty(prompt: str, media: list, backend: Ircawp_Backend) -> InfResponse:
     # return prompt.strip(), ""
     # response = backend.runInference(
     #     system_prompt="", user_prompt=prompt.strip()

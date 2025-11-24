@@ -161,7 +161,9 @@ def process_weather_json(json_text: str) -> tuple[str, str]:
         return "Error: could not decode JSON.", "", True
 
 
-def doWeather(query: str, backend: Ircawp_Backend) -> tuple[str, str | dict]:
+def doWeather(
+    query: str, media: list, backend: Ircawp_Backend
+) -> tuple[str, str | dict]:
     try:
         url_query = f"https://wttr.in/{quote_plus(query)}?format=j1"
         # response = requests.get(url_query, timeout=12, allow_redirects=True)

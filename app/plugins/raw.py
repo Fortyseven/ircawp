@@ -7,7 +7,7 @@ from app.types import InfResponse
 from .__PluginBase import PluginBase
 
 
-def raw(prompt: str, backend: Ircawp_Backend) -> InfResponse:
+def raw(prompt: str, media: list, backend: Ircawp_Backend) -> InfResponse:
     # return prompt.strip(), ""
     response = backend.runInference(system_prompt="", prompt=prompt.strip())
     return response, (), False

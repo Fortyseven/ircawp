@@ -13,6 +13,7 @@ CORE_PLUGINS = [
     "help",
     "hn",
     "img",
+    "geolocate",
     "news",
     "raw",
     "summarize",

@@ -36,7 +36,9 @@ Summarize the following text in a acidic, sarcastic manner, poking fun at the co
 DISABLE_IMAGEGEN = True
 
 
-def summarize(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
+def summarize(
+    prompt: str, media: list, backend: Ircawp_Backend
+) -> tuple[str, str, bool]:
     special_mode = None
     import re
 

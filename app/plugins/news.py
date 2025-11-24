@@ -13,7 +13,7 @@ START_TIME = datetime.datetime.now()
 SITE_URL = "https://drudgereport.com/"
 
 
-def news(prompt: str, backend: Ircawp_Backend) -> tuple[str, str, bool]:
+def news(prompt: str, media: list, backend: Ircawp_Backend) -> tuple[str, str, bool]:
     content = fetchHtml(SITE_URL)
 
     # page has HTML comments bracketing sections of the site:

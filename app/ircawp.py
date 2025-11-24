@@ -3,6 +3,7 @@ import threading
 import queue as q
 import time
 import importlib
+from pathlib import Path
 
 from rich import console as rich_console
 from rich.traceback import install
@@ -133,7 +134,7 @@ class Ircawp:
         self.frontend.egestEvent(message, media, aux)
 
     def processMessagePlugin(
-        self, plugin: str, message: str, user_id: str
+        self, plugin: str, message: str, user_id: str, media: list = []
     ) -> InfResponse:
         """
         Process a message from the queue, directed towards a plugin
@@ -148,16 +149,16 @@ class Ircawp:
         """
         self.console.log(f"Processing plugin: {plugin}")
         message = message.replace(f"/{plugin} ", "").strip()
-        response, media, skip_imagegen = PLUGINS[plugin].execute(
+        response, outgoing_media, skip_imagegen = PLUGINS[plugin].execute(
             query=message,
             backend=self.backend,
         )
 
         self.console.log(
-            f"Plugin response: {response[0:10]}, media: {media}, skip_imagegen: {skip_imagegen}"
+            f"Plugin response: {response[0:10]}, media: {outgoing_media}, skip_imagegen: {skip_imagegen}"
         )
 
-        return response, media, skip_imagegen
+        return response, outgoing_media, skip_imagegen
 
     def extractUrl(self, text: str) -> list:
         """
@@ -267,66 +268,86 @@ class Ircawp:
                 skip_imagegen = False
 
                 message, user_id, incoming_media, aux = self.queue.get()
-
                 message = message.strip()
 
                 self.console.log(f'[blue]Incoming message:[/blue] "{message}"')
                 self.console.log(f"[blue]Incoming media:[/blue] {incoming_media}")
 
-                # is it a plugin?
-                if message.startswith("/"):
-                    plugin_name = message.split(" ")[0][1:]
-                    if plugin_name in PLUGINS:
-                        inf_response, outgoing_media_filename, skip_imagegen = (
-                            self.processMessagePlugin(
-                                plugin_name, message=message, user_id=user_id
+                try:
+                    # is it a plugin?
+                    if message.startswith("/"):
+                        plugin_name = message.split(" ")[0][1:]
+                        if plugin_name in PLUGINS:
+                            inf_response, outgoing_media_filename, skip_imagegen = (
+                                self.processMessagePlugin(
+                                    plugin_name,
+                                    message=message,
+                                    user_id=user_id,
+                                    media=incoming_media,
+                                )
                             )
-                        )
-                        if plugin_name == "img":
-                            is_img_plugin = True
+                            if plugin_name == "img":
+                                is_img_plugin = True
+                        else:
+                            inf_response = f"Plugin {plugin_name} not found."
+                            outgoing_media_filename = ""
+                    # otherwise, process it as a regular text message
                     else:
-                        inf_response = f"Plugin {plugin_name} not found."
-                        outgoing_media_filename = ""
-                # otherwise, process it as a regular text message
-                else:
-                    inf_response = self.processMessageText(
-                        message, user_id, incoming_media
-                    )
-                    outgoing_media_filename = None
-
-                if not skip_imagegen and outgoing_media_filename:
-                    self.console.log(
-                        f"[yellow]Media filename: {outgoing_media_filename}[/yellow]"
-                    )
-
-                if skip_imagegen:
-                    self.console.log(
-                        "[yellow]Skipping image generation as requested.[/yellow]"
-                    )
-
-                self.console.log(
-                    f"[red]Plugin returned {outgoing_media_filename}.[/red]"
-                )
-
-                # we have a media filename and it exists, so we're good
-                if outgoing_media_filename and os.path.exists(outgoing_media_filename):
-                    self.console.log(
-                        f"[green]Media file provided from plugin:[/green] {outgoing_media_filename}"
-                    )
-                    pass
-                else:
-                    # otherwise pass the response as a prompt and save the resulting filename
-                    self.console.log(
-                        f"[yellow]Media file {outgoing_media_filename} not found, generating from response using {self.imagegen}.[/yellow]"
-                    )
-                    if self.imagegen and not skip_imagegen:
-                        self.console.log("[yellow]Generating image...[/yellow]")
-                        imagegen_summary = self.generateImageSummary(inf_response)
-                        if is_img_plugin:
-                            inf_response = imagegen_summary
-                        outgoing_media_filename = self.imagegen.execute(
-                            prompt=imagegen_summary
+                        inf_response = self.processMessageText(
+                            message, user_id, incoming_media
                         )
+                        outgoing_media_filename = None
+
+                    if not skip_imagegen and outgoing_media_filename:
+                        self.console.log(
+                            f"[yellow]Media filename: {outgoing_media_filename}[/yellow]"
+                        )
+
+                    if skip_imagegen:
+                        self.console.log(
+                            "[yellow]Skipping image generation as requested.[/yellow]"
+                        )
+
+                    self.console.log(
+                        f"[red]Plugin returned {outgoing_media_filename}.[/red]"
+                    )
+
+                    # we have a media filename and it exists, so we're good
+                    if outgoing_media_filename and os.path.exists(
+                        outgoing_media_filename
+                    ):
+                        self.console.log(
+                            f"[green]Media file provided from plugin:[/green] {outgoing_media_filename}"
+                        )
+                        pass
+                    else:
+                        # otherwise pass the response as a prompt and save the resulting filename
+                        self.console.log(
+                            f"[yellow]Media file {outgoing_media_filename} not found, generating from response using {self.imagegen}.[/yellow]"
+                        )
+                        if self.imagegen and not skip_imagegen:
+                            self.console.log("[yellow]Generating image...[/yellow]")
+                            imagegen_summary = self.generateImageSummary(inf_response)
+                            if is_img_plugin:
+                                inf_response = imagegen_summary
+                            outgoing_media_filename = self.imagegen.execute(
+                                prompt=imagegen_summary
+                            )
+                finally:
+                    # clean up incoming media files; they are no longer needed
+                    for img_path in incoming_media:
+                        try:
+                            p = Path(img_path)
+                            if p.is_file():
+                                p.unlink()
+                                self.console.log(
+                                    f"[blue]Deleted temp media file: {img_path}[/blue]"
+                                )
+                        except Exception as e:
+                            self.console.log(
+                                f"[yellow]Failed to delete temp media file '{img_path}': {e}[/yellow]"
+                            )
+                            continue
 
                 self.egestMessage(inf_response, [outgoing_media_filename or None], aux)
 
