@@ -46,7 +46,7 @@ class Slack(Ircawp_Frontend):
         user_id = event["user"]
         channel = event["channel"]
 
-        regex = r"(<.*> )(.*)"
+        regex = r"(<.*>\w?)(.*)"
 
         prompt: re.Match | None = re.match(regex, event["text"], re.MULTILINE)
 
