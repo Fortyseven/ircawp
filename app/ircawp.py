@@ -334,6 +334,7 @@ class Ircawp:
                         pass
                     else:
                         # otherwise pass the response as a prompt and save the resulting filename
+
                         self.console.log(
                             f"[yellow]Media file {outgoing_media_filename} not found, generating from response using {self.imagegen}.[/yellow]"
                         )

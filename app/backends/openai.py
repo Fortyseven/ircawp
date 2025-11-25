@@ -21,6 +21,8 @@ import mimetypes
 from datetime import datetime
 from pathlib import Path
 from .Ircawp_Backend import Ircawp_Backend
+from .tools import get_all_tools
+from .tools.ToolBase import ToolResult
 
 DEBUG = True
 
@@ -65,7 +67,53 @@ class Openai(Ircawp_Backend):
 
         self.console.log("System prompt: ", self.system_prompt)
 
-    def chat(self, messages, temperature: float | None = None):
+        # Initialize tools
+        self.tools_enabled = self.oai_config.get("tools_enabled", True)
+        self.tools_supported = True  # Track if endpoint supports tools
+        self.available_tools = {}
+        if self.tools_enabled:
+            self._initialize_tools()
+        else:
+            self.console.log("[yellow]Tools disabled in config[/yellow]")
+
+    def _initialize_tools(self):
+        """Initialize and register available tools."""
+        all_tools = get_all_tools()
+        for tool_name, tool_class in all_tools.items():
+            try:
+                # Instantiate tool with access to backend and media backend
+                tool_instance = tool_class(
+                    backend=self,
+                    media_backend=getattr(self, "media_backend", None),
+                    console=self.console,
+                )
+                self.available_tools[tool_name] = tool_instance
+                self.console.log(f"- [green]Registered tool: {tool_name}[/green]")
+            except Exception as e:
+                self.console.log(
+                    f"[yellow]Failed to initialize tool {tool_name}: {e}[/yellow]"
+                )
+
+    def _get_tool_schemas(self) -> list:
+        """Get OpenAI function schemas for all available tools."""
+        return [tool.get_schema() for tool in self.available_tools.values()]
+
+    def _execute_tool(self, tool_name: str, arguments: dict) -> ToolResult:
+        """Execute a tool and return its result."""
+        if tool_name not in self.available_tools:
+            return ToolResult(text=f"Error: Tool '{tool_name}' not found")
+
+        tool = self.available_tools[tool_name]
+        try:
+            result = tool.execute(**arguments)
+            return result
+        except Exception as e:
+            self.console.log(f"[red]Error executing tool {tool_name}: {e}[/red]")
+            return ToolResult(text=f"Error executing tool: {str(e)}")
+
+    def chat(
+        self, messages, temperature: float | None = None, tools: list | None = None
+    ):
         headers = {
             "Content-Type": "application/json",
         }
@@ -90,12 +138,42 @@ class Openai(Ircawp_Backend):
             "temperature": use_temperature,
             "max_tokens": 2048,  # max Slack block length is 3000 # self.options['max_tokens'],
         }
+
+        # Add tools if provided
+        if tools:
+            payload["tools"] = tools
+            payload["tool_choice"] = "auto"
+
         response = requests.post(
             f"{self.api_url}/v1/chat/completions",
             headers=headers,
             data=json.dumps(payload),
         )
-        response.raise_for_status()
+
+        # If we get a 500 error and tools were provided, it might be that the endpoint
+        # doesn't support tools. Try again without tools.
+        if response.status_code == 500 and tools:
+            self.console.log(
+                "[yellow]Server error with tools, retrying without tools...[/yellow]"
+            )
+            self.tools_supported = (
+                False  # Remember that this endpoint doesn't support tools
+            )
+            payload.pop("tools", None)
+            payload.pop("tool_choice", None)
+            response = requests.post(
+                f"{self.api_url}/v1/chat/completions",
+                headers=headers,
+                data=json.dumps(payload),
+            )
+
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            self.console.log(f"[red]HTTP Error: {e}[/red]")
+            self.console.log(f"[red]Response body: {response.text}[/red]")
+            raise
+
         return response.json()
 
     def _image_to_data_uri(self, img_path: str) -> str | None:
@@ -128,6 +206,7 @@ class Openai(Ircawp_Backend):
         username: str = "",
         temperature: float = 0.7,
         media: list = [],
+        use_tools: bool = True,
     ) -> str:
         if DEBUG:
             self.console.log(f"[black on yellow]OpenAI runInference: prompt='{prompt}'")
@@ -141,6 +220,9 @@ class Openai(Ircawp_Backend):
                 f"[black on yellow]OpenAI runInference: temperature='{temperature}'"
             )
             self.console.log(f"[black on yellow]OpenAI runInference: media='{media}'")
+            self.console.log(
+                f"[black on yellow]OpenAI runInference: use_tools='{use_tools}'"
+            )
 
         if type(prompt) is not str:
             prompt = str(prompt)
@@ -202,8 +284,75 @@ class Openai(Ircawp_Backend):
                     {"role": "user", "content": user_content},
                 ]
 
-            # Call OpenAI chat endpoint with possible temperature override
-            result = self.chat(messages, temperature=temperature)
+            # Determine if tools should be used
+            tools = None
+            if (
+                use_tools
+                and self.tools_enabled
+                and self.tools_supported
+                and self.available_tools
+            ):
+                tools = self._get_tool_schemas()
+
+            # Call OpenAI chat endpoint with possible temperature override and tools
+            result = self.chat(messages, temperature=temperature, tools=tools)
+
+            # Check if LLM wants to call tools
+            if tools and "choices" in result and len(result["choices"]) > 0:
+                choice = result["choices"][0]
+                message = choice["message"]
+
+                # Handle tool calls
+                if message.get("tool_calls"):
+                    for tool_call in message["tool_calls"]:
+                        tool_name = tool_call["function"]["name"]
+                        tool_args = json.loads(tool_call["function"]["arguments"])
+
+                        self.console.log(
+                            f"[cyan]Tool call: {tool_name} with args {tool_args}[/cyan]"
+                        )
+
+                        # Execute the tool
+                        tool_result = self._execute_tool(tool_name, tool_args)
+
+                        # Add tool call to messages
+                        messages.append(message)
+
+                        # Build tool response content
+                        tool_content_parts = []
+                        if tool_result.text:
+                            tool_content_parts.append(
+                                {"type": "text", "text": tool_result.text}
+                            )
+
+                        # Add images from tool result
+                        if tool_result.images:
+                            for img_path in tool_result.images:
+                                data_uri = self._image_to_data_uri(str(img_path))
+                                if data_uri:
+                                    tool_content_parts.append(
+                                        {
+                                            "type": "image_url",
+                                            "image_url": {"url": data_uri},
+                                        }
+                                    )
+
+                        # Add tool response to messages
+                        messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": tool_call["id"],
+                                "content": tool_content_parts
+                                if len(tool_content_parts) > 1
+                                else (
+                                    tool_content_parts[0] if tool_content_parts else ""
+                                ),
+                            }
+                        )
+
+                    # Make another call with tool results
+                    result = self.chat(messages, temperature=temperature)
+
             # Extract response text
             if "choices" in result and len(result["choices"]) > 0:
                 response = result["choices"][0]["message"]["content"]
