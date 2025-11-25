@@ -22,6 +22,8 @@ from datetime import datetime
 from pathlib import Path
 from .Ircawp_Backend import Ircawp_Backend
 
+DEBUG = True
+
 
 class Openai(Ircawp_Backend):
     def __init__(self, *args, **kwargs):
@@ -42,7 +44,7 @@ class Openai(Ircawp_Backend):
         self.model = self.oai_config.get("model", "")
 
         self.options = {}
-        self.options["temperature"] = self.oai_config.get("temperature", 0.7)
+        self.options["temperature"] = self.oai_config.get("temperature", 1.0)
         self.options["max_tokens"] = self.oai_config.get("max_tokens", 1024)
 
         self.console.log(f"- [yellow]OpenAI API URL: {self.api_url}[/yellow]")
@@ -86,7 +88,7 @@ class Openai(Ircawp_Backend):
             "model": self.model,
             "messages": messages,
             "temperature": use_temperature,
-            "max_tokens": 2500,  # max Slack block length is 3000 # self.options['max_tokens'],
+            "max_tokens": 2048,  # max Slack block length is 3000 # self.options['max_tokens'],
         }
         response = requests.post(
             f"{self.api_url}/v1/chat/completions",
@@ -127,14 +129,27 @@ class Openai(Ircawp_Backend):
         temperature: float = 0.7,
         media: list = [],
     ) -> str:
+        if DEBUG:
+            self.console.log(f"[black on yellow]OpenAI runInference: prompt='{prompt}'")
+            self.console.log(
+                f"[black on yellow]OpenAI runInference: system_prompt='{system_prompt}'"
+            )
+            self.console.log(
+                f"[black on yellow]OpenAI runInference: username='{username}'"
+            )
+            self.console.log(
+                f"[black on yellow]OpenAI runInference: temperature='{temperature}'"
+            )
+            self.console.log(f"[black on yellow]OpenAI runInference: media='{media}'")
+
         if type(prompt) is not str:
-            self.console.log(f"= OpenAI runInference: prompt='{prompt}...'")
             prompt = str(prompt)
 
         response = ""
+
         try:
             # System prompt handling
-            if prompt[0] == "!":
+            if len(prompt) > 0 and prompt[0] == "!":
                 # use no prompt if starts with !
                 system_prompt = ""
             else:
@@ -207,6 +222,12 @@ class Openai(Ircawp_Backend):
 
         except Exception as e:
             response = f"**IT HERTZ, IT HERTZ (openai):** '{e}'"
-            self.console.log(f"[red]Exception in OpenAI backend: {e}[/red] {str(e)}")
+            self.console.log(f"[red on yellow]Exception in OpenAI backend: {e}")
+
+        finally:
+            if DEBUG:
+                self.console.log(
+                    f"[black on yellow]OpenAI runInference response size: {len(response)} chars"
+                )
 
         return response.replace("\n", "\n\n")

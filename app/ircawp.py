@@ -23,6 +23,8 @@ from app.frontends.Ircawp_Frontend import Ircawp_Frontend
 
 install(show_locals=True)
 
+DEBUG = True
+
 BANNER = r"""
 [red] __[/red]
 [red]|__|_______   ____  _____  __  _  ________[/red]
@@ -156,9 +158,10 @@ class Ircawp:
             media=media,
         )
 
-        self.console.log(
-            f"Plugin response: {response[0:10]}, media: {outgoing_media}, skip_imagegen: {skip_imagegen}"
-        )
+        if DEBUG:
+            self.console.log(
+                f"Plugin response: {response[0:10]}, media: {outgoing_media}, skip_imagegen: {skip_imagegen}"
+            )
 
         return response, outgoing_media, skip_imagegen
 
@@ -254,7 +257,8 @@ class Ircawp:
         return summary
 
     def messageQueueLoop(self) -> None:
-        self.console.log("Starting message queue thread...")
+        if DEBUG:
+            self.console.log("Starting message queue thread...")
 
         thread_sleep = config.get("thread_sleep", 0.250)
         while True:
@@ -264,7 +268,7 @@ class Ircawp:
             time.sleep(thread_sleep)
 
             if not self.queue.empty():
-                self.console.log("=================================================")
+                self.console.rule("[white on purple]START QUEUE ITEM PROCESSING")
 
                 is_img_plugin = False
                 skip_imagegen = False
@@ -272,8 +276,14 @@ class Ircawp:
                 message, user_id, incoming_media, aux = self.queue.get()
                 message = message.strip()
 
-                self.console.log(f'[blue]Incoming message:[/blue] "{message}"')
-                self.console.log(f"[blue]Incoming media:[/blue] {incoming_media}")
+                if DEBUG:
+                    self.console.log(
+                        "[white on purple]Dequeued message:\n",
+                        f"    [purple]|[/purple] '{message}'\n",
+                        f"    [purple]|[/purple] from user {user_id},\n",
+                        f"    [purple]|[/purple] with media {incoming_media},\n",
+                        f"    [purple]|[/purple] and aux {aux}",
+                    )
 
                 try:
                     # is it a plugin?
@@ -300,12 +310,12 @@ class Ircawp:
                         )
                         outgoing_media_filename = None
 
-                    if not skip_imagegen and outgoing_media_filename:
+                    if not skip_imagegen and outgoing_media_filename and DEBUG:
                         self.console.log(
                             f"[yellow]Media filename: {outgoing_media_filename}[/yellow]"
                         )
 
-                    if skip_imagegen:
+                    if skip_imagegen and DEBUG:
                         self.console.log(
                             "[yellow]Skipping image generation as requested.[/yellow]"
                         )
@@ -352,6 +362,13 @@ class Ircawp:
                             continue
 
                 self.egestMessage(inf_response, [outgoing_media_filename or None], aux)
+                if DEBUG:
+                    self.console.log(
+                        "[purple]egested response:\n",
+                        f"    [purple]|[/purple] '{inf_response}'\n",
+                        f"    [purple]|[/purple] with media '{outgoing_media_filename}'",
+                    )
+                self.console.rule("[white on purple]END QUEUE ITEM PROCESSING")
 
     def start(self):
         self.console.log("Here we go...")
