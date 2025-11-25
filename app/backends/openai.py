@@ -233,7 +233,7 @@ class Openai(Ircawp_Backend):
             # System prompt handling
             if len(prompt) > 0 and prompt[0] == "!":
                 # use no prompt if starts with !
-                system_prompt = ""
+                system_prompt = "You are a helpful assistant. Strive for accuracy. Do not make up information if you are not confident. Responses from tool calls are considered a primary source of truth."
             else:
                 if system_prompt is None:
                     system_prompt = self.system_prompt
@@ -318,35 +318,25 @@ class Openai(Ircawp_Backend):
                         # Add tool call to messages
                         messages.append(message)
 
-                        # Build tool response content
-                        tool_content_parts = []
-                        if tool_result.text:
-                            tool_content_parts.append(
-                                {"type": "text", "text": tool_result.text}
-                            )
+                        # Build tool response content as a simple string
+                        # Most endpoints don't support complex content in tool messages
+                        tool_content = (
+                            tool_result.text if tool_result.text else "No result"
+                        )
 
-                        # Add images from tool result
+                        # Note: Images from tools are currently not supported in tool responses
+                        # as most OpenAI-compatible endpoints don't support multimodal tool results
                         if tool_result.images:
-                            for img_path in tool_result.images:
-                                data_uri = self._image_to_data_uri(str(img_path))
-                                if data_uri:
-                                    tool_content_parts.append(
-                                        {
-                                            "type": "image_url",
-                                            "image_url": {"url": data_uri},
-                                        }
-                                    )
+                            tool_content += (
+                                f"\n[Tool returned {len(tool_result.images)} image(s)]"
+                            )
 
                         # Add tool response to messages
                         messages.append(
                             {
                                 "role": "tool",
                                 "tool_call_id": tool_call["id"],
-                                "content": tool_content_parts
-                                if len(tool_content_parts) > 1
-                                else (
-                                    tool_content_parts[0] if tool_content_parts else ""
-                                ),
+                                "content": tool_content,
                             }
                         )
 
