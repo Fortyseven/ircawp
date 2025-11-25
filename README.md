@@ -9,7 +9,7 @@
 
 # ircawp
 
-An easy to setup Llama.cpp-based IRC bot with easily extensible plugin functionality.
+An easy to setup OpenAI API (Ollama, Llamacpp, etc) connected IRC bot with easily extensible plugin functionality.
 
 Ircawp is under _heavy development_ and may undergo significant changes. I'm already planning a refactor to make it easier to port to other services, like Discord.
 
@@ -28,10 +28,11 @@ But for now, the standard LLM weirdness is good enough for me! ;)
 # Features
 
 -   Designed to work on lower-end hardware first. (I personally deploy this on a small AMD Ryzen 5 5625U based media box that sits on a shelf.)
--   Llamacpp (gguf models) and Ollama (preferred) backends
+-   OpenAI backend (compatiable with Ollama)
 -   Easy plugin support to add new `/slash` commands with arguments; return images and text.
     -   Includes weather and a host of chatbot 'personalities' to ask the advice of.
--   Request queue that processes requests in the order received
+-   Supports media image attachments from Slack for the LLM, or passed to plugins.
+-   Request queue that processes requests in the order received.
 -   SDXS image generation (insanely fast!); renders on the CPU by default, but even on that meager Ryzen 5 CPU it can generate about _an image a second_. Sure, they're not fantastic and they're 512x512, but c'mon, man, they're practically free. 😉
 
 # Requirements
@@ -72,7 +73,8 @@ A base set of plugins are included, including but not limited to:
 -   `/reverse` - reverses the text you give it (a trivial demo!)
 -   `/weather` - queries [wttr.in](https://wttr.in) for the weather in the location you give it (e.g. `@ircawp /weather 90210`)
 -   `/askjesus` - ask Jesus for advice (e.g. `@ircawp /askjesus should I buy a new car?`) -- and other characters!
--   ~~`/summary` - uses langchain and a smaller, faster model to summarize the website you give it (e.g. `@ircawp /summary https://www.example.com`)~~ (Disabled for now.)
+-   `/summarize` - summarizes a webpage given a URL
+-   `/geolocate` - runs rudimentary a geolocation prompt on a provided image
 
 ### Authoring New Plugins
 
@@ -102,4 +104,4 @@ A base set of plugins are included, including but not limited to:
 
 <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0 International License</a>.
 
-&copy; Network47.org, 2024
+&copy; Network47.org, 2025
