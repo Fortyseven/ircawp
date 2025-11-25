@@ -25,7 +25,6 @@ dependencies = [
     "llama-cpp-python>=0.3.16",
     "multidict>=6.6.4",
     "numpy>=1.26.4",
-    "ollama>=0.5.3",
     "optimum-quanto>=0.2.7",
     "packaging>=25.0",
     "playwright>=1.56.0",

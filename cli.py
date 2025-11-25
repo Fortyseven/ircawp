@@ -9,15 +9,12 @@ from rich.console import Console
 # from imagegen.BaseImageGen import BaseImageGen
 # from imagegen.SDXS import SDXS
 from app.lib.config import config
-from app.backends.ollama import Ollama
 from app.backends.openai import Openai
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.plugins import PLUGINS
 
 
-def processMessagePlugin(
-    plugin: str, message: str, user_id: str, backend_instance
-):
+def processMessagePlugin(plugin: str, message: str, user_id: str, backend_instance):
     """
     Process a message from the queue, directed towards a plugin
     instead of the standard inference backend.
@@ -52,18 +49,8 @@ if not prompt:
 backend_instance: Ircawp_Backend | None = None
 
 match config.get("backend", "ollama"):
-    case "ollama":
-        backend_instance = Ollama(
-            console=console,
-            config=config,
-            parent=None
-        )
     case "openai":
-        backend_instance = Openai(
-            console=console,
-            config=config,
-            parent=None
-        )
+        backend_instance = Openai(console=console, config=config, parent=None)
     case _:
         raise ValueError(f"Invalid backend: {config['backend']}")
 
@@ -72,7 +59,6 @@ print("\n----------------------------\n")
 import app.plugins as plugins
 
 plugins.load(console)
-Ollama.last_query_time = "xxx"
 
 print(f"- PROMPT: [yellow]{prompt}[/]")
 response = ""

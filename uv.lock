@@ -1255,7 +1255,6 @@ dependencies = [
     { name = "llama-cpp-python" },
     { name = "multidict" },
     { name = "numpy" },
-    { name = "ollama" },
     { name = "optimum-quanto" },
     { name = "packaging" },
     { name = "playwright" },
@@ -1298,7 +1297,6 @@ requires-dist = [
     { name = "llama-cpp-python", specifier = ">=0.3.16" },
     { name = "multidict", specifier = ">=6.6.4" },
     { name = "numpy", specifier = ">=1.26.4" },
-    { name = "ollama", specifier = ">=0.5.3" },
     { name = "optimum-quanto", specifier = ">=0.2.7" },
     { name = "packaging", specifier = ">=25.0" },
     { name = "playwright", specifier = ">=1.56.0" },
@@ -2251,19 +2249,6 @@ version = "12.8.90"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a2/eb/86626c1bbc2edb86323022371c39aa48df6fd8b0a1647bc274577f72e90b/nvidia_nvtx_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:5b17e2001cc0d751a5bc2c6ec6d26ad95913324a4adb86788c944f8ce9ba441f", size = 89954, upload-time = "2025-03-07T01:42:44.131Z" },
-]
-
-[[package]]
-name = "ollama"
-version = "0.5.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "httpx" },
-    { name = "pydantic" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/91/6d/ae96027416dcc2e98c944c050c492789502d7d7c0b95a740f0bb39268632/ollama-0.5.3.tar.gz", hash = "sha256:40b6dff729df3b24e56d4042fd9d37e231cee8e528677e0d085413a1d6692394", size = 43331, upload-time = "2025-08-07T21:44:10.422Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/be/f6/2091e50b8b6c3e6901f6eab283d5efd66fb71c86ddb1b4d68766c3eeba0f/ollama-0.5.3-py3-none-any.whl", hash = "sha256:a8303b413d99a9043dbf77ebf11ced672396b59bec27e6d5db67c88f01b279d2", size = 13490, upload-time = "2025-08-07T21:44:09.353Z" },
 ]
 
 [[package]]
