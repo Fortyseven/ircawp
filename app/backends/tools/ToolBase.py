@@ -2,13 +2,15 @@
 Base class for all LLM tools.
 
 Tools extend LLM capabilities by providing access to external functions,
-APIs, or data sources. Each tool must implement the execute() method and
-can return both text and images.
+APIs, or data sources. Supports both decorator-based (@tool) and class-based
+tool definitions, mimicking LangChain's approach.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Callable, get_type_hints
 from pathlib import Path
+from pydantic import BaseModel
+import inspect
 
 
 class ToolResult:
@@ -92,3 +94,186 @@ class ToolBase(ABC):
         """Convenience method to log messages."""
         if self.console:
             self.console.log(f"[Tool:{self.name}] {message}")
+
+
+class DecoratedTool(ToolBase):
+    """
+    Wrapper for decorator-based tools.
+
+    This class wraps functions decorated with @tool to make them compatible
+    with the ToolBase interface.
+    """
+
+    def __init__(
+        self,
+        func: Callable,
+        name: str | None = None,
+        description: str | None = None,
+        args_schema: type[BaseModel] | None = None,
+        backend=None,
+        media_backend=None,
+        console=None,
+    ):
+        """
+        Initialize a decorated tool.
+
+        Args:
+            func: The function to wrap
+            name: Tool name (defaults to function name)
+            description: Tool description (defaults to function docstring)
+            args_schema: Pydantic model for input validation
+            backend: LLM backend instance
+            media_backend: Media generation backend
+            console: Rich console for logging
+        """
+        super().__init__(backend, media_backend, console)
+
+        self._func = func
+        self.name = name or func.__name__
+        self.description = description or (func.__doc__ or "").strip()
+        self.args_schema = args_schema
+
+        # Generate schema from function signature
+        self._generate_schema()
+
+    def _generate_schema(self):
+        """Generate OpenAI function schema from function signature."""
+        sig = inspect.signature(self._func)
+        type_hints = get_type_hints(self._func)
+
+        properties = {}
+        required = []
+
+        for param_name, param in sig.parameters.items():
+            # Skip injected parameters
+            if param_name in ("backend", "media_backend", "console"):
+                continue
+
+            param_type = type_hints.get(param_name, str)
+            param_desc = ""
+
+            # Basic type mapping
+            json_type = "string"
+            if param_type is int:
+                json_type = "integer"
+            elif param_type is float:
+                json_type = "number"
+            elif param_type is bool:
+                json_type = "boolean"
+
+            properties[param_name] = {"type": json_type, "description": param_desc}
+
+            # Mark as required if no default value
+            if param.default == inspect.Parameter.empty:
+                required.append(param_name)
+
+        # If args_schema provided, use it instead
+        if self.args_schema:
+            schema = self.args_schema.model_json_schema()
+            properties = schema.get("properties", {})
+            required = schema.get("required", [])
+
+        self._schema = {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": {
+                    "type": "object",
+                    "properties": properties,
+                    "required": required,
+                },
+            },
+        }
+
+    def execute(self, **kwargs) -> ToolResult:
+        """Execute the wrapped function."""
+        # Inject backend services if function accepts them
+        sig = inspect.signature(self._func)
+        if "backend" in sig.parameters:
+            kwargs["backend"] = self.backend
+        if "media_backend" in sig.parameters:
+            kwargs["media_backend"] = self.media_backend
+        if "console" in sig.parameters:
+            kwargs["console"] = self.console
+
+        result = self._func(**kwargs)
+
+        # Convert result to ToolResult if needed
+        if isinstance(result, ToolResult):
+            return result
+        elif isinstance(result, str):
+            return ToolResult(text=result)
+        else:
+            return ToolResult(text=str(result))
+
+    def get_schema(self) -> Dict[str, Any]:
+        """Return the generated schema."""
+        return self._schema
+
+
+def tool(
+    name: str | None = None,
+    description: str | None = None,
+    args_schema: type[BaseModel] | None = None,
+):
+    """
+    Decorator to create a tool from a function.
+
+    Usage:
+        @tool
+        def my_tool(query: str) -> str:
+            '''Search for information.'''
+            return f"Results for {query}"
+
+        @tool(name="custom_name", description="Custom description")
+        def another_tool(x: int, y: int) -> str:
+            '''Add two numbers.'''
+            return str(x + y)
+
+        # With Pydantic schema
+        class MyInput(BaseModel):
+            location: str = Field(description="City name")
+            units: str = Field(default="celsius")
+
+        @tool(args_schema=MyInput)
+        def weather(location: str, units: str = "celsius") -> str:
+            '''Get weather for a location.'''
+            return f"Weather in {location}: 72°{units[0].upper()}"
+
+    Args:
+        name: Override the function name
+        description: Override the function docstring
+        args_schema: Pydantic model for input validation
+
+    Returns:
+        Decorated function that can be used as a tool
+    """
+
+    def decorator(func: Callable) -> DecoratedTool:
+        # Return a factory function that creates the tool when called
+        def tool_factory(backend=None, media_backend=None, console=None):
+            return DecoratedTool(
+                func=func,
+                name=name,
+                description=description,
+                args_schema=args_schema,
+                backend=backend,
+                media_backend=media_backend,
+                console=console,
+            )
+
+        # Store metadata on the factory
+        tool_factory._is_tool = True
+        tool_factory._tool_name = name or func.__name__
+        tool_factory._tool_func = func
+
+        return tool_factory
+
+    # Support both @tool and @tool()
+    if callable(name):
+        func = name
+        name = None
+        return decorator(func)
+
+    return decorator

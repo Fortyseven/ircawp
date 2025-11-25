@@ -79,10 +79,11 @@ class Openai(Ircawp_Backend):
     def _initialize_tools(self):
         """Initialize and register available tools."""
         all_tools = get_all_tools()
-        for tool_name, tool_class in all_tools.items():
+        for tool_name, tool_factory in all_tools.items():
             try:
                 # Instantiate tool with access to backend and media backend
-                tool_instance = tool_class(
+                # Works for both class-based and decorator-based tools
+                tool_instance = tool_factory(
                     backend=self,
                     media_backend=getattr(self, "media_backend", None),
                     console=self.console,
@@ -286,6 +287,7 @@ class Openai(Ircawp_Backend):
 
             # Determine if tools should be used
             tools = None
+            tools_used = []  # Track which tools were called
             if (
                 use_tools
                 and self.tools_enabled
@@ -311,6 +313,9 @@ class Openai(Ircawp_Backend):
                         self.console.log(
                             f"[cyan]Tool call: {tool_name} with args {tool_args}[/cyan]"
                         )
+
+                        # Track tool usage
+                        tools_used.append(tool_name)
 
                         # Execute the tool
                         tool_result = self._execute_tool(tool_name, tool_args)
@@ -354,6 +359,11 @@ class Openai(Ircawp_Backend):
                 )
             if not response or len(response) == 0:
                 response = "Response was empty. :("
+
+            # Append tools used if any
+            if tools_used:
+                tools_list = ", ".join(tools_used)
+                response += f"\n\n----\n_[Tools used: {tools_list}]_"
 
             tok = datetime.now()
 

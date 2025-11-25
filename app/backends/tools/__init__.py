@@ -3,16 +3,25 @@ Tools module for LLM backend function calling.
 
 Tools can be used to extend LLM capabilities by providing access to external
 functions, APIs, or data sources. Each tool is a separate submodule with a
-common interface.
+common interface. Supports both class-based and decorator-based (@tool) tools.
 """
 
 from pathlib import Path
 import importlib
-from typing import Dict, Type
-from .ToolBase import ToolBase
+from typing import Dict, Type, Callable
+from .ToolBase import ToolBase, tool, DecoratedTool
 
-# Tool registry
-_tools: Dict[str, Type[ToolBase]] = {}
+__all__ = [
+    "ToolBase",
+    "tool",
+    "DecoratedTool",
+    "get_tool",
+    "list_tools",
+    "get_all_tools",
+]
+
+# Tool registry - stores tool factories (classes or decorated functions)
+_tools: Dict[str, Type[ToolBase] | Callable] = {}
 
 
 def discover_tools():
@@ -31,24 +40,31 @@ def discover_tools():
                 module_name = f"app.backends.tools.{subdir.name}.tool"
                 module = importlib.import_module(module_name)
 
-                # Find ToolBase subclass in module
+                # Find all ToolBase subclasses and @tool decorated functions
                 for attr_name in dir(module):
                     attr = getattr(module, attr_name)
+
+                    # Check for class-based tools
                     if (
                         isinstance(attr, type)
                         and issubclass(attr, ToolBase)
                         and attr is not ToolBase
+                        and attr is not DecoratedTool
                     ):
-                        # Register tool by its name
                         tool_name = getattr(attr, "name", subdir.name)
                         _tools[tool_name] = attr
-                        break
+
+                    # Check for decorator-based tools
+                    elif callable(attr) and hasattr(attr, "_is_tool"):
+                        tool_name = getattr(attr, "_tool_name", attr_name)
+                        _tools[tool_name] = attr
+
             except Exception as e:
                 print(f"Failed to load tool from {subdir.name}: {e}")
 
 
-def get_tool(name: str) -> Type[ToolBase] | None:
-    """Get a tool class by name."""
+def get_tool(name: str) -> Type[ToolBase] | Callable | None:
+    """Get a tool factory by name."""
     return _tools.get(name)
 
 
@@ -57,8 +73,8 @@ def list_tools() -> list[str]:
     return list(_tools.keys())
 
 
-def get_all_tools() -> Dict[str, Type[ToolBase]]:
-    """Get all registered tools."""
+def get_all_tools() -> Dict[str, Type[ToolBase] | Callable]:
+    """Get all registered tool factories."""
     return _tools.copy()
 
 
