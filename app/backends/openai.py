@@ -18,6 +18,7 @@ import requests
 import json
 import base64
 import mimetypes
+from datetime import datetime
 from pathlib import Path
 from .Ircawp_Backend import Ircawp_Backend
 
@@ -152,6 +153,8 @@ class Openai(Ircawp_Backend):
 
             prompt = prompt.strip()
 
+            tick = datetime.now()
+
             # Compose messages for chat endpoint
             messages = []
 
@@ -197,6 +200,11 @@ class Openai(Ircawp_Backend):
                 )
             if not response or len(response) == 0:
                 response = "Response was empty. :("
+
+            tok = datetime.now()
+
+            self.last_query_time = tok - tick
+
         except Exception as e:
             response = f"**IT HERTZ, IT HERTZ (openai):** '{e}'"
             self.console.log(f"[red]Exception in OpenAI backend: {e}[/red] {str(e)}")

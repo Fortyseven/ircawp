@@ -13,6 +13,7 @@ class Ircawp_Backend:
         self.console = console
         self.parent = parent
         self.config = config
+        self.last_query_time = 0
 
         self.console.log(f"Backend config: {self.config}")
 
