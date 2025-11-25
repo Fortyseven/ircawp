@@ -9,7 +9,8 @@ from rich import console as rich_console
 from rich.traceback import install
 
 
-from app.backends.Ircawp_Backend import InfResponse, Ircawp_Backend
+from app.backends.Ircawp_Backend import Ircawp_Backend
+from app.types import InfResponse
 
 # Import MediaBackend base class for type hinting
 from app.media_backends.MediaBackend import MediaBackend
