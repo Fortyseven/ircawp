@@ -152,6 +152,7 @@ class Ircawp:
         response, outgoing_media, skip_imagegen = PLUGINS[plugin].execute(
             query=message,
             backend=self.backend,
+            media=media,
         )
 
         self.console.log(
