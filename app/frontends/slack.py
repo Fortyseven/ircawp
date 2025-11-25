@@ -40,9 +40,6 @@ class Slack(Ircawp_Frontend):
 
     # @bolt.event("app_mention")
     def ingestEvent(self, event, message, client, say, body):
-        self.console.log(
-            f"[yellow]:alert: :smile: Ingesting Slack event: {event}[/yellow]"
-        )
         user_id = event["user"]
         channel = event["channel"]
 

@@ -86,7 +86,7 @@ class Openai(Ircawp_Backend):
             "model": self.model,
             "messages": messages,
             "temperature": use_temperature,
-            # "max_tokens": self.options['max_tokens'],
+            "max_tokens": 2500,  # max Slack block length is 3000 # self.options['max_tokens'],
         }
         response = requests.post(
             f"{self.api_url}/v1/chat/completions",
