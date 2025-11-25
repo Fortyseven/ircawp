@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Sequence
-from .Ircawp_Backend import Ircawp_Backend, InfResponse
+from .Ircawp_Backend import Ircawp_Backend
 from ollama import Client, Message
 from app.lib.config import config
 
@@ -31,13 +31,11 @@ class Ollama(Ircawp_Backend):
         response = ""
 
         try:
-            if system_prompt == None:
+            if system_prompt is None:
                 system_prompt = self.config["llm"].get("system_prompt", None)
 
             if system_prompt:
-                system_prompt = self.templateReplace(
-                    system_prompt, username=username
-                )
+                system_prompt = self.templateReplace(system_prompt, username=username)
 
             prompt = prompt.strip()
 

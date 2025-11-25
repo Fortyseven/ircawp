@@ -7,7 +7,6 @@ if __name__ == "__main__":
     print("Running as script")
     sys.path.append(".")
 
-import os
 import torch
 
 # from diffusers import DiffusionPipeline

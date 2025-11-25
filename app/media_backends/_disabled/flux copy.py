@@ -32,9 +32,7 @@ from transformers import (
 DEFAULT_FILENAME = "/tmp/ircawp.flux.png"
 # CKPT_LOCAL_PATH = "/models/stable-diffusion/Hyper-SDXL-1step-Unet.safetensors"
 # MODEL_PATH = "/models/flux/flux1-schnell-fp8.safetensors"
-MODEL_PATH = (
-    "https://huggingface.co/Kijai/flux-fp8/blob/main/flux1-dev-fp8.safetensors"
-)
+MODEL_PATH = "https://huggingface.co/Kijai/flux-fp8/blob/main/flux1-dev-fp8.safetensors"
 # MODEL_PATH = "/models/flux/flux1-schnell-bnb-nf4.safetensors"
 # MODEL_PATH = "/models/flux/gguf/schnell/flux1-schnell-Q2_K.gguf"
 
