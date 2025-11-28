@@ -71,7 +71,7 @@ class Flux(MediaBackend):
 
         self.pipe = pipe
 
-        print("[red]Flux initialized?????[/red]")
+        print("[red]Flux initialized?????")
 
         # self.pipe = FluxPipeline.from_pretrained(
         #     MODEL_PATH, transformer=transformer

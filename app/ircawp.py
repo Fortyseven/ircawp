@@ -52,13 +52,15 @@ class Ircawp:
 
         self.console.log(BANNER)
         self.config = config
+        # Maximum characters allowed in egested messages; prevent frontend errors
+        self.max_egest_length = self.config.get("max_egest_length", 3500)
 
         # get config options, set up frontend, backend, and imagegen
         # process plugins, run setup for those needing it
 
         frontend_id = self.config.get("frontend")
 
-        self.console.log(f"- [yellow]Using frontend: {frontend_id}[/yellow]")
+        self.console.log(f"- [yellow]Using frontend: {frontend_id}")
 
         frontend = getattr(
             importlib.import_module(f"app.frontends.{frontend_id}"),
@@ -75,7 +77,7 @@ class Ircawp:
 
         backend_id = self.config.get("backend")
 
-        self.console.log(f"- [yellow]Using backend: {backend_id}[/yellow]")
+        self.console.log(f"- [yellow]Using backend: {backend_id}")
 
         backend = getattr(
             importlib.import_module(f"app.backends.{backend_id}"),
@@ -102,12 +104,20 @@ class Ircawp:
             )
 
             self.imagegen = imagegen_backend(self.backend)
+
+            # Pass imagegen to backend so tools can access it
+            if hasattr(self.backend, "update_media_backend"):
+                self.backend.update_media_backend(self.imagegen)
+            else:
+                self.backend.media_backend = self.imagegen
         else:
-            self.console.log("- [red]Image generator disabled[/red]")
+            self.console.log("- [red]Image generator disabled")
+            if hasattr(self.backend, "update_media_backend"):
+                self.backend.update_media_backend(None)
+            else:
+                self.backend.media_backend = None
 
         #####
-
-        self.console.log("- [yellow]Setting up plugins[/yellow]")
 
         plugins.load(self.console)
 
@@ -133,8 +143,41 @@ class Ircawp:
             media (list): Placeholder for media attachments.
             aux (list, optional): Bundle of optional data needed to route the message back to the user.
         """
-        # this sends a response back to the frontend
-        self.frontend.egestEvent(message, media, aux)
+        # enforce size limit before sending to frontend to avoid transport errors
+        try:
+            if isinstance(message, str) and len(message) > self.max_egest_length:
+                truncated_note = "\n\n[... message truncated due to size ...]"
+                message = (
+                    message[: self.max_egest_length - len(truncated_note)]
+                    + truncated_note
+                )
+
+            # this sends a response back to the frontend
+            self.frontend.egestEvent(message, media, aux)
+        except Exception as e:
+            # Never let frontend errors kill the queue thread; log and attempt a safe fallback
+            try:
+                self.console.log(
+                    f"[red]Frontend egest error: {e}. Attempting to send a shortened notice."
+                )
+            except Exception:
+                pass
+
+            safe_msg = (
+                "An error occurred delivering the response to the frontend. "
+                "The content may be too large or invalid. Showing a shortened preview:\n\n"
+            )
+            preview = ""
+            if isinstance(message, str):
+                preview = message[: min(1000, len(message))]
+            try:
+                self.frontend.egestEvent(safe_msg + preview, media, aux)
+            except Exception:
+                # If even the fallback fails, swallow to keep the thread alive
+                try:
+                    self.console.log("[yellow]Fallback egest also failed; continuing.")
+                except Exception:
+                    pass
 
     def processMessagePlugin(
         self, plugin: str, message: str, user_id: str, media: list = []
@@ -150,17 +193,18 @@ class Ircawp:
         Returns:
             InfResponse: _description_
         """
-        self.console.log(f"Processing plugin: {plugin}")
+        self.console.log(f"[white on green]Processing plugin: {plugin}")
         message = message.replace(f"/{plugin} ", "").strip()
         response, outgoing_media, skip_imagegen = PLUGINS[plugin].execute(
             query=message,
             backend=self.backend,
             media=media,
+            media_backend=self.imagegen,
         )
 
         if DEBUG:
             self.console.log(
-                f"Plugin response: {response[0:10]}, media: {outgoing_media}, skip_imagegen: {skip_imagegen}"
+                f"[black on green]Plugin response: {response[0:10]}, media: {outgoing_media}, skip_imagegen: {skip_imagegen}"
             )
 
         return response, outgoing_media, skip_imagegen
@@ -202,8 +246,8 @@ class Ircawp:
         return url
 
     def processMessageText(
-        self, message: str, user_id: str, incoming_media: list
-    ) -> InfResponse:
+        self, message: str, user_id: str, incoming_media: list, aux=None
+    ) -> tuple[str, list[str]]:
         """
         Process a message from the queue.
 
@@ -213,7 +257,7 @@ class Ircawp:
             incoming_media (list): An array of local file path strings to incoming media.
 
         Returns:
-            InfResponse: _description_
+            tuple[str, list[str]]: (response_text, tool_generated_image_paths)
         """
 
         # extract URLs from prompt
@@ -227,40 +271,44 @@ class Ircawp:
 
             message = f"####{url} content: ```\n{content}\n```\n####\n\n{message}"
 
-        response = self.backend.runInference(
+        response, tool_images = self.backend.runInference(
             prompt=message,
             system_prompt=None,
             username=user_id,
             media=incoming_media,
+            aux=aux,
         )
 
-        return response
+        return response, tool_images
 
-    def generateImageSummary(self, text: str) -> str:
-        """
-        Generate a summary prompt for image generation based on the
-        given text.
+    # def generateImageSummary(self, text: str) -> str:
+    #     """
+    #     Generate a summary prompt for image generation based on the
+    #     given text.
 
-        Args:
-            text (str): The text to summarize.
-        """
-        summary_prompt = f"{config['llm'].get('imagegen_prompt')}\n####\n{text}\n"
+    #     Args:
+    #         text (str): The text to summarize.
+    #     """
+    #     summary_prompt = (
+    #         f"{config['llm'].get('imagegen_prompt')}\n####\n{text}\n"
+    #         if config["llm"].get("imagegen_prompt")
+    #         else f"Create a vivid, detailed image generation prompt based on this description:\n\n{text}\n\nProvide only the refined prompt, nothing else."
+    #     )
 
-        summary = self.backend.runInference(
-            prompt=summary_prompt,
-            system_prompt="You are an expert at creating vivid image descriptions.",
-            username="imagegen_summary_bot",
-        )
+    #     summary = self.backend.runInference(
+    #         prompt=summary_prompt,
+    #         system_prompt=summary_prompt,
+    #     )
 
-        self.console.log(f"[green]Generated image summary prompt:[/green] {summary}")
+    #     self.console.log(f"[green]Generated image summary prompt: {summary}")
 
-        return summary
+    #     return summary
 
     def messageQueueLoop(self) -> None:
-        if DEBUG:
-            self.console.log("Starting message queue thread...")
+        self.console.log("[green on white]Starting message queue thread...")
 
         thread_sleep = config.get("thread_sleep", 0.250)
+
         while True:
             inf_response: str = ""
             outgoing_media_filename: str = ""
@@ -270,11 +318,13 @@ class Ircawp:
             if not self.queue.empty():
                 self.console.rule("[white on purple]START QUEUE ITEM PROCESSING")
 
-                is_img_plugin = False
-                skip_imagegen = False
+                # is_img_plugin = False
+                skip_imagegen = True
 
                 message, user_id, incoming_media, aux = self.queue.get()
                 message = message.strip()
+
+                outgoing_media_filename = ""
 
                 if DEBUG:
                     self.console.log(
@@ -290,6 +340,9 @@ class Ircawp:
                     if message.startswith("/"):
                         plugin_name = message.split(" ")[0][1:]
                         if plugin_name in PLUGINS:
+                            self.console.log(
+                                f"[white on green]Processing plugin: {plugin_name}"
+                            )
                             inf_response, outgoing_media_filename, skip_imagegen = (
                                 self.processMessagePlugin(
                                     plugin_name,
@@ -298,30 +351,32 @@ class Ircawp:
                                     media=incoming_media,
                                 )
                             )
-                            if plugin_name == "img":
-                                is_img_plugin = True
+                            # if plugin_name == "img":
+                            #     is_img_plugin = True
                         else:
                             inf_response = f"Plugin {plugin_name} not found."
-                            outgoing_media_filename = ""
                     # otherwise, process it as a regular text message
                     else:
-                        inf_response = self.processMessageText(
-                            message, user_id, incoming_media
+                        inf_response, tool_images = self.processMessageText(
+                            message, user_id, incoming_media, aux
                         )
-                        outgoing_media_filename = None
-
-                    if not skip_imagegen and outgoing_media_filename and DEBUG:
-                        self.console.log(
-                            f"[yellow]Media filename: {outgoing_media_filename}[/yellow]"
+                        # Use first tool-generated image if available
+                        outgoing_media_filename = (
+                            tool_images[0] if tool_images else None
                         )
 
-                    if skip_imagegen and DEBUG:
+                    if outgoing_media_filename and DEBUG:
                         self.console.log(
-                            "[yellow]Skipping image generation as requested.[/yellow]"
+                            f"[yellow]Media filename: {outgoing_media_filename}"
                         )
+
+                    # if skip_imagegen and DEBUG:
+                    #     self.console.log(
+                    #         "[yellow]Skipping image generation as requested."
+                    #     )
 
                     self.console.log(
-                        f"[red]Plugin returned {outgoing_media_filename}.[/red]"
+                        f"[white on green]Plugin returned {outgoing_media_filename}."
                     )
 
                     # we have a media filename and it exists, so we're good
@@ -329,23 +384,10 @@ class Ircawp:
                         outgoing_media_filename
                     ):
                         self.console.log(
-                            f"[green]Media file provided from plugin:[/green] {outgoing_media_filename}"
+                            f"[blue on green]Media file provided from plugin: {outgoing_media_filename}"
                         )
                         pass
-                    else:
-                        # otherwise pass the response as a prompt and save the resulting filename
 
-                        self.console.log(
-                            f"[yellow]Media file {outgoing_media_filename} not found, generating from response using {self.imagegen}.[/yellow]"
-                        )
-                        if self.imagegen and not skip_imagegen:
-                            self.console.log("[yellow]Generating image...[/yellow]")
-                            imagegen_summary = self.generateImageSummary(inf_response)
-                            if is_img_plugin:
-                                inf_response = imagegen_summary
-                            outgoing_media_filename = self.imagegen.execute(
-                                prompt=imagegen_summary
-                            )
                 finally:
                     # clean up incoming media files; they are no longer needed
                     for img_path in incoming_media:
@@ -354,25 +396,35 @@ class Ircawp:
                             if p.is_file():
                                 p.unlink()
                                 self.console.log(
-                                    f"[blue]Deleted temp media file: {img_path}[/blue]"
+                                    f"[blue on white]Deleted temp media file: {img_path}"
                                 )
                         except Exception as e:
                             self.console.log(
-                                f"[yellow]Failed to delete temp media file '{img_path}': {e}[/yellow]"
+                                f"[red on white]Failed to delete temp media file '{img_path}': {e}"
                             )
                             continue
 
-                self.egestMessage(inf_response, [outgoing_media_filename or None], aux)
+                # Always attempt to egest; protect the queue thread from frontend errors
+                try:
+                    self.egestMessage(
+                        inf_response, [outgoing_media_filename or None], aux
+                    )
+                except Exception as e:
+                    # egestMessage already handles errors, but double-guard here as well
+                    try:
+                        self.console.log(f"[red on white]Unhandled egest error: {e}")
+                    except Exception:
+                        pass
                 if DEBUG:
                     self.console.log(
-                        "[purple]egested response:\n",
+                        "[white on purple]egested response:\n",
                         f"    [purple]|[/purple] '{inf_response}'\n",
                         f"    [purple]|[/purple] with media '{outgoing_media_filename}'",
                     )
                 self.console.rule("[white on purple]END QUEUE ITEM PROCESSING")
 
     def start(self):
-        self.console.log("Here we go...")
+        self.console.log("[green on white]Here we go...")
         self.queue = q.Queue()
         self.queue_thread = threading.Thread(target=self.messageQueueLoop, daemon=True)
 

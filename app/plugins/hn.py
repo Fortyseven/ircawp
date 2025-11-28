@@ -3,6 +3,7 @@ Hacker News Front Page
 """
 
 import datetime
+from app.media_backends.MediaBackend import MediaBackend
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from .__PluginBase import PluginBase
 import feedparser
@@ -12,7 +13,12 @@ START_TIME = datetime.datetime.now()
 RSS_URL = "https://hnrss.org/frontpage"
 
 
-def hn(prompt: str, media: list, backend: Ircawp_Backend) -> tuple[str, str, bool]:
+def hn(
+    prompt: str,
+    media: list,
+    backend: Ircawp_Backend,
+    media_backend: MediaBackend = None,
+) -> tuple[str, str, bool]:
     url = RSS_URL
     feed = feedparser.parse(url)
 

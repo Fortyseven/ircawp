@@ -29,7 +29,7 @@ class sdxs(MediaBackend):
         self.pipe.to("cpu")
 
     def execute(self, prompt: str, output_file: str = DEFAULT_FILENAME) -> str:
-        self.backend.console.log(f"[yellow]SDXS prompt: {prompt}[/yellow]")
+        self.backend.console.log(f"[yellow]SDXS prompt: {prompt}")
         seed = random.randint(0, 100000)
         image = self.pipe(
             prompt=prompt,
@@ -41,7 +41,7 @@ class sdxs(MediaBackend):
 
         image.save(output_file)
 
-        self.backend.console.log(f"[green]SDXS wrote:[/green] {output_file}")
+        self.backend.console.log(f"[green]SDXS wrote: {output_file}")
 
         return output_file
 

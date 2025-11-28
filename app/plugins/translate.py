@@ -3,6 +3,7 @@ Provides a language translation to English.
 """
 
 from app.backends.Ircawp_Backend import Ircawp_Backend
+from app.media_backends.MediaBackend import MediaBackend
 from .__PluginBase import PluginBase
 
 
@@ -29,7 +30,10 @@ DISABLE_IMAGEGEN = True
 
 
 def translate(
-    prompt: str, media: list, backend: Ircawp_Backend
+    prompt: str,
+    media: list,
+    backend: Ircawp_Backend,
+    media_backend: MediaBackend = None,
 ) -> tuple[str, str, bool]:
     inf_response = backend.runInference(
         system_prompt=SYSTEM_PROMPT,

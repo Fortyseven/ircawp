@@ -27,7 +27,8 @@ class Ollama(Ircawp_Backend):
         prompt: str,
         system_prompt: str | None = None,
         username: str = "",
-    ) -> str:
+    ) -> tuple[str, list[str]]:
+        """Run inference and return (response_text, tool_generated_images)."""
         response = ""
 
         try:
@@ -87,4 +88,4 @@ class Ollama(Ircawp_Backend):
         except RuntimeError as e:
             response = f"**IT HERTZ, IT HERTZ:** '{str(e)}'"
 
-        return response.replace("\n", "\n\n")
+        return response.replace("\n", "\n\n"), []

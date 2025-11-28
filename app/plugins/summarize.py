@@ -4,6 +4,7 @@ Pulls an HTML page and provides a summary
 
 from app.lib.network import fetchHtml
 from app.backends.Ircawp_Backend import Ircawp_Backend
+from app.media_backends.MediaBackend import MediaBackend
 from .__PluginBase import PluginBase
 
 DISCLAIMER = """IMPORTANT: Do NOT include opinion, interpretations, or infer additional context where it does not exist in the provided text or your subsequent summary. Only use the information provided in the text. Do not invent information. Strive for accuracy using ONLY the information provided. This is true for the summary, or for follow-up questions asked by the user about the text: only use what is provided."""
@@ -37,7 +38,10 @@ DISABLE_IMAGEGEN = True
 
 
 def summarize(
-    prompt: str, media: list, backend: Ircawp_Backend
+    prompt: str,
+    media: list,
+    backend: Ircawp_Backend,
+    media_backend: MediaBackend = None,
 ) -> tuple[str, str, bool]:
     special_mode = None
     import re

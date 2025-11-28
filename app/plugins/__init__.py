@@ -29,12 +29,14 @@ PLUGINS: dict[str, Any] = {}
 def validatePlugin(plug, mod_name, console):
     invalid = False
     if not hasattr(plug, "plugin"):
-        console.log(f"[red]ERROR: plugin {plug} does not have `plugin` object![/red]")
+        console.log(
+            f"[red on green]ERROR: plugin {plug} does not have `plugin` object!"
+        )
         invalid = True
 
     if invalid:
         plug_name = plug.__name__.split(".")[1]
-        console.log(f"[red bold]ERROR: plugin {plug_name} was ignored![/]")
+        console.log(f"[red on green bold]ERROR: plugin {plug_name} was ignored!")
         PLUGINS.pop(plug_name)
     else:
         PLUGINS[mod_name] = PLUGINS[mod_name].plugin
@@ -42,9 +44,11 @@ def validatePlugin(plug, mod_name, console):
 
 def load(console):
     # load core plugins
+    console.rule()
+    console.log("- [white on green]Setting up plugins")
 
     for plugin in CORE_PLUGINS:
-        console.log("[purple]= Registering plugin:[/purple] " + plugin)
+        console.log("[white on green]+ Registering plugin: ", plugin)
 
         PLUGINS[plugin] = importlib.import_module(
             f".{plugin}",
@@ -52,16 +56,3 @@ def load(console):
         )
 
         validatePlugin(PLUGINS[plugin], plugin, console)
-
-    # load user plugins
-    # for file in os.listdir("plugins"):
-    #     if file.endswith(".py") and not file.startswith("__"):
-    #         console.log("= Registering plugin: " + file)
-
-    #         mod_name = file[:-3]
-
-    #         PLUGINS[mod_name] = importlib.import_module("plugins." + mod_name)
-
-    #         validate_plugin(PLUGINS[mod_name], mod_namem, console)
-
-    console.log("=========================")

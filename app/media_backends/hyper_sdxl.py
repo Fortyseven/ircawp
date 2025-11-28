@@ -3,11 +3,13 @@ if __name__ == "__main__":
 
     print("Running as script")
     sys.path.append(".")
+    from MediaBackend import MediaBackend
+else:
+    from .MediaBackend import MediaBackend
 
 import torch
 import random
 
-from .MediaBackend import MediaBackend
 from diffusers import DiffusionPipeline, UNet2DConditionModel, LCMScheduler
 from safetensors.torch import load_file
 
@@ -16,7 +18,7 @@ BASE_MODEL_ID = "stabilityai/stable-diffusion-xl-base-1.0"
 DEFAULT_FILENAME = "/tmp/ircawp.hypersdxl.png"
 CKPT_LOCAL_PATH = "/models/Hyper-SDXL-1step-Unet.safetensors"
 
-DEVICE = "cpu"
+DEVICE = "cuda"
 
 
 class hyper_sdxl(MediaBackend):
@@ -41,7 +43,7 @@ class hyper_sdxl(MediaBackend):
         self.pipe.scheduler = LCMScheduler.from_config(self.pipe.scheduler.config)
 
     def execute(self, prompt: str, output_file: str = DEFAULT_FILENAME) -> str:
-        print(f"[yellow]HyperSDXL prompt: {prompt}[/yellow]")
+        print(f"[yellow]HyperSDXL prompt: {prompt}")
         seed = random.randint(0, 100000)
 
         image = self.pipe(
@@ -53,11 +55,11 @@ class hyper_sdxl(MediaBackend):
             generator=torch.Generator(device=DEVICE).manual_seed(seed),
         ).images[0]
 
-        print(f"[green]HyperSDXL wrote: {output_file}[/green]")
+        print(f"[green]HyperSDXL wrote: {output_file}")
 
         image.save(output_file)
 
-        print("[green]HyperSDXL done[/green]")
+        print("[green]HyperSDXL done")
 
         return output_file
 

@@ -55,7 +55,7 @@ def fetchHtml(
     text_only=False,
     use_js=False,
     bypass_cache=False,
-):
+) -> str:
     """Fetch HTML (optionally rendered with JS) with optional caching.
 
     Successful responses are cached for ~10 minutes. Cache key factors:
@@ -70,7 +70,7 @@ def fetchHtml(
         use_js: If True, uses Playwright to render.
         bypass_cache: If True, forces a fresh fetch and updates cache.
     Returns:
-        str on success, or (error_message, "", True) tuple on error.
+        str on success or throws error string on failure.
     """
     cache_key = _make_cache_key(
         url, timeout, allow_redirects, headers, text_only, use_js
@@ -84,6 +84,7 @@ def fetchHtml(
             print(f"[fetchHtml] cache miss: {url}")
     else:
         print(f"[fetchHtml] cache bypass requested: {url}")
+
     if use_js:
         content = fetchHtmlWithJs(url, timeout=timeout, headers=headers)
         if isinstance(content, tuple):
@@ -124,12 +125,8 @@ def fetchHtml(
         print(f"[fetchHtml] cache store: {url}")
         return result
 
-    except Exception as e:
-        return f"Error fetching URL: {e}", "", True
+    # except Exception as e:
+    #     raise f"Error fetching URL: {e}"
 
     except requests.exceptions.Timeout:
-        return (
-            f"Timed out while trying to fetch ({url}). Sites can be fussy; try again in a minute.",
-            "",
-            True,
-        )
+        return f"Timed out while trying to fetch ({url}). Sites can be fussy; try again in a minute."

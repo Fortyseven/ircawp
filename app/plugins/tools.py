@@ -3,10 +3,16 @@ Tools command, returns a list of registered LLM tool-calling functions.
 """
 
 from app.backends.Ircawp_Backend import Ircawp_Backend
+from app.media_backends.MediaBackend import MediaBackend
 from .__PluginBase import PluginBase
 
 
-def tools(query: str, media: list, backend: Ircawp_Backend) -> tuple[str, str]:
+def tools(
+    query: str,
+    media: list,
+    backend: Ircawp_Backend,
+    media_backend: MediaBackend = None,
+) -> tuple[str, str]:
     """List all registered tool-calling functions available to the LLM."""
 
     # Check if backend has tools support
@@ -16,7 +22,7 @@ def tools(query: str, media: list, backend: Ircawp_Backend) -> tuple[str, str]:
     if not backend.available_tools:
         return "No tools are currently registered.", "", True
 
-    output = "## Registered LLM Tool-Calling Functions ##\n\n"
+    output = "Registered LLM tools:\n\n"
 
     # Sort tools by name for consistent output
     sorted_tools = sorted(backend.available_tools.items())
@@ -31,15 +37,14 @@ def tools(query: str, media: list, backend: Ircawp_Backend) -> tuple[str, str]:
             func_def = schema.get("function", {})
             params = func_def.get("parameters", {}).get("properties", {})
 
-            output += f"**{tool_name}**\n"
-            output += f"  {description}\n"
+            output += f"----\n`{tool_name}` - {description}\n"
 
             if params:
                 output += "  Parameters:\n"
                 for param_name, param_def in params.items():
                     param_type = param_def.get("type", "unknown")
                     param_desc = param_def.get("description", "")
-                    output += f"    - `{param_name}` ({param_type})"
+                    output += f"    • `{param_name}` ({param_type})"
                     if param_desc:
                         output += f": {param_desc}"
                     output += "\n"

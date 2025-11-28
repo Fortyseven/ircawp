@@ -1,0 +1,6 @@
+- debugging:    white on purple
+- llm calls:    black on yellow
+- plugins:      white on green
+- xxx:          white on cyan
+- slack:        black on light_salmon3
+- ircawp:       black on white

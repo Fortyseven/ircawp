@@ -5,6 +5,7 @@ Bot plugin that allows the user to ask a raw prompt of the LLM without a system 
 import os
 from uuid import uuid4
 from app.backends.Ircawp_Backend import Ircawp_Backend
+from app.media_backends.MediaBackend import MediaBackend
 from app.types import InfResponse
 from .__PluginBase import PluginBase
 

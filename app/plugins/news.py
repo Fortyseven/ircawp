@@ -3,6 +3,7 @@ Basic News Summary
 """
 
 from app.backends.Ircawp_Backend import Ircawp_Backend
+from app.media_backends.MediaBackend import MediaBackend
 from app.lib.network import fetchHtml
 from .__PluginBase import PluginBase
 from bs4 import BeautifulSoup, Comment
@@ -13,7 +14,12 @@ START_TIME = datetime.datetime.now()
 SITE_URL = "https://drudgereport.com/"
 
 
-def news(prompt: str, media: list, backend: Ircawp_Backend) -> tuple[str, str, bool]:
+def news(
+    prompt: str,
+    media: list,
+    backend: Ircawp_Backend,
+    media_backend: MediaBackend = None,
+) -> tuple[str, str, bool]:
     content = fetchHtml(SITE_URL)
 
     # page has HTML comments bracketing sections of the site:

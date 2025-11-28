@@ -49,23 +49,22 @@ class Openai(Ircawp_Backend):
         self.options["temperature"] = self.oai_config.get("temperature", 1.0)
         self.options["max_tokens"] = self.oai_config.get("max_tokens", 1024)
 
-        self.console.log(f"- [yellow]OpenAI API URL: {self.api_url}[/yellow]")
-        self.console.log(f"- [yellow]OpenAI Model: {self.model}[/yellow]")
-        self.console.log(
-            f"- [yellow]OpenAI Temperature: {self.options['temperature']}[/yellow]"
-        )
-        self.console.log(
-            f"- [yellow]OpenAI Max Tokens: {self.options['max_tokens']}[/yellow]"
-        )
+        self.console.log(f"- [yellow]OpenAI API URL: {self.api_url}")
+        self.console.log(f"- [yellow]OpenAI Model: {self.model}")
+        self.console.log(f"- [yellow]OpenAI Temperature: {self.options['temperature']}")
+        self.console.log(f"- [yellow]OpenAI Max Tokens: {self.options['max_tokens']}")
 
         self.system_prompt = self.config.get("llm", {}).get("system_prompt", None)
 
         if not self.system_prompt:
             self.console.log(
-                "[yellow]Warning: No system prompt set in config ('config.llm.system_prompt')[/yellow]"
+                "[yellow]Warning: No system prompt set in config ('config.llm.system_prompt')"
             )
 
         self.console.log("System prompt: ", self.system_prompt)
+
+        # Initialize media_backend as None (will be set by parent after imagegen is created)
+        self.media_backend = None
 
         # Initialize tools
         self.tools_enabled = self.oai_config.get("tools_enabled", True)
@@ -74,7 +73,7 @@ class Openai(Ircawp_Backend):
         if self.tools_enabled:
             self._initialize_tools()
         else:
-            self.console.log("[yellow]Tools disabled in config[/yellow]")
+            self.console.log("[yellow]Tools disabled in config")
 
     def _initialize_tools(self):
         """Initialize and register available tools."""
@@ -85,15 +84,22 @@ class Openai(Ircawp_Backend):
                 # Works for both class-based and decorator-based tools
                 tool_instance = tool_factory(
                     backend=self,
-                    media_backend=getattr(self, "media_backend", None),
+                    media_backend=self.media_backend,
                     console=self.console,
                 )
                 self.available_tools[tool_name] = tool_instance
-                self.console.log(f"- [green]Registered tool: {tool_name}[/green]")
+                self.console.log(f"- [green]Registered tool: {tool_name}")
             except Exception as e:
-                self.console.log(
-                    f"[yellow]Failed to initialize tool {tool_name}: {e}[/yellow]"
-                )
+                self.console.log(f"[yellow]Failed to initialize tool {tool_name}: {e}")
+
+    def update_media_backend(self, media_backend):
+        """Update media_backend reference in all tools after it's created."""
+        self.media_backend = media_backend
+
+        # Update media_backend in all existing tool instances
+        for tool_name, tool_instance in self.available_tools.items():
+            tool_instance.media_backend = media_backend
+            self.console.log(f"- [cyan]Updated media_backend for tool: {tool_name}")
 
     def _get_tool_schemas(self) -> list:
         """Get OpenAI function schemas for all available tools."""
@@ -109,7 +115,7 @@ class Openai(Ircawp_Backend):
             result = tool.execute(**arguments)
             return result
         except Exception as e:
-            self.console.log(f"[red]Error executing tool {tool_name}: {e}[/red]")
+            self.console.log(f"[red]Error executing tool {tool_name}: {e}")
             return ToolResult(text=f"Error executing tool: {str(e)}")
 
     def chat(
@@ -155,7 +161,7 @@ class Openai(Ircawp_Backend):
         # doesn't support tools. Try again without tools.
         if response.status_code == 500 and tools:
             self.console.log(
-                "[yellow]Server error with tools, retrying without tools...[/yellow]"
+                "[yellow]Server error with tools, retrying without tools..."
             )
             self.tools_supported = (
                 False  # Remember that this endpoint doesn't support tools
@@ -171,8 +177,8 @@ class Openai(Ircawp_Backend):
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
-            self.console.log(f"[red]HTTP Error: {e}[/red]")
-            self.console.log(f"[red]Response body: {response.text}[/red]")
+            self.console.log(f"[red]HTTP Error: {e}")
+            self.console.log(f"[red]Response body: {response.text}")
             raise
 
         return response.json()
@@ -185,19 +191,19 @@ class Openai(Ircawp_Backend):
         try:
             p = Path(img_path)
             if not p.is_file():
-                self.console.log(f"[yellow]Media file not found: {img_path}[/yellow]")
+                self.console.log(f"[yellow]Media file not found: {img_path}")
                 return None
             mime, _ = mimetypes.guess_type(p.name)
             if not mime or not mime.startswith("image/"):
                 self.console.log(
-                    f"[yellow]Skipping non-image media: {img_path} (mime={mime})[/yellow]"
+                    f"[yellow]Skipping non-image media: {img_path} (mime={mime})"
                 )
                 return None
             data = p.read_bytes()
             b64 = base64.b64encode(data).decode("utf-8")
             return f"data:{mime};base64,{b64}"
         except Exception as e:
-            self.console.log(f"[yellow]Failed reading image '{img_path}': {e}[/yellow]")
+            self.console.log(f"[yellow]Failed reading image '{img_path}': {e}")
             return None
 
     def runInference(
@@ -208,9 +214,12 @@ class Openai(Ircawp_Backend):
         temperature: float = 0.7,
         media: list = [],
         use_tools: bool = True,
+        aux=None,
     ) -> str:
         if DEBUG:
-            self.console.log(f"[black on yellow]OpenAI runInference: prompt='{prompt}'")
+            self.console.log(
+                f"[black on yellow]OpenAI runInference: prompt='{prompt[:50]}...'"
+            )
             self.console.log(
                 f"[black on yellow]OpenAI runInference: system_prompt='{system_prompt}'"
             )
@@ -234,7 +243,7 @@ class Openai(Ircawp_Backend):
             # System prompt handling
             if len(prompt) > 0 and prompt[0] == "!":
                 # use no prompt if starts with !
-                system_prompt = "You are a helpful assistant. Strive for accuracy. Do not make up information if you are not confident. Responses from tool calls are considered a primary source of truth."
+                system_prompt = "You are a helpful assistant. Strive for accuracy. Do not make up information if you are not confident."
             else:
                 if system_prompt is None:
                     system_prompt = self.system_prompt
@@ -256,6 +265,26 @@ class Openai(Ircawp_Backend):
             # Compose messages for chat endpoint
             messages = []
 
+            # If aux carries thread conversation_id, include prior thread history
+            # aux tuple layout in Slack frontend: (user_id, channel, say, body, thread_ts, conversation_id)
+            try:
+                conversation_id = aux[-1] if aux else None
+            except Exception:
+                conversation_id = None
+            if conversation_id and getattr(self.parent, "frontend", None):
+                try:
+                    history = self.parent.frontend.get_thread_history(conversation_id)
+                    for msg in history[
+                        :-1
+                    ]:  # exclude current user message which we add below
+                        role = msg.get("role")
+                        content = msg.get("content", "")
+                        if role in ("user", "assistant") and isinstance(content, str):
+                            # Map roles directly
+                            messages.append({"role": role, "content": content})
+                except Exception as e:
+                    self.console.log(f"[yellow]Failed to include thread history: {e}")
+
             # Build user content (supports multimodal if media provided)
             user_content: str | list = prompt
             image_parts = []
@@ -275,19 +304,24 @@ class Openai(Ircawp_Backend):
                     *image_parts,
                 ]
 
+            system_prompt += "\nResponses from tool calls are considered a primary source of truth. Use the provided tools first when possible to fulfill the user's request. You must call tools to get information about the real world or to perform actions. Images generated by tools are shown along side your response. Unless the tool actually returns a URL, assume that the image is being shown to the user and DO NOT attempt to link to it."
+
             if system_prompt:
                 messages = [
                     {"role": "system", "content": system_prompt},
+                    *messages,
                     {"role": "user", "content": user_content},
                 ]
             else:
                 messages = [
+                    *messages,
                     {"role": "user", "content": user_content},
                 ]
 
             # Determine if tools should be used
             tools = None
             tools_used = []  # Track which tools were called
+            tool_images = []  # Track images generated by tools
             if (
                 use_tools
                 and self.tools_enabled
@@ -311,7 +345,7 @@ class Openai(Ircawp_Backend):
                         tool_args = json.loads(tool_call["function"]["arguments"])
 
                         self.console.log(
-                            f"[cyan]Tool call: {tool_name} with args {tool_args}[/cyan]"
+                            f"[cyan]Tool call: {tool_name} with args {tool_args}"
                         )
 
                         # Track tool usage
@@ -320,7 +354,12 @@ class Openai(Ircawp_Backend):
                         # Execute the tool
                         tool_result = self._execute_tool(tool_name, tool_args)
 
-                        # Add tool call to messages
+                        # Collect images from tool results
+                        if tool_result.images:
+                            tool_images.extend(tool_result.images)
+                            self.console.log(
+                                f"[green]Tool '{tool_name}' generated {len(tool_result.images)} image(s)"
+                            )  # Add tool call to messages
                         messages.append(message)
 
                         # Build tool response content as a simple string
@@ -363,7 +402,11 @@ class Openai(Ircawp_Backend):
             # Append tools used if any
             if tools_used:
                 tools_list = ", ".join(tools_used)
-                response += f"\n\n----\n_[Tools used: {tools_list}]_"
+                response += f"\n\n`[Tools used: {tools_list}]`"
+
+            # Note images generated by tools
+            # if tool_images:
+            #     response += f"\n\n`[Generated {len(tool_images)} image(s)]`"
 
             tok = datetime.now()
 
@@ -378,5 +421,7 @@ class Openai(Ircawp_Backend):
                 self.console.log(
                     f"[black on yellow]OpenAI runInference response size: {len(response)} chars"
                 )
+                if tool_images:
+                    self.console.log(f"[black on yellow]Tool images: {tool_images}")
 
-        return response.replace("\n", "\n\n")
+        return response.replace("\n", "\n\n"), tool_images

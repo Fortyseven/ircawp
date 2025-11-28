@@ -1,62 +1,152 @@
 """
-Example tool demonstrating the tool interface.
+Weather tool - provides weather information for locations.
 
-This tool returns a simple greeting message and optionally an image path.
+This is a decorator-based tool example.
 """
 
+import json
+import datetime
+from urllib.parse import quote_plus
 from ..ToolBase import tool
-from pydantic import BaseModel, Field
+from app.lib.network import fetchHtml
+
+
+def _estimateTimeOfDay(observed: str) -> str:
+    # 'observed' requires '10:00 AM' format
+    # 8pm to 4am is night
+    # 4am to 12pm is morning
+    # 12pm to 4pm is afternoon
+    # 4pm to 8pm is evening
+
+    if not observed:
+        return "daytime"
+
+    time = datetime.datetime.strptime(observed, "%I:%M %p").time()
+
+    if time >= datetime.time(20, 0) or time < datetime.time(4, 0):
+        return "night"
+    elif time >= datetime.time(4, 0) and time < datetime.time(12, 0):
+        return "morning"
+    elif time >= datetime.time(12, 0) and time < datetime.time(16, 0):
+        return "afternoon"
+    elif time >= datetime.time(16, 0) and time < datetime.time(20, 0):
+        return "evening"
+    else:
+        return "daytime"
+
+
+def _estimateTemperature(temp: str) -> str:
+    # 'temp' requires '10F (10C)' format
+    # 0F to 32F is cold
+    # 32F to 50F is cool
+    # 50F to 70F is warm
+    # 70F to 90F is hot
+    # 90F to 100F is very hot
+    # 100F to 120F is extremely hot
+    # 120F+ is dangerously hot
+
+    if not temp:
+        return "temperature"
+
+    temp_f = int(temp.split(" ")[0][:-1])
+    if temp_f < -20:
+        return "dangerously cold"
+    elif temp_f <= 0:
+        return "freezing"
+    elif temp_f <= 32:
+        return "cold"
+    elif temp_f <= 50:
+        return "cool"
+    elif temp_f <= 70:
+        return "warm"
+    elif temp_f <= 90:
+        return "hot"
+    elif temp_f <= 100:
+        return "very hot"
+    elif temp_f <= 120:
+        return "extremely hot"
+    else:
+        return "dangerously hot"
+
+
+def _normalizeWeatherType(weather: str) -> str:
+    weather = weather.lower()
+
+    if weather == "rain":
+        return "rainy"
+
+    return weather
+
+
+def process_weather_json(json_text: str) -> tuple[str, str]:
+    """
+    https://wttr.in/:help
+    """
+    # decode
+    try:
+        weather_data = json.loads(json_text)
+
+        if not weather_data["current_condition"]:
+            return "Error: no current condition data.", ""
+
+        current = weather_data["current_condition"][0]
+        feels_like_f = current["FeelsLikeF"]
+        feels_like_c = current["FeelsLikeC"]
+        temp_f = current["temp_F"]
+        temp_c = current["temp_C"]
+
+        temps = f"{temp_f}F ({temp_c}C)"
+
+        if temp_f != feels_like_f:
+            temps = f"{temps}, feels like {feels_like_f}F ({feels_like_c}C)"
+
+        humidity = current["humidity"]
+        desc = current["weatherDesc"][0]["value"]
+
+        wind_mph = current["windspeedMiles"]
+        wind_kph = current["windspeedKmph"]
+        wind_dir = current["winddir16Point"]
+
+        observed = current["localObsDateTime"]
+
+        if (
+            not weather_data.get("nearest_area", None)
+            or len(weather_data["nearest_area"]) < 1
+        ):
+            where = "Unknown...?"
+        else:
+            where = weather_data["nearest_area"][0]["areaName"][0]["value"]
+            where2 = weather_data["nearest_area"][0]["region"][0]["value"]
+
+            where = f"{where}, {where2}"
+
+        # imagegen_prompt = buildImageGenPrompt(
+        #     where,
+        #     desc,
+        #     temps,
+        #     wind_dir,
+        #     wind_mph,
+        #     wind_kph,
+        #     humidity,
+        #     observed,
+        # )
+
+        return f"Weather for {where}: {desc} at 🌡 {temps}, winds 🌬 {wind_dir} at {wind_mph}mph ({wind_kph}kph), 💦 humidity at {humidity}%. (⏰ As of {observed}, local.)"
+    # imagegen_prompt,
+
+    except json.decoder.JSONDecodeError:
+        return "Error: could not decode JSON.", "", True
 
 
 @tool
 def get_weather(location: str) -> str:
     """Get weather for a location."""
-    return (
-        f"The current weather in {location} is a sunny 120F with an expected tornado."
-    )
+    try:
+        url_query = f"https://wttr.in/{quote_plus(location)}?format=j1"
+        # response = requests.get(url_query, timeout=12, allow_redirects=True)
+        content = fetchHtml(url_query, bypass_cache=True)
+        print("content: ", content)
+        return process_weather_json(content), "", False
 
-
-# class ExampleTool(ToolBase):
-#     """Example tool that demonstrates the tool interface."""
-
-#     name = "weather"
-#     description = "A tool that provides weather information"
-
-#     def execute(self, **kwargs) -> ToolResult:
-#         """
-#         Execute the weather tool.
-
-#         Args:
-#             location (str, optional): Location to get weather for. Defaults to "World"
-
-#         Returns:
-#             ToolResult with weather information
-#         """
-#         location = kwargs.get("location", "World")
-
-#         self.log(f"Executing with location={location}")
-
-#         text = f"The current weather in {location} is a sunny 120F with an expected tornado."
-#         images = []
-
-#         return ToolResult(text=text, images=images)
-
-#     def get_schema(self) -> Dict[str, Any]:
-#         """Return the OpenAI function calling schema for this tool."""
-#         return {
-#             "type": "function",
-#             "function": {
-#                 "name": self.name,
-#                 "description": self.description,
-#                 "parameters": {
-#                     "type": "object",
-#                     "properties": {
-#                         "location": {
-#                             "type": "string",
-#                             "description": "The location to get weather for",
-#                         },
-#                     },
-#                     "required": [],
-#                 },
-#             },
-#         }
+    except Exception as e:
+        return "WTTR PROBLEMS: " + str(e), "", True

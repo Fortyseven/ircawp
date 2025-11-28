@@ -3,6 +3,7 @@ Help command, returns a list of registered slash commands.
 """
 
 from app.backends.Ircawp_Backend import Ircawp_Backend
+from app.media_backends.MediaBackend import MediaBackend
 from .__PluginBase import PluginBase
 
 
@@ -10,7 +11,9 @@ def get_triggers(trigger: list) -> str:
     return "/" + ", /".join(trigger)
 
 
-def help(query: str, media: list, backend: Ircawp_Backend) -> tuple[str, str]:
+def help(
+    query: str, media: list, backend: Ircawp_Backend, media_backend: MediaBackend
+) -> tuple[str, str]:
     from app.plugins import PLUGINS  # lazy load
 
     groups = {}

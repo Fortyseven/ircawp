@@ -60,7 +60,7 @@ import app.plugins as plugins
 
 plugins.load(console)
 
-print(f"- PROMPT: [yellow]{prompt}[/]")
+print(f"- PROMPT: [yellow]{prompt}")
 response = ""
 
 if prompt.startswith("/"):
@@ -82,10 +82,10 @@ else:
     )
 
 
-print(f"- ASSISTANT:\n[blue]{response}[/]")
+print(f"- ASSISTANT:\n[blue]{response}")
 
 # if media:
-# print(f"- MEDIA: [green]{media}[/]")
+# print(f"- MEDIA: [green]{media}")
 # dont load all this unless we _really_ need it
 # imagegen_instance: BaseImageGen = SDXS()
 # imagegen_instance.generateImage(media, "/tmp/temp.png")

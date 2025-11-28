@@ -8,6 +8,7 @@ import datetime
 from urllib.parse import quote_plus
 
 from app.backends.Ircawp_Backend import Ircawp_Backend
+from app.media_backends.MediaBackend import MediaBackend
 from app.lib.network import fetchHtml
 from .__PluginBase import PluginBase
 
@@ -162,7 +163,10 @@ def process_weather_json(json_text: str) -> tuple[str, str]:
 
 
 def doWeather(
-    query: str, media: list, backend: Ircawp_Backend
+    query: str,
+    media: list,
+    backend: Ircawp_Backend,
+    media_backend: MediaBackend = None,
 ) -> tuple[str, str | dict]:
     try:
         url_query = f"https://wttr.in/{quote_plus(query)}?format=j1"

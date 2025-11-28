@@ -2,6 +2,7 @@
 Provides a language translation to English.
 """
 
+from app.media_backends.MediaBackend import MediaBackend
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from .__PluginBase import PluginBase
 
@@ -22,7 +23,10 @@ DISABLE_IMAGEGEN = True
 
 
 def geolocate(
-    prompt: str, media: list, backend: Ircawp_Backend
+    prompt: str,
+    media: list,
+    backend: Ircawp_Backend,
+    media_backend: MediaBackend = None,
 ) -> tuple[str, str, bool]:
     backend.console.log(f"Geolocate plugin invoked with prompt: {media}")
     if not media or len(media) == 0:

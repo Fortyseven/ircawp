@@ -27,7 +27,8 @@ class Ircawp_Backend:
         prompt: str,
         system_prompt: str | None = None,
         username: str = "",
-    ) -> str:
+    ) -> tuple[str, list[str]]:
+        """Run inference and return (response_text, tool_generated_images)."""
         pass
 
     def templateReplace(self, prompt: str, username: str) -> str:

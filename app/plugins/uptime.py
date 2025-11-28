@@ -4,13 +4,19 @@ Get the bot's uptime and stats.
 
 from datetime import datetime
 from app.backends.Ircawp_Backend import Ircawp_Backend
+from app.media_backends.MediaBackend import MediaBackend
 from .__PluginBase import PluginBase
 
 
 START_TIME = datetime.now()
 
 
-def uptime(prompt: str, media: list, backend: Ircawp_Backend) -> tuple[str, str]:
+def uptime(
+    prompt: str,
+    media: list,
+    backend: Ircawp_Backend,
+    media_backend: MediaBackend = None,
+) -> tuple[str, str]:
     now = datetime.now()
     uptime = now - START_TIME
 
