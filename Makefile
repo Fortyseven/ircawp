@@ -3,6 +3,9 @@ DEST_SSH=wheeljack:~/opt/ircawp-beta/
 run:
 	uv run -m app
 
+run-aimee:
+	uv run -m app --config ./config.aimee.json
+
 push-to-wheeljack:
 	rsync -azr -v  \
 		--exclude='__pycache__' \

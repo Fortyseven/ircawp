@@ -1,4 +1,5 @@
 import os
+import argparse
 import threading
 import queue as q
 import time
@@ -18,7 +19,7 @@ from app.media_backends.MediaBackend import MediaBackend
 import app.plugins as plugins
 from app.plugins import PLUGINS
 
-from app.lib.config import config
+
 from app.frontends.Ircawp_Frontend import Ircawp_Frontend
 
 install(show_locals=True)
@@ -35,8 +36,6 @@ BANNER = r"""
 
 -=-=-=-=-=-=-=-=-= BOOTING =-=-=-=-=-=-=-=-
 """.rstrip()
-
-# temp config
 
 
 class Ircawp:
@@ -67,11 +66,7 @@ class Ircawp:
             frontend_id.capitalize(),
         )
 
-        self.frontend = frontend(
-            console=self.console,
-            parent=self,
-            config=self.config.get("frontends", {}).get(frontend_id, {}),
-        )
+        self.frontend = frontend(console=self.console, parent=self, config=self.config)
 
         #####
 
@@ -307,7 +302,7 @@ class Ircawp:
     def messageQueueLoop(self) -> None:
         self.console.log("[green on white]Starting message queue thread...")
 
-        thread_sleep = config.get("thread_sleep", 0.250)
+        thread_sleep = self.config.get("thread_sleep", 0.250)
 
         while True:
             inf_response: str = ""
@@ -433,5 +428,34 @@ class Ircawp:
 
 
 def __main__():
-    ircawp = Ircawp(config)
+    parser = argparse.ArgumentParser(description="ircawp bot runner")
+    parser.add_argument(
+        "--config",
+        default="config.json",
+        help="Path to config file (default: config.json)",
+    )
+
+    args = parser.parse_args()
+
+    # Load configuration from the specified path
+    # Without changing global state in app.lib.config
+    cfg = None
+    try:
+        # Temporarily set environment to influence loader only if needed.
+        # Prefer explicit path via local loader.
+        with open(args.config, "r") as f:
+            import json
+
+            cfg = json.load(f)
+    except FileNotFoundError:
+        # Provide a clear error then exit
+        print(f"Config file not found: {args.config}")
+        raise
+    except Exception as e:
+        print(f"Error loading config '{args.config}': {e}")
+        raise
+
+    print(f"* Using config file: {args.config}")
+
+    ircawp = Ircawp(cfg)
     ircawp.start()
