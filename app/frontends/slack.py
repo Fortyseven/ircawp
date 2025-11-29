@@ -8,9 +8,14 @@ from .Ircawp_Frontend import Ircawp_Frontend
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
+from app.lib.thread_history import ThreadManager
+from app.lib.network import depipeText
+
 
 class Slack(Ircawp_Frontend):
     bolt = None
+    # Store conversation history per thread_ts
+    thread_history = ThreadManager()
 
     ###############################
     def __init__(self, *args, **kwargs):
@@ -19,7 +24,14 @@ class Slack(Ircawp_Frontend):
 
     ###############################
     def configure(self):
-        self.slack_creds = dotenv.dotenv_values(".env")
+        dotenv_file = self.config.get("creds_file", ".env")
+
+        self.slack_creds = dotenv.dotenv_values(dotenv_file)
+
+        self.console.log(
+            "[black on light_salmon3]Loaded Slack creds from:", dotenv_file
+        )
+
         if (
             not self.slack_creds["SLACK_APP_TOKEN"]
             or not self.slack_creds["SLACK_BOT_TOKEN"]
@@ -27,28 +39,106 @@ class Slack(Ircawp_Frontend):
             raise Exception("Slack credentials incomplete. Check .env file.")
 
     ###############################
+    def get_thread_history(self, thread_ts: str) -> list:
+        """
+        Get conversation history for a specific thread.
+
+        Args:
+            thread_ts (str): The thread timestamp identifier
+
+        Returns:
+            list: List of messages in this thread
+        """
+        return self.thread_conversations.get(thread_ts, [])
+
+    def add_to_thread_history(self, thread_ts: str, role: str, content: str):
+        """
+        Add a message to thread conversation history.
+
+        Args:
+            thread_ts (str): The thread timestamp identifier
+            role (str): 'user' or 'assistant'
+            content (str): The message content
+        """
+        if thread_ts not in self.thread_conversations:
+            self.thread_conversations[thread_ts] = []
+
+        self.thread_conversations[thread_ts].append({"role": role, "content": content})
+
+        # Optional: Limit history size to prevent memory bloat
+        max_history = 50
+        if len(self.thread_conversations[thread_ts]) > max_history:
+            self.thread_conversations[thread_ts] = self.thread_conversations[thread_ts][
+                -max_history:
+            ]
+
+    def clear_thread_history(self, thread_ts: str):
+        """
+        Clear conversation history for a specific thread.
+
+        Args:
+            thread_ts (str): The thread timestamp identifier
+        """
+        if thread_ts in self.thread_conversations:
+            del self.thread_conversations[thread_ts]
+
+    ###############################
     def start(self):
         self.bolt = App(token=self.slack_creds["SLACK_BOT_TOKEN"])
+        # Fetch and store bot user id once
+        self.bot_user_id = self.bolt.client.auth_test()["user_id"]
+        self.console.log(f"[black on light_salmon3]Bot user id: {self.bot_user_id}")
 
-        # self.bolt.action("app_mention")(self.ingest_event)
-        # self.bolt.action("event_callback")(self.ingest_event)
-        self.bolt.event("app_mention")(self.ingestEvent)
-
-        self.console.log("Slack frontend starting.")
-
+        self.bolt.event("message")(self.ingestEvent)
         SocketModeHandler(self.bolt, self.slack_creds["SLACK_APP_TOKEN"]).start()
 
     # @bolt.event("app_mention")
     def ingestEvent(self, event, message, client, say, body):
-        user_id = event["user"]
+        # Safely extract the user id. Some message subtypes (e.g. message_changed) nest the user.
+        user_id = event.get("user")
+        if not user_id and isinstance(event.get("message"), dict):
+            user_id = event["message"].get("user")
+        # If still no user_id, ignore this event.
+        if not user_id:
+            return
         channel = event["channel"]
 
-        regex = r"(<.*>\w?)(.*)"
+        print("EVENT RECEIVED: ", event)
 
-        prompt: re.Match | None = re.match(regex, event["text"], re.MULTILINE)
+        # Skip bot's own messages
+        if event.get("bot_id") or event.get("subtype") == "bot_message":
+            return
 
-        if prompt:
-            prompt = prompt[2]
+        # Get thread_ts - ONLY if user's message was in a thread
+        # This allows threads to be optional - user-initiated only
+        thread_ts = event.get("thread_ts")  # None if not in a thread
+
+        # conversation_id is only set for actual threads
+        # Channel messages have no conversation_id = no history = fresh start
+        conversation_id = thread_ts  # None for channel messages
+
+        # For channel messages: only respond if bot is mentioned
+        # For thread replies: respond regardless of mention (now that event subscriptions are enabled)
+        text = event.get("text", "")
+        # Only treat as mentioned if OUR bot user id is explicitly present.
+        # self.bot_user_id is initialized in start() via auth_test.
+        mentioned = f"<@{self.bot_user_id}>" in text if self.bot_user_id else False
+        if not thread_ts and not mentioned:
+            return
+
+        # Extract the prompt text
+        # If @mentioned, strip the mention; otherwise use full text (for thread replies)
+        if mentioned:
+            # Strip ONLY our bot mention prefix to form the prompt.
+            regex = rf"(<@{self.bot_user_id}>)(.*)"
+            match = re.match(regex, text, re.MULTILINE)
+            if match:
+                prompt = match[2].strip()
+            else:
+                # Fallback: remove first occurrence of bot mention anywhere.
+                prompt = re.sub(rf"<@{self.bot_user_id}>", "", text).strip()
+        else:
+            prompt = text.strip()
 
         username = self.bolt.client.users_info(user=user_id)["user"]["profile"][
             "display_name"
@@ -72,47 +162,95 @@ class Slack(Ircawp_Frontend):
                 resp.raise_for_status()
                 media_content = resp.content
             except Exception as e:
-                self.console.log(f"[red]Failed to download media: {e}[/red]")
+                self.console.log(f"[red on light_salmon3]Failed to download media: {e}")
                 media_content = b""
             # dump to /tmp with uuid prefix to avoid collisions
             safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", file_info["name"])
             media_path = os.path.join("/tmp", f"{uuid.uuid4()}_{safe_name}")
             with open(media_path, "wb") as f:
                 f.write(media_content)
-            self.console.log(f"[blue]Saved media temp file: {media_path}[/blue]")
+            self.console.log(
+                f"[blue on light_salmon3]Saved media temp file: {media_path}"
+            )
             incoming_media.append(media_path)
 
+        # Only store history if in a thread (conversation_id is not None)
+        # Channel messages are fresh starts with no history
+        if conversation_id:
+            self.add_to_thread_history(conversation_id, "user", prompt)
+
         self.parent.ingestMessage(
-            prompt.strip(), username, incoming_media, (user_id, channel, say, body)
+            depipeText(prompt),
+            username,
+            incoming_media,
+            (user_id, channel, say, body, thread_ts, conversation_id),
         )
 
     def egestEvent(self, message, media, aux={}):
-        user_id, channel, say, body = aux
+        user_id, channel, say, body, thread_ts, conversation_id = aux
+
+        # Only store assistant response if in a thread (conversation_id is not None)
+        # Channel messages don't maintain history
+        if conversation_id and message:
+            self.add_to_thread_history(conversation_id, "assistant", str(message))
 
         # HACK:
         media = media[0]
 
         if not media:
             blocks = self._build_blocks_with_prefix(f"<@{user_id}> ", message or "")
-            say(blocks=blocks)
+            # Only reply in thread if thread_ts exists (user initiated thread)
+            if thread_ts:
+                say(blocks=blocks, thread_ts=thread_ts)
+            else:
+                say(blocks=blocks)  # Post to channel, not in thread
         else:
             self._postMedia(message, media, aux)
         pass
 
     def _postMedia(self, message, media, aux):
-        user_id, channel, say, body = aux
+        user_id, channel, say, body, thread_ts, conversation_id = aux
         if message:
             blocks = self._build_blocks_with_prefix(f"<@{user_id}> ", message)
-            say(blocks=blocks)
+            if thread_ts:
+                say(blocks=blocks, thread_ts=thread_ts)
+            else:
+                say(blocks=blocks)
         with open(media, "rb") as f:
-            self.bolt.client.files_upload_v2(
-                file=f.read(),
-                channel=channel,
+            upload_kwargs = {
+                "file": f.read(),
+                "channel": channel,
                 # initial_comment=response_message_with_username,
                 # title=f"{imagegen_prompt}",
-            )
+            }
+            if thread_ts:
+                upload_kwargs["thread_ts"] = thread_ts
+            self.bolt.client.files_upload_v2(**upload_kwargs)
 
-    def _build_blocks_with_prefix(self, prefix: str, content: str, limit: int = 3000):
+    def _build_blocks_with_prefix(self, prefix: str, content, limit: int = 3000):
+        # Normalize content into a single string. Some plugins/backends may
+        # accidentally return a tuple/list (e.g., (text, metadata)). We only
+        # want the textual parts for Slack rendering.
+        if isinstance(content, (tuple, list)):
+            # Flatten one level and join stringifiable, non-empty parts.
+            flat_parts = []
+            for part in content:
+                if part is None:
+                    continue
+                # If a dict was passed (e.g. metadata), ignore it; but if it
+                # has a 'content' key use that.
+                if isinstance(part, dict):
+                    if "content" in part and isinstance(part["content"], str):
+                        flat_parts.append(part["content"])
+                    continue
+                # Basic stringification; avoid Python tuple/list repr noise by stripping.
+                text_part = str(part).strip()
+                if text_part:
+                    flat_parts.append(text_part)
+            content = " \n".join(flat_parts)
+        elif not isinstance(content, str):
+            content = str(content or "")
+
         content = (content or "").strip()
         blocks = []
         if not content:
@@ -125,6 +263,7 @@ class Slack(Ircawp_Frontend):
         paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", content) if p.strip()]
 
         def append_block(text):
+            print("Appending block:", text)
             blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": text}})
 
         # Helper: sentence split with fallback slicing
