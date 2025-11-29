@@ -243,7 +243,10 @@ class Openai(Ircawp_Backend):
             # System prompt handling
             if len(prompt) > 0 and prompt[0] == "!":
                 # use no prompt if starts with !
-                system_prompt = "You are a helpful assistant. Strive for accuracy. Do not make up information if you are not confident."
+                system_prompt = self.config.get("system_prompt_agent")
+                self.console.log(
+                    f"Using agent system prompt due to ! prefix: {system_prompt}"
+                )
             else:
                 if system_prompt is None:
                     system_prompt = self.system_prompt
