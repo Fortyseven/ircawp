@@ -1,3 +1,4 @@
+import re
 import requests
 from . import cache
 import hashlib
