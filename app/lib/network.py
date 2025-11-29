@@ -130,3 +130,19 @@ def fetchHtml(
 
     except requests.exceptions.Timeout:
         return f"Timed out while trying to fetch ({url}). Sites can be fussy; try again in a minute."
+
+
+def depipeText(string: str) -> str:
+    # finds urls in the format `<http://cnn.com|cnn.com>`
+    # and returns just `cnn.com`.
+
+    pattern = r"<(https?:\/\/[^|]+)\|([^>]+)>"
+
+    def replacer(match):
+        return match.group(2)
+
+    replaced = re.sub(pattern, replacer, string)
+
+    print("REPL", string, replaced)
+
+    return replaced
