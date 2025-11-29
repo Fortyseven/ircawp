@@ -19,16 +19,16 @@ MODEL = "Tongyi-MAI/Z-Image-Turbo"
 class zimageturbo(MediaBackend):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        torch.cuda.empty_cache()
         self.pipe = ZImagePipeline.from_pretrained(
             MODEL,
             torch_dtype=torch.bfloat16,
-            low_cpu_mem_usage=False,
+            low_cpu_mem_usage=True,
         )
-        # self.pipe.to("cuda")
+        self.pipe.to("cpu")
         self.pipe.enable_model_cpu_offload()
 
     def execute(self, prompt: str, output_file: str = DEFAULT_FILENAME) -> str:
+        torch.cuda.empty_cache()
         seed = torch.randint(0, 1000000, (1,)).item()
         image = self.pipe(
             prompt=prompt,
