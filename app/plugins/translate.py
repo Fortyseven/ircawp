@@ -15,6 +15,10 @@ Translate the provided text into English. Translate the entire provided text.
 
 If you cannot confidently and correctly translate the text, please respond with "I cannot confidently translate this text."
 
+If there are words difficult to translate due to illegibility, note this in the translation using [???] next to the uncertain word.
+
+Optionally provide a summary of the translation in 1-2 sentences if the text is long or complex.
+
 Provide the source language if you can detect it, along with an appropriate flag emoji representing that language if possible.
 
 Optionally add any notes that might help give context for the translation. Do not invent or guess at a word's meaning. If you are unsure of a word's meaning, you may provide a literal translation of the word.
@@ -49,6 +53,7 @@ class TranslationResponse(BaseModel):
     language_flag_emoji: str | None = Field(
         None, description="The emoji flag representing the source language."
     )
+    summary: str | None = Field(None, description="A brief summary of the translation.")
     notes: str | None = Field(None, description="Additional notes for context.")
     cannot_translate: bool = Field(
         False, description="Indicates if the translation could not be performed."
@@ -89,6 +94,9 @@ def translate(
 
     translated_text = format_translation_as_quote(if_response.translation)
     final_response = f"*{if_response.source_language or 'Unknown'}* {if_response.language_flag_emoji or ''}:\n{translated_text}"
+
+    if if_response.summary:
+        final_response += f"\n\n*Summary:* _{if_response.summary}_"
     if if_response.notes:
         final_response += f"\n\n*Notes:* _{if_response.notes}_"
 
