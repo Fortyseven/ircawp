@@ -70,7 +70,15 @@ def translate(
         use_tools=False,
     )
 
-    if_response = TranslationResponse.model_validate_json(inf_response)
+    try:
+        if_response = TranslationResponse.model_validate_json(inf_response)
+    except Exception as e:
+        # Handle JSON truncation or parsing errors
+        return (
+            f"Translation failed due to response truncation or parsing error. The text may be too long. Error: {str(e)[:100]}",
+            "",
+            DISABLE_IMAGEGEN,
+        )
 
     if if_response.cannot_translate:
         return (

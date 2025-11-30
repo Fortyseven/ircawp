@@ -149,7 +149,9 @@ class Openai(Ircawp_Backend):
             "model": self.model,
             "messages": messages,
             "temperature": use_temperature,
-            "max_tokens": 2048,  # max Slack block length is 3000 # self.options['max_tokens'],
+            "max_tokens": -1
+            if format is not None
+            else 2048,  # Increase limit for structured outputs to avoid JSON truncation
         }
 
         # Add structured output format if provided
