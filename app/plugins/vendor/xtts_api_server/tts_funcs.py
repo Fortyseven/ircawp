@@ -78,13 +78,9 @@ class TTSWrapper:
     ):
         self.cuda = device  # If the user has chosen what to use, we rewrite the value to the value we want to use
         self.device = (
-            "cpu"
-            if lowvram
-            else (self.cuda if torch.cuda.is_available() else "cpu")
+            "cpu" if lowvram else (self.cuda if torch.cuda.is_available() else "cpu")
         )
-        self.lowvram = (
-            lowvram  # Store whether we want to run in low VRAM mode.
-        )
+        self.lowvram = lowvram  # Store whether we want to run in low VRAM mode.
 
         self.latents_cache = {}
 
@@ -157,9 +153,7 @@ class TTSWrapper:
                 cache_data = json.load(cache_file)
 
             for entry in cache_data.values():
-                if all(
-                    entry[key] == value for key, value in text_params.items()
-                ):
+                if all(entry[key] == value for key, value in text_params.items()):
                     return entry["file_name"]
 
             return None
@@ -179,9 +173,7 @@ class TTSWrapper:
                 with open(self.cache_file_path, "r") as cache_file:
                     cache_data = json.load(cache_file)
             else:
-                cache_data = (
-                    {}
-                )  # Initialization of an empty dictionary if the file does not exist or is empty.
+                cache_data = {}  # Initialization of an empty dictionary if the file does not exist or is empty.
 
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
             cache_data[timestamp] = {**text_params, "file_name": file_name}
@@ -193,9 +185,7 @@ class TTSWrapper:
         except IOError as e:
             print("I/O error occurred while updating the cache: ", str(e))
         except json.JSONDecodeError as e:
-            print(
-                "JSON decode error occurred while updating the cache: ", str(e)
-            )
+            print("JSON decode error occurred while updating the cache: ", str(e))
 
     # LOAD FUNCS
     def load_model(self, load=True):
@@ -299,9 +289,7 @@ class TTSWrapper:
         speakers_list = self._get_speakers()
 
         for speaker in speakers_list:
-            self.get_or_create_latents(
-                speaker["speaker_name"], speaker["speaker_wav"]
-            )
+            self.get_or_create_latents(speaker["speaker_name"], speaker["speaker_wav"])
 
         print(f"Latents created for all {len(speakers_list)} speakers.")
 
@@ -336,9 +324,7 @@ class TTSWrapper:
 
         # Check temperature
         if not (0.01 <= temperature <= 1):
-            raise InvalidSettingsError(
-                "Temperature must be between 0.01 and 1."
-            )
+            raise InvalidSettingsError("Temperature must be between 0.01 and 1.")
 
         # Check speed
         if not (0.2 <= speed <= 2):
@@ -364,9 +350,7 @@ class TTSWrapper:
 
         # Check top_k
         if not (1 <= top_k <= 100):
-            raise InvalidSettingsError(
-                "Top_k must be an integer between 1 and 100."
-            )
+            raise InvalidSettingsError("Top_k must be an integer between 1 and 100.")
 
         # Check stream_chunk_size
         if not (20 <= stream_chunk_size <= 400):
@@ -419,8 +403,7 @@ class TTSWrapper:
 
                 speaker_name = f
                 speaker_wav = [
-                    os.path.join(self.speaker_folder, f, s)
-                    for s in subdir_files
+                    os.path.join(self.speaker_folder, f, s) for s in subdir_files
                 ]
                 # use the first file found as the preview
                 preview = os.path.join(f, subdir_files[0])
@@ -461,13 +444,9 @@ class TTSWrapper:
         text = re.sub(r'"\s?(.*?)\s?"', r"'\1'", text)
         return text
 
-    def local_generation(
-        self, text, speaker_name, speaker_wav, language, output_file
-    ):
+    def local_generation(self, text, speaker_name, speaker_wav, language, output_file):
         # Log time
-        generate_start_time = (
-            time.time()
-        )  # Record the start time of loading the model
+        generate_start_time = time.time()  # Record the start time of loading the model
 
         gpt_cond_latent, speaker_embedding = self.get_or_create_latents(
             speaker_name, speaker_wav
@@ -481,9 +460,7 @@ class TTSWrapper:
             **self.tts_settings,  # Expands the object with the settings and applies them for generation
         )
 
-        torchaudio.save(
-            output_file, torch.tensor(out["wav"]).unsqueeze(0), 24000
-        )
+        torchaudio.save(output_file, torch.tensor(out["wav"]).unsqueeze(0), 24000)
 
         generate_end_time = time.time()  # Record the time to generate TTS
         generate_elapsed_time = generate_end_time - generate_start_time
@@ -499,9 +476,7 @@ class TTSWrapper:
                 speaker_wav = speaker_name_or_path
             else:
                 # make it a full path
-                speaker_wav = os.path.join(
-                    self.speaker_folder, speaker_name_or_path
-                )
+                speaker_wav = os.path.join(self.speaker_folder, speaker_name_or_path)
         else:
             # it's a speaker name
             full_path = os.path.join(self.speaker_folder, speaker_name_or_path)
@@ -538,9 +513,7 @@ class TTSWrapper:
                 output_file = file_name_or_path
             else:
                 # Only a filename was provided; prepend with output folder.
-                output_file = os.path.join(
-                    self.output_folder, file_name_or_path
-                )
+                output_file = os.path.join(self.output_folder, file_name_or_path)
 
             # Check if 'text' is a valid path to a '.txt' file.
             if os.path.isfile(text) and text.lower().endswith(".txt"):
@@ -551,9 +524,7 @@ class TTSWrapper:
             if self.enable_cache_results:
                 timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
                 file_name_or_path = timestamp + "_cache_" + file_name_or_path
-                output_file = os.path.join(
-                    self.output_folder, file_name_or_path
-                )
+                output_file = os.path.join(self.output_folder, file_name_or_path)
 
             # Replace double quotes with single, asterisks, carriage returns, and line feeds
             clear_text = self.clean_text(text)
@@ -601,9 +572,7 @@ class TTSWrapper:
                         output_file,
                     )
             else:
-                self.api_generation(
-                    clear_text, speaker_wav, language, output_file
-                )
+                self.api_generation(clear_text, speaker_wav, language, output_file)
 
             self.switch_model_device()  # Unload to CPU if lowram ON
 
