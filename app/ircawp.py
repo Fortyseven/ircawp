@@ -346,8 +346,6 @@ class Ircawp:
                                     media=incoming_media,
                                 )
                             )
-                            # if plugin_name == "img":
-                            #     is_img_plugin = True
                         else:
                             inf_response = f"Plugin {plugin_name} not found."
                     # otherwise, process it as a regular text message

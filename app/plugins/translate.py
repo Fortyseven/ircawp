@@ -23,6 +23,22 @@ Optionally add any notes that might help give context for the translation. Do no
 DISABLE_IMAGEGEN = True
 
 
+def format_translation_as_quote(text: str) -> str:
+    """
+    Wraps translation text in markdown quote formatting.
+    Handles multi-line text by prefixing each line with '>'.
+
+    Args:
+        text: The translation text to format
+
+    Returns:
+        The formatted text with markdown quote syntax
+    """
+    lines = text.split("\n")
+    formatted_lines = [f"> _{line}_" for line in lines]
+    return "\n".join(formatted_lines)
+
+
 class TranslationResponse(BaseModel):
     """Structured response model for translation output."""
 
@@ -50,6 +66,7 @@ def translate(
         prompt=prompt.strip(),
         format=TranslationResponse,
         temperature=0.2,
+        media=media,
         use_tools=False,
     )
 
@@ -62,11 +79,11 @@ def translate(
             DISABLE_IMAGEGEN,
         )
 
-    final_response = f"*{if_response.source_language or 'Unknown'}* {if_response.language_flag_emoji or ''}:\n> _{if_response.translation}_"
+    translated_text = format_translation_as_quote(if_response.translation)
+    final_response = f"*{if_response.source_language or 'Unknown'}* {if_response.language_flag_emoji or ''}:\n{translated_text}"
     if if_response.notes:
         final_response += f"\n\n*Notes:* _{if_response.notes}_"
 
-    backend.console.log("Translation completed")
     return (
         final_response,
         "",
