@@ -62,6 +62,7 @@ class PluginBase:
 
             if outgoing_media and isinstance(outgoing_media, str):
                 media_return = outgoing_media
+
             return (response, media_return, skip_imagegen)
         except Exception as e:
             return (
