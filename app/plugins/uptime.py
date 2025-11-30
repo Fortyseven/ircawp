@@ -16,7 +16,7 @@ def uptime(
     media: list,
     backend: Ircawp_Backend,
     media_backend: MediaBackend = None,
-) -> tuple[str, str]:
+) -> tuple[str, str, bool]:
     now = datetime.now()
     uptime = now - START_TIME
 

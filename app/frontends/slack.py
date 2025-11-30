@@ -85,7 +85,8 @@ class Slack(Ircawp_Frontend):
     ###############################
     def start(self):
         self.bolt = App(token=self.slack_creds["SLACK_BOT_TOKEN"])
-        # Fetch and store bot user id once
+
+        # Fetch our bot ID
         self.bot_user_id = self.bolt.client.auth_test()["user_id"]
         self.console.log(f"[black on light_salmon3]Bot user id: {self.bot_user_id}")
 
