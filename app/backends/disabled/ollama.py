@@ -27,6 +27,11 @@ class Ollama(Ircawp_Backend):
         prompt: str,
         system_prompt: str | None = None,
         username: str = "",
+        temperature: float = 0.7,
+        media: list = [],
+        use_tools: bool = True,
+        aux=None,
+        format=None,
     ) -> tuple[str, list[str]]:
         """Run inference and return (response_text, tool_generated_images)."""
         response = ""
