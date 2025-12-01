@@ -14,13 +14,16 @@ from app.lib.network import depipeText
 
 class Slack(Ircawp_Frontend):
     bolt = None
-    # Store conversation history per thread_ts
-    thread_history = ThreadManager()
+
+    # FIXME: Currently thread history retention is a NOP; we'll return to
+    # this later; we're currently only responding to threads for one-offs
+    thread_history = None
 
     ###############################
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.configure()
+        # self.thread_history = ThreadManager()
 
     ###############################
     def configure(self):
@@ -39,50 +42,6 @@ class Slack(Ircawp_Frontend):
             raise Exception("Slack credentials incomplete. Check .env file.")
 
     ###############################
-    def get_thread_history(self, thread_ts: str) -> list:
-        """
-        Get conversation history for a specific thread.
-
-        Args:
-            thread_ts (str): The thread timestamp identifier
-
-        Returns:
-            list: List of messages in this thread
-        """
-        return self.thread_conversations.get(thread_ts, [])
-
-    def add_to_thread_history(self, thread_ts: str, role: str, content: str):
-        """
-        Add a message to thread conversation history.
-
-        Args:
-            thread_ts (str): The thread timestamp identifier
-            role (str): 'user' or 'assistant'
-            content (str): The message content
-        """
-        if thread_ts not in self.thread_conversations:
-            self.thread_conversations[thread_ts] = []
-
-        self.thread_conversations[thread_ts].append({"role": role, "content": content})
-
-        # Optional: Limit history size to prevent memory bloat
-        max_history = 50
-        if len(self.thread_conversations[thread_ts]) > max_history:
-            self.thread_conversations[thread_ts] = self.thread_conversations[thread_ts][
-                -max_history:
-            ]
-
-    def clear_thread_history(self, thread_ts: str):
-        """
-        Clear conversation history for a specific thread.
-
-        Args:
-            thread_ts (str): The thread timestamp identifier
-        """
-        if thread_ts in self.thread_conversations:
-            del self.thread_conversations[thread_ts]
-
-    ###############################
     def start(self):
         self.bolt = App(token=self.slack_creds["SLACK_BOT_TOKEN"])
 
@@ -97,14 +56,17 @@ class Slack(Ircawp_Frontend):
     def ingestEvent(self, event, message, client, say, body):
         # Safely extract the user id. Some message subtypes (e.g. message_changed) nest the user.
         user_id = event.get("user")
+
         if not user_id and isinstance(event.get("message"), dict):
             user_id = event["message"].get("user")
+
         # If still no user_id, ignore this event.
         if not user_id:
             return
+
         channel = event["channel"]
 
-        print("EVENT RECEIVED: ", event)
+        # print("EVENT RECEIVED: ", event)
 
         # Skip bot's own messages
         if event.get("bot_id") or event.get("subtype") == "bot_message":
@@ -121,10 +83,14 @@ class Slack(Ircawp_Frontend):
         # For channel messages: only respond if bot is mentioned
         # For thread replies: respond regardless of mention (now that event subscriptions are enabled)
         text = event.get("text", "")
+
         # Only treat as mentioned if OUR bot user id is explicitly present.
         # self.bot_user_id is initialized in start() via auth_test.
         mentioned = f"<@{self.bot_user_id}>" in text if self.bot_user_id else False
-        if not thread_ts and not mentioned:
+
+        # if not thread_ts and not mentioned:
+        #     return
+        if not mentioned:
             return
 
         # Extract the prompt text
@@ -178,13 +144,22 @@ class Slack(Ircawp_Frontend):
         # Only store history if in a thread (conversation_id is not None)
         # Channel messages are fresh starts with no history
         if conversation_id:
-            self.add_to_thread_history(conversation_id, "user", prompt)
+            # self.thread_history.addToThreadHistory(conversation_id, "user", prompt)
 
         self.parent.ingestMessage(
             depipeText(prompt),
             username,
             incoming_media,
-            (user_id, channel, say, body, thread_ts, conversation_id),
+            # self.thread_history.getThreadHistory(conversation_id),
+            "",
+            (
+                user_id,
+                channel,
+                say,
+                body,
+                thread_ts,
+                conversation_id,
+            ),
         )
 
     def egestEvent(self, message, media, aux={}):
@@ -193,13 +168,16 @@ class Slack(Ircawp_Frontend):
         # Only store assistant response if in a thread (conversation_id is not None)
         # Channel messages don't maintain history
         if conversation_id and message:
-            self.add_to_thread_history(conversation_id, "assistant", str(message))
+            # self.thread_history.addToThreadHistory(
+            #     conversation_id, "assistant", str(message)
+            # )
 
         # HACK:
         media = media[0]
 
         if not media:
             blocks = self._build_blocks_with_prefix(f"<@{user_id}> ", message or "")
+
             # Only reply in thread if thread_ts exists (user initiated thread)
             if thread_ts:
                 say(blocks=blocks, thread_ts=thread_ts)
@@ -211,12 +189,14 @@ class Slack(Ircawp_Frontend):
 
     def _postMedia(self, message, media, aux):
         user_id, channel, say, body, thread_ts, conversation_id = aux
+
         if message:
             blocks = self._build_blocks_with_prefix(f"<@{user_id}> ", message)
             if thread_ts:
                 say(blocks=blocks, thread_ts=thread_ts)
             else:
                 say(blocks=blocks)
+
         with open(media, "rb") as f:
             upload_kwargs = {
                 "file": f.read(),
@@ -235,25 +215,31 @@ class Slack(Ircawp_Frontend):
         if isinstance(content, (tuple, list)):
             # Flatten one level and join stringifiable, non-empty parts.
             flat_parts = []
+
             for part in content:
                 if part is None:
                     continue
+
                 # If a dict was passed (e.g. metadata), ignore it; but if it
                 # has a 'content' key use that.
                 if isinstance(part, dict):
                     if "content" in part and isinstance(part["content"], str):
                         flat_parts.append(part["content"])
                     continue
+
                 # Basic stringification; avoid Python tuple/list repr noise by stripping.
                 text_part = str(part).strip()
                 if text_part:
                     flat_parts.append(text_part)
+
             content = " \n".join(flat_parts)
         elif not isinstance(content, str):
             content = str(content or "")
 
         content = (content or "").strip()
+
         blocks = []
+
         if not content:
             blocks.append(
                 {"type": "section", "text": {"type": "mrkdwn", "text": prefix.strip()}}
@@ -263,8 +249,8 @@ class Slack(Ircawp_Frontend):
         # Split into paragraphs (double newlines or blank-line separated)
         paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", content) if p.strip()]
 
-        def append_block(text):
-            print("Appending block:", text)
+        def _append_block(text):
+            # print("Appending block:", text)
             blocks.append({"type": "section", "text": {"type": "mrkdwn", "text": text}})
 
         # Helper: sentence split with fallback slicing
@@ -297,9 +283,11 @@ class Slack(Ircawp_Frontend):
         # First block has prefix space budget
         first_budget = limit - len(prefix)
         first_text = ""
+
         while paragraphs and len(first_text) < first_budget:
             para = paragraphs[0]
             needed = len(para) + (2 if first_text else 0)  # add separator if not first
+
             if len(first_text) + needed <= first_budget:
                 paragraphs.pop(0)
                 first_text = first_text + ("\n\n" if first_text else "") + para
@@ -308,14 +296,18 @@ class Slack(Ircawp_Frontend):
                 remaining_space = (
                     first_budget - len(first_text) - (2 if first_text else 0)
                 )
+
                 if remaining_space <= 0:
                     break
+
                 chunks = sentence_chunks(para, remaining_space)
+
                 if chunks:
                     fill = chunks[0]
                     first_text = first_text + ("\n\n" if first_text else "") + fill
                     # Replace paragraph with remainder (rejoin leftover chunks)
                     leftover = " ".join(chunks[1:]).strip()
+
                     if leftover:
                         paragraphs[0] = leftover
                     else:
@@ -323,14 +315,14 @@ class Slack(Ircawp_Frontend):
                 else:
                     break
 
-        append_block(prefix + first_text)
+        _append_block(prefix + first_text)
 
         # Subsequent blocks (no prefix)
         for para in paragraphs:
             # Break paragraph into block-sized chunks preferring sentence boundaries
             if len(para) <= limit:
-                append_block(para)
+                _append_block(para)
             else:
                 for chunk in sentence_chunks(para, limit):
-                    append_block(chunk)
+                    _append_block(chunk)
         return blocks
