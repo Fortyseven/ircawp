@@ -12,6 +12,7 @@ from rich.traceback import install
 
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.types import InfResponse
+from app.lib.thread_history import ThreadManager
 
 # Import MediaBackend base class for type hinting
 from app.media_backends.MediaBackend import MediaBackend
@@ -116,7 +117,14 @@ class Ircawp:
 
         plugins.load(self.console)
 
-    def ingestMessage(self, message, username, media=[], aux=None):
+    def ingestMessage(
+        self,
+        message,
+        username,
+        media=[],
+        thread_history: ThreadManager = None,
+        aux=None,
+    ):
         """
         Receives a message from the frontend and puts it into the
         queue.
@@ -127,7 +135,7 @@ class Ircawp:
             media (list): Local file paths to attached media
             aux (List, optional): Bundle of optional data needed to route the message back to the user.
         """
-        self.queue.put((message, username, media, aux))
+        self.queue.put((message, username, media, thread_history, aux))
 
     def egestMessage(self, message: str, media: list, aux: dict):
         """
@@ -316,8 +324,10 @@ class Ircawp:
                 # is_img_plugin = False
                 skip_imagegen = True
 
-                message, user_id, incoming_media, aux = self.queue.get()
+                message, user_id, incoming_media, thread_history, aux = self.queue.get()
                 message = message.strip()
+
+                # self.console.log(f"[white on purple]thread: {thread_history}")
 
                 outgoing_media_filename = ""
 

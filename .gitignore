@@ -5,3 +5,9 @@ models
 app/plugins/vendor/xtts_api_server/xtts_models/*
 _archive
 attic
+THREAD_IMPLEMENTATION.md
+TOOL_IMAGES_IMPLEMENTATION.md
+TOOL_CALLING_IMPLEMENTATION.md
+THREAD_FLOW.md
+ztemp.py
+prompts.sqlite3.thisisnotadatabase
