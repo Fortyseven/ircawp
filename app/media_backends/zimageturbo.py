@@ -10,6 +10,7 @@ else:
 
 import torch
 from diffusers import ZImagePipeline
+# from app.media_backends.upscaler.upscaler import upscaleImage
 
 DEFAULT_FILENAME = "/tmp/ircawp.zimageturbo.png"
 # LORA_PATH = "app/media_backends/zimage-lora/technically-color.safetensors"
@@ -88,6 +89,8 @@ class zimageturbo(MediaBackend):
         ).images[0]
 
         image.save(output_file)
+
+        # upscaled_file = upscaleImage(image, scale=2)
 
         return output_file
 
