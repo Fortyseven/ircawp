@@ -79,6 +79,10 @@ class Openai(Ircawp_Backend):
 
     def _initialize_tools(self):
         """Initialize and register available tools."""
+        if self.oai_config.get("tools_enabled", False):
+            self.console.log("[yellow]Tools disabled via config.llm.disable_tools")
+            return
+
         all_tools = get_all_tools()
         for tool_name, tool_factory in all_tools.items():
             try:
@@ -366,11 +370,11 @@ class Openai(Ircawp_Backend):
                 and self.available_tools
             ):
                 tools = self._get_tool_schemas()
-
-            # Call OpenAI chat endpoint with possible temperature override and tools
-            result = self.chat(
-                messages, temperature=temperature, tools=tools, format=format
-            )
+                result = self.chat(
+                    messages, temperature=temperature, tools=tools, format=format
+                )
+            else:
+                result = self.chat(messages, temperature=temperature, format=format)
 
             # Check if LLM wants to call tools
             if tools and "choices" in result and len(result["choices"]) > 0:
@@ -378,7 +382,11 @@ class Openai(Ircawp_Backend):
                 message = choice["message"]
 
                 # Handle tool calls
-                if message.get("tool_calls"):
+                if (
+                    self.tools_enabled
+                    and self.tools_supported
+                    and message.get("tool_calls")
+                ):
                     for tool_call in message["tool_calls"]:
                         tool_name = tool_call["function"]["name"]
                         tool_args = json.loads(tool_call["function"]["arguments"])
