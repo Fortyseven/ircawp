@@ -7,6 +7,8 @@
                  \/      \/         |__|
 ```
 
+WARNING: This documentation is incomplete, and a constant WIP as new features and changes are rolled in regularly.
+
 # ircawp
 
 An easy to setup OpenAI API (Ollama, Llamacpp, etc) connected IRC bot with easily extensible plugin functionality.
@@ -15,11 +17,9 @@ Ircawp is under _heavy development_ and may undergo significant changes. I'm alr
 
 ## Why "ircawp"? (or "I want a the golden goose now!")
 
-It's the name of an old bot we had on IRC in the late 1990s. Back then it was a more straightforward bot that would handle channel operations, bans, etc. Then it
-became a fun Markov chain based babbler that would actually learn from the inputs people would feed it.
+It's the name of an old bot we had on IRC in the late 1990s. Back then it was a more straightforward bot that would handle channel operations, bans, etc. Then it became a fun Markov chain based babbler that would actually learn from the inputs people would feed it.
 
-Eventually it's "brain" would get corrupted and we'd
-have to reset it.
+Eventually it's "brain" would get corrupted and we'd have to reset it.
 
 Hopefully down the line this LLM-based bot will, too, be able to do something similar where the bot will learn from our bizarre shit and regurgitate even weirder stuff.
 
@@ -28,25 +28,22 @@ But for now, the standard LLM weirdness is good enough for me! ;)
 # Features
 
 -   Designed to work on lower-end hardware first. (I personally deploy this on a small AMD Ryzen 5 5625U based media box that sits on a shelf.)
+-   Request queue that processes requests in the order received.
 -   OpenAI backend (compatiable with Ollama)
 -   Easy plugin support to add new `/slash` commands with arguments; return images and text.
     -   Includes weather and a host of chatbot 'personalities' to ask the advice of.
 -   Supports media image attachments from Slack for the LLM, or passed to plugins.
--   Request queue that processes requests in the order received.
 -   SDXS image generation (insanely fast!); renders on the CPU by default, but even on that meager Ryzen 5 CPU it can generate about _an image a second_. Sure, they're not fantastic and they're 512x512, but c'mon, man, they're practically free. 😉
+-   ZImage Turbo image generation (also fast!), but renders on the GPU -- very high quality.
 
 # Requirements
 
 -   Tested with Python 3.11
--   Deployed on a small box with 32gb of RAM but that was apparently overkill.
+-   Deployed on a small box with 64gb of RAM (it's overkill; 32gb is recommended though).
 
 ## Installation
 
 -   Run `setup.sh` to setup a venv, install dependencies, create config files, and download models.
-
--   You will be prompted before the ~11 gig download begins.
-
-    -   Or bring your own GGML-format model and add it to the `config.json` file.
 
 -   You'll need to setup a Slack application. Doing that is beyond the scope of this meager README.
 
