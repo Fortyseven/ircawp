@@ -142,8 +142,8 @@ class Slack(Ircawp_Frontend):
 
         # Only store history if in a thread (conversation_id is not None)
         # Channel messages are fresh starts with no history
-        if conversation_id:
-            # self.thread_history.addToThreadHistory(conversation_id, "user", prompt)
+        # if conversation_id:
+        # self.thread_history.addToThreadHistory(conversation_id, "user", prompt)
 
         self.parent.ingestMessage(
             depipeText(prompt),
@@ -166,10 +166,10 @@ class Slack(Ircawp_Frontend):
 
         # Only store assistant response if in a thread (conversation_id is not None)
         # Channel messages don't maintain history
-        if conversation_id and message:
-            # self.thread_history.addToThreadHistory(
-            #     conversation_id, "assistant", str(message)
-            # )
+        # if conversation_id and message:
+        # self.thread_history.addToThreadHistory(
+        #     conversation_id, "assistant", str(message)
+        # )
 
         # HACK:
         media = media[0]
