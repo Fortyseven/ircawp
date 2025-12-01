@@ -83,9 +83,18 @@ class Slack(Ircawp_Frontend):
         # For thread replies: respond regardless of mention (now that event subscriptions are enabled)
         text = event.get("text", "")
 
+        # TODO: add this to the config
+        mention_anywhere = False
+
         # Only treat as mentioned if OUR bot user id is explicitly present.
         # self.bot_user_id is initialized in start() via auth_test.
-        mentioned = f"<@{self.bot_user_id}>" in text if self.bot_user_id else False
+        if mention_anywhere:
+            mentioned = f"<@{self.bot_user_id}>" in text if self.bot_user_id else False
+        else:
+            # Only consider as mentioned if at start of message
+            regex = rf"^(<@{self.bot_user_id}>)(.*)"
+            match = re.match(regex, text, re.MULTILINE)
+            mentioned = bool(match)
 
         # if not thread_ts and not mentioned:
         #     return
