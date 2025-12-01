@@ -5,5 +5,5 @@ class MediaBackend:
     def __init__(self, backend: Ircawp_Backend = None):
         self.backend = backend
 
-    def execute(self, query: str) -> str:
+    def execute(self, query: str, config: dict) -> str:
         return ""
