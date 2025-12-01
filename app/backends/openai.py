@@ -248,12 +248,15 @@ class Openai(Ircawp_Backend):
         prompt: str,
         system_prompt: str | None = None,
         username: str = "",
-        temperature: float = 0.7,
+        temperature: float = None,
         media: list = [],
         use_tools: bool = True,
         aux=None,
         format: Type[BaseModel] | dict | None = None,
     ) -> str:
+        if temperature is None:
+            temperature = self.options.get("temperature", 0.7)
+
         if DEBUG:
             self.console.log(
                 f"[black on yellow]OpenAI runInference: prompt='{prompt[:50]}...'"
