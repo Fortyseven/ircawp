@@ -52,7 +52,6 @@ class Slack(Ircawp_Frontend):
         self.bolt.event("message")(self.ingestEvent)
         SocketModeHandler(self.bolt, self.slack_creds["SLACK_APP_TOKEN"]).start()
 
-    # @bolt.event("app_mention")
     def ingestEvent(self, event, message, client, say, body):
         # Safely extract the user id. Some message subtypes (e.g. message_changed) nest the user.
         user_id = event.get("user")
