@@ -155,7 +155,7 @@ class Openai(Ircawp_Backend):
             "temperature": use_temperature,
             "max_tokens": -1
             if format is not None
-            else 2048,  # Increase limit for structured outputs to avoid JSON truncation
+            else 4096,  # Increase limit for structured outputs to avoid JSON truncation
         }
 
         # Add structured output format if provided
