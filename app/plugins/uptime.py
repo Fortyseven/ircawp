@@ -24,11 +24,13 @@ def uptime(
     start_time = START_TIME.strftime("%Y-%m-%d %H:%M:%S")
 
     return (
-        f"""STATS:
-    - Uptime: {uptime}
-    - Last started: {start_time}
-    - Current model: {backend.model}
-    - Last query time: {backend.last_query_time or "None yet"}
+        f"""
+    📊 STATS:
+    - *Uptime:* {uptime}
+    - *Last started:* {start_time}
+    - *Current model:* {backend.model}
+    - *Last query time:* {backend.last_query_time or "None yet"}
+    - *Last imagegen_prompt:* `{media_backend.last_imagegen_prompt or "None"}`
     """.strip(),
         "",
         True,

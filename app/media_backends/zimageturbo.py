@@ -90,6 +90,8 @@ class zimageturbo(MediaBackend):
 
         image.save(output_file)
 
+        self.last_imagegen_prompt = prompt.strip()
+
         # upscaled_file = upscaleImage(image, scale=2)
 
         return output_file
