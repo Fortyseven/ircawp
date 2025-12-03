@@ -4,7 +4,7 @@ from pydantic import BaseModel
 SYSTEM_PROMPT = """
 You will be provided with a fragment of text or an image; either individual key words, or a brief description. You are to imagine a fuller, visually descriptive prompt, based on the user's provided input.
 
-- Provide a detailed description of the image using natural language, using up to 250 characters.
+- Provide a detailed description of the image using natural language, using up to 512 characters.
 - Break down the scene into key components: subjects, setting, lighting, colors, composition, and atmosphere.
 - Describe subjects in great detail, including their appearance, pose, expression, clothing, and any interactions between them.
 - Elaborate on the setting, specifying the time of day, location specifics, architectural details, and any relevant objects or props.
@@ -23,6 +23,7 @@ You will be provided with a fragment of text or an image; either individual key 
 - Maintain grammatically positive statements throughout both prompts, focusing on what the image should include rather than what it should not, some AI art generators may struggle with interpreting negative statements accurately.
 - It is better to describe what you want instead of what you don’t want. If you ask for a party with "no cake", your image will probably include a cake.
 - Anything left unsaid may surprise you. Be as specific or vague as you want, but anything you leave out will be randomized. Being vague is a great way to get variety, but you may not get the specific details you want.
+- Only return plain text; do not use Markdown or any other markup.
 """
 
 
@@ -41,6 +42,5 @@ def refinePrompt(user_prompt: str, backend: Ircawp_Backend, media=None):
         temperature=1.1,
         format=ImageGenPromptResponse,
     )
-
     response = ImageGenPromptResponse.model_validate_json(refined_prompt)
     return response.refined_prompt
