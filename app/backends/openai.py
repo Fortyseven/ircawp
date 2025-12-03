@@ -259,10 +259,10 @@ class Openai(Ircawp_Backend):
 
         if DEBUG:
             self.console.log(
-                f"[black on yellow]OpenAI runInference: prompt='{prompt[:50]}...'"
+                f"[black on yellow]OpenAI runInference: prompt='{prompt[:256]}...'"
             )
             self.console.log(
-                f"[black on yellow]OpenAI runInference: system_prompt='{system_prompt}'"
+                f"[black on yellow]OpenAI runInference: system_prompt='{system_prompt[:256] if system_prompt else '--'}...'"
             )
             self.console.log(
                 f"[black on yellow]OpenAI runInference: username='{username}'"
