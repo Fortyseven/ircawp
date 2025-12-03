@@ -16,7 +16,7 @@ def raw(
 ) -> InfResponse:
     # return prompt.strip(), ""
     response = backend.runInference(system_prompt="", prompt=prompt.strip())
-    return response, (), False
+    return response, (), False, {}
 
 
 plugin = PluginBase(

@@ -49,24 +49,21 @@ class PluginBase:
         media: list,
         backend: Ircawp_Backend,
         media_backend: MediaBackend | None = None,
-    ) -> tuple[str, str | dict, bool]:
+    ) -> tuple[str, str | dict, bool, dict]:
         backend.console.log("[black on green]= PluginBase execute: ", query, media)
 
         if not query.strip() and self.prompt_required:
-            return self.msg_empty_query, "", True
+            return self.msg_empty_query, "", True, {}
         try:
             media_return = ""
-            response, outgoing_media, skip_imagegen = self.main(
+
+            response, outgoing_media, skip_imagegen, meta = self.main(
                 query, media, backend, media_backend
             )
 
             if outgoing_media and isinstance(outgoing_media, str):
                 media_return = outgoing_media
 
-            return (response, media_return, skip_imagegen)
+            return (response, media_return, skip_imagegen, meta)
         except Exception as e:
-            return (
-                f"{self.msg_exception_prefix}: " + str(e),
-                "",
-                True,
-            )
+            return (f"{self.msg_exception_prefix}: " + str(e), "", True, {})

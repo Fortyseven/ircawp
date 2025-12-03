@@ -209,9 +209,10 @@ class Slack(Ircawp_Frontend):
             upload_kwargs = {
                 "file": f.read(),
                 "channel": channel,
-                # initial_comment=response_message_with_username,
+                # "initial_comment": "Initial comment.",
                 # title=f"{imagegen_prompt}",
             }
+
             if thread_ts:
                 upload_kwargs["thread_ts"] = thread_ts
             self.bolt.client.files_upload_v2(**upload_kwargs)

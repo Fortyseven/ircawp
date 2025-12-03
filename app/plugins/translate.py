@@ -86,11 +86,7 @@ def translate(
         )
 
     if if_response.cannot_translate:
-        return (
-            "I cannot confidently translate this text.",
-            "",
-            DISABLE_IMAGEGEN,
-        )
+        return ("I cannot confidently translate this text.", "", DISABLE_IMAGEGEN, {})
 
     translated_text = format_translation_as_quote(if_response.translation)
     final_response = f"*{if_response.source_language or 'Unknown'}* {if_response.language_flag_emoji or ''}:\n{translated_text}"
@@ -100,11 +96,7 @@ def translate(
     if if_response.notes:
         final_response += f"\n\n*Notes:* _{if_response.notes}_"
 
-    return (
-        final_response,
-        "",
-        DISABLE_IMAGEGEN,
-    )
+    return (final_response, "", DISABLE_IMAGEGEN, {})
 
 
 plugin = PluginBase(

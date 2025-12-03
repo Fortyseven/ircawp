@@ -86,11 +86,10 @@ def img(
     backend.console.log(f"[black on green] refined prompt: '{final_prompt}'")
 
     # Call media backend to generate the image
-    # Note: config is prepared for future use when media_backend supports it
     image_path = media_backend.execute(prompt=final_prompt, config=config)
 
     # return "Refined prompt:\n```" + final_prompt.strip() + "```", image_path, False
-    return "", image_path, False
+    return "", image_path, False, {"imagegen_prompt": final_prompt}
 
 
 plugin = PluginBase(

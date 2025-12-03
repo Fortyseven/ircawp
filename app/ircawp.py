@@ -198,7 +198,7 @@ class Ircawp:
         """
         self.console.log(f"[white on green]Processing plugin: {plugin}")
         message = message.replace(f"/{plugin} ", "").strip()
-        response, outgoing_media, skip_imagegen = PLUGINS[plugin].execute(
+        response, outgoing_media, skip_imagegen, meta = PLUGINS[plugin].execute(
             query=message,
             backend=self.backend,
             media=media,
@@ -348,13 +348,15 @@ class Ircawp:
                             self.console.log(
                                 f"[white on green]Processing plugin: {plugin_name}"
                             )
-                            inf_response, outgoing_media_filename, skip_imagegen = (
-                                self.processMessagePlugin(
-                                    plugin_name,
-                                    message=message,
-                                    user_id=user_id,
-                                    media=incoming_media,
-                                )
+                            (
+                                inf_response,
+                                outgoing_media_filename,
+                                skip_imagegen,
+                            ) = self.processMessagePlugin(
+                                plugin_name,
+                                message=message,
+                                user_id=user_id,
+                                media=incoming_media,
                             )
                         else:
                             inf_response = f"Plugin {plugin_name} not found."
@@ -410,7 +412,9 @@ class Ircawp:
                 # Always attempt to egest; protect the queue thread from frontend errors
                 try:
                     self.egestMessage(
-                        inf_response, [outgoing_media_filename or None], aux
+                        inf_response,
+                        [outgoing_media_filename or None],
+                        aux,
                     )
                 except Exception as e:
                     # egestMessage already handles errors, but double-guard here as well

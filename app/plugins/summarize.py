@@ -78,7 +78,7 @@ def summarize(
 
     # validate proper url, allow no protocol for plain hostname
     if not (url.startswith("http://") or url.startswith("https://") or "." in url):
-        return "Invalid URL provided.", ""
+        return "Invalid URL provided.", "", True, {}
 
     skip_imagegen = True
 
@@ -105,11 +105,7 @@ def summarize(
         prompt=text,
     )
 
-    return (
-        summary,
-        "",
-        skip_imagegen,
-    )
+    return (summary, "", skip_imagegen, {})
 
 
 plugin = PluginBase(

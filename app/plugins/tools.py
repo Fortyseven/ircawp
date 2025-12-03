@@ -17,10 +17,10 @@ def tools(
 
     # Check if backend has tools support
     if not hasattr(backend, "available_tools"):
-        return "This backend doesn't support tool calling.", "", True
+        return "This backend doesn't support tool calling.", "", True, {}
 
     if not backend.available_tools:
-        return "No tools are currently registered.", "", True
+        return "No tools are currently registered.", "", True, {}
 
     output = "Registered LLM tools:\n\n"
 
@@ -63,6 +63,7 @@ def tools(
         f"{output}Total: {total} tool{'s' if total != 1 else ''} registered",
         "",
         True,
+        {},
     )
 
 

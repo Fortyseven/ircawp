@@ -34,6 +34,7 @@ def uptime(
     """.strip(),
         "",
         True,
+        {},
     )
 
 

@@ -89,12 +89,12 @@ def news(
                             headlines.append((text, href))
 
     if not headlines:
-        return "No headlines found.", "", True
+        return "No headlines found.", "", True, {}
 
     # Format the headlines for display
     formatted_headlines = "\n".join(f"• {title} ({url})" for title, url in headlines)
 
-    return "Drudge Report Headlines:\n" + formatted_headlines, "", False
+    return "Drudge Report Headlines:\n" + formatted_headlines, "", False, {}
 
 
 plugin = PluginBase(

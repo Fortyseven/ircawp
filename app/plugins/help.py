@@ -38,7 +38,7 @@ def help(
             output += f"`{get_triggers(PLUGINS[plugin].triggers)}` - {PLUGINS[plugin].description}\n"
         output += "\n"
 
-    return "AVAILABLE SLASH COMMANDS :\n\n" + output, "", True
+    return "AVAILABLE SLASH COMMANDS :\n\n" + output, "", True, {}
 
 
 plugin = PluginBase(

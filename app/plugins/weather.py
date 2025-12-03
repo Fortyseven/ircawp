@@ -175,7 +175,7 @@ def doWeather(
         return process_weather_json(content), "", False
 
     except Exception as e:
-        return "WTTR PROBLEMS: " + str(e), "", True
+        return "WTTR PROBLEMS: " + str(e), "", True, {}
 
 
 plugin = PluginBase(
