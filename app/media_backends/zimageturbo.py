@@ -10,7 +10,7 @@ else:
 
 import torch
 from diffusers import ZImagePipeline
-# from app.media_backends.upscaler.upscaler import upscaleImage
+
 
 DEFAULT_FILENAME = "/tmp/ircawp.zimageturbo.png"
 # LORA_PATH = "app/media_backends/zimage-lora/technically-color.safetensors"
@@ -18,7 +18,9 @@ DEFAULT_FILENAME = "/tmp/ircawp.zimageturbo.png"
 # DEFAULT_WIDTH = 1440  # 1056
 # DEFAULT_HEIGHT = 960  # 704
 DEFAULT_ASPECT = 1.5
+# MAX_WIDTH_HEIGHT = 1080
 MAX_WIDTH_HEIGHT = 1280
+# MAX_WIDTH_HEIGHT = 1440  # 1056
 
 INF_STEPS = 9
 CFG_SCALE = 0.0
@@ -38,8 +40,11 @@ class zimageturbo(MediaBackend):
         self.pipe.to("cpu")
         self.pipe.enable_model_cpu_offload()
 
-    def execute(self, prompt: str, config: dict) -> str:
-        output_file = config.get("output_file", DEFAULT_FILENAME)
+    def execute(self, prompt: str, config: dict, batch_id=None) -> str:
+        if batch_id is not None:
+            output_file = f"/tmp/ircawp.zimageturbo.{batch_id}.png"
+        else:
+            output_file = config.get("output_file", DEFAULT_FILENAME)
         torch.cuda.empty_cache()
         seed = torch.randint(0, 1000000, (1,)).item()
         # self.pipe.unet.load_attn_procs(LORA_PATH, weight=0.75)
@@ -75,7 +80,7 @@ class zimageturbo(MediaBackend):
         width = round(width / 16) * 16
         height = round(height / 16) * 16
 
-        self.pipe.set_progress_bar_config(disable=True)
+        # self.pipe.set_progress_bar_config(disable=True)
 
         print("Generating size:", width, "x", height, "seed:", seed, "aspect:", aspect)
 
