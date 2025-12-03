@@ -7,7 +7,7 @@ from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.media_backends.MediaBackend import MediaBackend
 from .__PluginBase import PluginBase
 
-DISCLAIMER = """IMPORTANT: Do NOT include opinion, interpretations, or infer additional context where it does not exist in the provided text or your subsequent summary. Only use the information provided in the text. Do not invent information. Strive for accuracy using ONLY the information provided. This is true for the summary, or for follow-up questions asked by the user about the text: only use what is provided."""
+DISCLAIMER = """IMPORTANT: Do NOT include opinion, interpretations, or infer additional context where it does not exist in the provided text, provided media, or your subsequent summary. Only use the information provided in the text. Do not invent information. Strive for accuracy using ONLY the information provided. This is true for the summary, or for follow-up questions asked by the user about the text: only use what is provided."""
 
 SYSTEM_PROMPT = f"""
 Summarize the following text. Provide a brief summary of the text. Return only the summary text, without any additional commentary. Ensure the summary is interesting and includes the main points and key details, and is concise and to the point.
