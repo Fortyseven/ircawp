@@ -144,6 +144,4 @@ def depipeText(string: str) -> str:
 
     replaced = re.sub(pattern, replacer, string)
 
-    print("REPL", string, replaced)
-
     return replaced

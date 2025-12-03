@@ -345,9 +345,6 @@ class Ircawp:
                     if message.startswith("/"):
                         plugin_name = message.split(" ")[0][1:]
                         if plugin_name in PLUGINS:
-                            self.console.log(
-                                f"[white on green]Processing plugin: {plugin_name}"
-                            )
                             (
                                 inf_response,
                                 outgoing_media_filename,
