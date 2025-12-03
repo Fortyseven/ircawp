@@ -135,7 +135,7 @@ def process_weather_json(json_text: str) -> tuple[str, str]:
     # imagegen_prompt,
 
     except json.decoder.JSONDecodeError:
-        return "Error: could not decode JSON.", "", True
+        return "Error: could not decode JSON.", "", True, {}
 
 
 @tool
@@ -149,4 +149,4 @@ def get_weather(location: str) -> str:
         return process_weather_json(content), "", False
 
     except Exception as e:
-        return "WTTR PROBLEMS: " + str(e), "", True
+        return "WTTR PROBLEMS: " + str(e), "", True, {}
