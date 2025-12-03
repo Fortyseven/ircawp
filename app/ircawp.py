@@ -197,7 +197,7 @@ class Ircawp:
             InfResponse: _description_
         """
         self.console.log(f"[white on green]Processing plugin: {plugin}")
-        message = message.replace(f"/{plugin} ", "").strip()
+        message = message.replace(f"/{plugin}", "").strip()
         response, outgoing_media, skip_imagegen, meta = PLUGINS[plugin].execute(
             query=message,
             backend=self.backend,
