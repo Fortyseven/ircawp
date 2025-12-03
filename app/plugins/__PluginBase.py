@@ -66,4 +66,4 @@ class PluginBase:
 
             return (response, media_return, skip_imagegen, meta)
         except Exception as e:
-            return (f"{self.msg_exception_prefix}: " + str(e), "", True, {})
+            return (f"{self.msg_exception_prefix}: {e}", "", True, {})
