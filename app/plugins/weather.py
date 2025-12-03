@@ -80,26 +80,26 @@ def _normalizeWeatherType(weather: str) -> str:
     return weather
 
 
-# def buildImageGenPrompt(
-#     where, desc, temps, wind_dir, wind_mph, wind_kph, humidity, observed
-# ) -> str:
-#     location = where.strip()
+def buildImageGenPrompt(
+    where, desc, temps, wind_dir, wind_mph, wind_kph, humidity, observed
+) -> str:
+    location = where.strip()
 
-#     kind_of_weather = _normalizeWeatherType(desc.strip())
+    kind_of_weather = _normalizeWeatherType(desc.strip())
 
-#     temp = temps.strip()
-#     temp = _estimateTemperature(temp)
+    temp = temps.strip()
+    temp = _estimateTemperature(temp)
 
-#     # NOTE: observed is NOT the current time, meaning it might show night
-#     # time even if it's currently daytime; I can't help this without doing
-#     # my own time zone lookups, etc. Nothing in wttr.in's JSON response
-#     # gives me the current time at the locale. If you want this, it will be
-#     # much more work. Probably. I didn't look into it.
+    # NOTE: observed is NOT the current time, meaning it might show night
+    # time even if it's currently daytime; I can't help this without doing
+    # my own time zone lookups, etc. Nothing in wttr.in's JSON response
+    # gives me the current time at the locale. If you want this, it will be
+    # much more work. Probably. I didn't look into it.
 
-#     time_of_day = " ".join(observed.split(" ")[1:])
-#     time_of_day = _estimateTimeOfDay(time_of_day)
+    time_of_day = " ".join(observed.split(" ")[1:])
+    time_of_day = _estimateTimeOfDay(time_of_day)
 
-#     return f"professional street-level photo of {location} featuring {temp} {kind_of_weather} weather at {time_of_day}"
+    return f"professional street-level photo of {location} featuring {temp} {kind_of_weather} weather at {time_of_day}"
 
 
 def process_weather_json(json_text: str) -> tuple[str, str]:
@@ -144,22 +144,24 @@ def process_weather_json(json_text: str) -> tuple[str, str]:
 
             where = f"{where}, {where2}"
 
-        # imagegen_prompt = buildImageGenPrompt(
-        #     where,
-        #     desc,
-        #     temps,
-        #     wind_dir,
-        #     wind_mph,
-        #     wind_kph,
-        #     humidity,
-        #     observed,
-        # )
+        imagegen_prompt = buildImageGenPrompt(
+            where,
+            desc,
+            temps,
+            wind_dir,
+            wind_mph,
+            wind_kph,
+            humidity,
+            observed,
+        )
 
-        return f"Weather for {where}: {desc} at 🌡 {temps}, winds 🌬 {wind_dir} at {wind_mph}mph ({wind_kph}kph), 💦 humidity at {humidity}%. (⏰ As of {observed}, local.)"
-    # imagegen_prompt,
+        return (
+            f"Weather for {where}: {desc} at 🌡 {temps}, winds 🌬 {wind_dir} at {wind_mph}mph ({wind_kph}kph), 💦 humidity at {humidity}%. (⏰ As of {observed}, local.)",
+            imagegen_prompt,
+        )
 
     except json.decoder.JSONDecodeError:
-        return "Error: could not decode JSON.", "", True
+        return "Error: could not decode JSON.", "", True, {}
 
 
 def doWeather(
@@ -172,7 +174,11 @@ def doWeather(
         url_query = f"https://wttr.in/{quote_plus(query)}?format=j1"
         # response = requests.get(url_query, timeout=12, allow_redirects=True)
         content = fetchHtml(url_query, bypass_cache=True)
-        return process_weather_json(content), "", False
+        processed, prompt = process_weather_json(content)
+
+        image = media_backend.execute(prompt=prompt, config={"aspect": "16:9"})
+
+        return processed, image, False, {}
 
     except Exception as e:
         return "WTTR PROBLEMS: " + str(e), "", True, {}
