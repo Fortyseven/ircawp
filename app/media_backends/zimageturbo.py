@@ -53,16 +53,22 @@ class zimageturbo(MediaBackend):
 
         # check for common ratio strings ("16:9", etc), or take float directly
         if "aspect" in config:
-            ratio_str = config["aspect"]
-            if ":" in ratio_str:
-                parts = ratio_str.split(":")
-                if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
-                    aspect = float(parts[0]) / float(parts[1])
+            ratio_value = config["aspect"]
+            # If it's already a float, use it directly
+            if isinstance(ratio_value, (int, float)):
+                aspect = float(ratio_value)
             else:
-                try:
-                    aspect = float(ratio_str)
-                except ValueError:
-                    pass  # keep default if conversion fails
+                # It's a string, parse it
+                ratio_str = str(ratio_value)
+                if ":" in ratio_str:
+                    parts = ratio_str.split(":")
+                    if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+                        aspect = float(parts[0]) / float(parts[1])
+                else:
+                    try:
+                        aspect = float(ratio_str)
+                    except ValueError:
+                        pass  # keep default if conversion fails
 
         if type(aspect) is float:
             if aspect >= 1.0:
