@@ -5,6 +5,7 @@ Bot plugin that allows the user to pass a raw prompt to the system imagegen back
 import shutil
 from typing import Dict, Any
 from pathlib import Path
+from PIL import Image
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.media_backends.MediaBackend import MediaBackend
 from app.lib.llm_helpers import refinePrompt
@@ -13,6 +14,15 @@ from .__PluginBase import PluginBase
 
 REDO_MEDIA_PATH = "/tmp/ircawp.last_imagegen_media.png"
 last_unrefined_prompt: str = None
+
+
+def get_media_aspect_ratio(media_path: str) -> float:
+    """Extract aspect ratio (width/height) from an image file."""
+    try:
+        img = Image.open(media_path)
+        return img.width / img.height
+    except Exception:
+        return None
 
 
 def parse_arguments(prompt: str) -> tuple[str, Dict[str, Any]]:
@@ -40,6 +50,23 @@ def img(
 
     # Parse command-line style arguments from the prompt
     prompt, config = parse_arguments(prompt)
+
+    # Handle --aspect match: if media is provided and aspect is match (or not specified),
+    # automatically set aspect to the media's aspect ratio
+    if media:
+        aspect_value = config.get("aspect")
+        if aspect_value == "match" or aspect_value is None:
+            media_aspect = get_media_aspect_ratio(media[0])
+            if media_aspect is not None:
+                config["aspect"] = media_aspect
+                if aspect_value is None:
+                    backend.console.log(
+                        f"[cyan on black] defaulting to media aspect ratio: {media_aspect:.2f}"
+                    )
+                else:
+                    backend.console.log(
+                        f"[cyan on black] matched media aspect ratio: {media_aspect:.2f}"
+                    )
 
     if prompt.startswith("!!"):
         # redo prior session run
@@ -88,8 +115,6 @@ def img(
 
         # combine them into one image grid
         try:
-            from PIL import Image
-
             # Use up to 4 images in a 2x2 grid
             imgs = image_paths[:4]
             opened = [Image.open(p).convert("RGB") for p in imgs]
