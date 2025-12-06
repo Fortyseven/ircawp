@@ -1,4 +1,5 @@
-venv
+.venv
+.ruff_cache
 .env*
 config*.json
 models
