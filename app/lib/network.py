@@ -19,14 +19,46 @@ def fetchHtmlWithJs(url, timeout=12, headers=None):
 
     try:
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
+            # Launch headless (necessary for servers without X11/display)
+            # Use stealth measures to avoid bot detection
+            browser = p.chromium.launch(
+                headless=True,
+                args=[
+                    "--disable-dev-shm-usage",
+                    "--no-first-run",
+                    "--no-default-browser-check",
+                    "--disable-blink-features=AutomationControlled",
+                ],
+            )
 
-            context_args = {"user_agent": DEFAULT_UA}
+            context_args = {
+                "user_agent": DEFAULT_UA,
+                "viewport": {"width": 1920, "height": 1080},
+                # Prevent headless detection via chrome properties
+                "ignore_https_errors": True,
+            }
             if headers:
                 context_args["extra_http_headers"] = headers
 
             context = browser.new_context(**context_args)
             page = context.new_page()
+
+            # Stealth measures: override navigator properties
+            page.add_init_script(
+                """
+                Object.defineProperty(navigator, 'webdriver', {
+                  get: () => false,
+                });
+                Object.defineProperty(navigator, 'plugins', {
+                  get: () => [1, 2, 3, 4, 5],
+                });
+                Object.defineProperty(navigator, 'languages', {
+                  get: () => ['en-US', 'en'],
+                });
+                window.chrome = { runtime: {} };
+                """
+            )
+
             page.goto(url, timeout=timeout * 1000)
 
             try:
@@ -109,9 +141,11 @@ def fetchHtml(
             headers = {
                 "User-Agent": DEFAULT_UA,
             }
+        print(f"[fetchHtml] fetching URL: {url}")
         resp = requests.get(
             url, timeout=timeout, headers=headers, allow_redirects=allow_redirects
         )
+        print(f"[fetchHtml] received: `{resp}`")
         resp.raise_for_status()
 
         if text_only:
@@ -126,11 +160,12 @@ def fetchHtml(
         print(f"[fetchHtml] cache store: {url}")
         return result
 
-    # except Exception as e:
-    #     raise f"Error fetching URL: {e}"
-
+    except requests.exceptions.HTTPError as e:
+        return f"[fetchHtml] HTTPError: {e}"
     except requests.exceptions.Timeout:
-        return f"Timed out while trying to fetch ({url}). Sites can be fussy; try again in a minute."
+        return f"[fetchHtml] Timed out while trying to fetch ({url}). Sites can be fussy; try again in a minute."
+    except Exception:
+        return f"[fetchHtml] An error occurred while trying to fetch ({url})."
 
 
 def depipeText(string: str) -> str:
