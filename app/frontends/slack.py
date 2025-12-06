@@ -1,5 +1,6 @@
 import re
 import os
+import sys
 import uuid
 import dotenv
 import requests
@@ -36,10 +37,13 @@ class Slack(Ircawp_Frontend):
         )
 
         if (
-            not self.slack_creds["SLACK_APP_TOKEN"]
-            or not self.slack_creds["SLACK_BOT_TOKEN"]
+            "SLACK_APP_TOKEN" not in self.slack_creds
+            or "SLACK_BOT_TOKEN" not in self.slack_creds
         ):
-            raise Exception("Slack credentials incomplete. Check .env file.")
+            self.console.log(
+                "[red on light_salmon3]Slack credentials incomplete.", self.slack_creds
+            )
+            sys.exit(-1)
 
     ###############################
     def start(self):
