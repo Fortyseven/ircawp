@@ -36,11 +36,12 @@ def geolocate(
         system_prompt=SYSTEM_PROMPT, prompt=prompt.strip(), media=media, temperature=0.2
     )
 
-    return (
-        inf_response,
-        "",
-        DISABLE_IMAGEGEN,
+    inf_response = backend.runInference(
+        system_prompt="Provide a condensed summary of this LLM analysis. Provide just the conclusion and basic reasoning.",
+        prompt=inf_response,
     )
+
+    return (inf_response, "", DISABLE_IMAGEGEN, {})
 
 
 plugin = PluginBase(
@@ -53,5 +54,6 @@ plugin = PluginBase(
     msg_exception_prefix="GEOLOCATING PROBLEMS",
     main=geolocate,
     use_imagegen=False,
-    prompt_required=True,
+    prompt_required=False,
+    media_required=True,
 )
