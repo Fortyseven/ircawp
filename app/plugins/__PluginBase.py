@@ -16,6 +16,7 @@ class PluginBase:
         msg_empty_query: str = "No question provided",
         msg_exception_prefix: Optional[str] = "GENERIC PROBLEMS",
         prompt_required: bool = True,
+        media_required: bool = False,
         use_imagegen: bool = False,
         backend: Ircawp_Backend | None = None,
         media_backend: MediaBackend | None = None,
@@ -33,6 +34,7 @@ class PluginBase:
         self.group = group
         self.use_imagegen = use_imagegen
         self.prompt_required = prompt_required
+        self.media_required = media_required
         self.backend: Ircawp_Backend = backend
         self.media_backend: MediaBackend = media_backend
         self.setMain(main)
@@ -51,6 +53,8 @@ class PluginBase:
         media_backend: MediaBackend | None = None,
     ) -> tuple[str, str | dict, bool, dict]:
         backend.console.log("[black on green]= PluginBase execute: ", query, media)
+        if self.media_required and not media:
+            return "Media required for this plugin.", "", True, {}
 
         if not query.strip() and self.prompt_required:
             return self.msg_empty_query, "", True, {}
