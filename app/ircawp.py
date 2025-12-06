@@ -355,6 +355,11 @@ class Ircawp:
                                 user_id=user_id,
                                 media=incoming_media,
                             )
+
+                            self.console.log(
+                                f"[white on green]Plugin returned {inf_response, outgoing_media_filename}."
+                            )
+
                         else:
                             inf_response = f"Plugin {plugin_name} not found."
                     # otherwise, process it as a regular text message
@@ -376,10 +381,6 @@ class Ircawp:
                     #     self.console.log(
                     #         "[yellow]Skipping image generation as requested."
                     #     )
-
-                    self.console.log(
-                        f"[white on green]Plugin returned {outgoing_media_filename}."
-                    )
 
                     # we have a media filename and it exists, so we're good
                     if outgoing_media_filename and os.path.exists(
