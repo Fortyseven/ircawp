@@ -18,6 +18,8 @@ def fetchHtmlWithJs(url, timeout=12, headers=None):
         )
 
     try:
+        if DEBUG:
+            print(f"[fetchHtmlWithJs] fetching URL with JS: {url}")
         with sync_playwright() as p:
             # Launch headless (necessary for servers without X11/display)
             # Use stealth measures to avoid bot detection
@@ -132,7 +134,8 @@ def fetchHtml(
             result = content
 
         # Cache successful result
-        print(f"[fetchHtml] cache store: {url}")
+        if DEBUG:
+            print(f"[fetchHtml] cache store: {url}")
         cache.set_cache(cache_key, result)
         return result
 
@@ -145,7 +148,8 @@ def fetchHtml(
         resp = requests.get(
             url, timeout=timeout, headers=headers, allow_redirects=allow_redirects
         )
-        print(f"[fetchHtml] received: `{resp}`")
+        if DEBUG:
+            print(f"[fetchHtml] received: `{resp}`")
         resp.raise_for_status()
 
         if text_only:
@@ -157,7 +161,10 @@ def fetchHtml(
             result = resp.text
 
         cache.set_cache(cache_key, result)
-        print(f"[fetchHtml] cache store: {url}")
+
+        if DEBUG:
+            print(f"[fetchHtml] cache store: {url}")
+
         return result
 
     except requests.exceptions.HTTPError as e:
