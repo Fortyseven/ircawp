@@ -23,11 +23,11 @@ def hn(
     feed = feedparser.parse(url)
 
     return (
-        f"Top stories from Hacker News as of {START_TIME.strftime('%Y-%m-%d %H:%M:%S')}"
+        f"Top stories from Hacker News as of {START_TIME.strftime('%Y-%m-%d %H:%M:%S')}\n"
         + "\n".join(
             [
-                f"{i + 1}. {feed.entries[i].title} - {feed.entries[i].link}"
-                for i in range(5)
+                f"{i + 1}. [{feed.entries[i].title}]({feed.entries[i].link})"
+                for i in range(len(feed.entries))
             ]
         ),
         "",
