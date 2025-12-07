@@ -109,5 +109,5 @@ plugin = PluginBase(
     msg_exception_prefix="TRANSLATING PROBLEMS",
     main=translate,
     use_imagegen=True,
-    prompt_required=True,
+    prompt_required=False,
 )
