@@ -299,8 +299,10 @@ class Openai(Ircawp_Backend):
                     *image_parts,
                 ]
 
+            # Only add tool rules and capabilities if tools will actually be used
             if (
-                self.tool_manager.is_enabled()
+                use_tools
+                and self.tool_manager.is_enabled()
                 and self.tool_manager.is_supported()
                 and self.tool_manager.has_tools()
             ):
