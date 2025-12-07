@@ -48,11 +48,7 @@ if not prompt:
 
 backend_instance: Ircawp_Backend | None = None
 
-match config.get("backend", "ollama"):
-    case "openai":
-        backend_instance = Openai(console=console, config=config, parent=None)
-    case _:
-        raise ValueError(f"Invalid backend: {config['backend']}")
+backend_instance = Openai(console=console, config=config, parent=None)
 
 print("\n----------------------------\n")
 
