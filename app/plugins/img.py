@@ -67,6 +67,10 @@ def img(
                     backend.console.log(
                         f"[cyan on black] matched media aspect ratio: {media_aspect:.2f}"
                     )
+    else:
+        # remove REDO_MEDIA_PATH
+        if Path(REDO_MEDIA_PATH).is_file():
+            Path(REDO_MEDIA_PATH).unlink()
 
     if prompt.startswith("!!"):
         # redo prior session run
