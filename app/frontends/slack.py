@@ -47,11 +47,65 @@ class Slack(Ircawp_Frontend):
 
     ###############################
     def start(self):
+        from app.plugins import PLUGINS
+        from app.lib.config import config
+
         self.bolt = App(token=self.slack_creds["SLACK_BOT_TOKEN"])
 
         # Fetch our bot ID
         self.bot_user_id = self.bolt.client.auth_test()["user_id"]
         self.console.log(f"[black on light_salmon3]Bot user id: {self.bot_user_id}")
+
+        # Register dynamic slash commands for plugins (except blacklisted)
+        blacklist = set(config.get("llm", {}).get("plugin_blacklist", []))
+        self.console.log(f"[black on light_salmon3]Plugin blacklist: {blacklist}")
+
+        def make_plugin_handler(plugin_name):
+            def handler(ack, respond, command):
+                ack()
+                try:
+                    # Get backend instance from parent if available
+                    backend_instance = self.parent.backend if self.parent else None
+                    media_backend_instance = (
+                        self.parent.imagegen if self.parent else None
+                    )
+
+                    response, outgoing_media, skip_imagegen, meta = PLUGINS[
+                        plugin_name
+                    ].execute(
+                        query=command["text"],
+                        media=[],  # Slash commands don't support file uploads
+                        backend=backend_instance,
+                        media_backend=media_backend_instance,
+                    )
+
+                    # Handle media response
+                    if outgoing_media:
+                        # Post the text response first if present
+                        if response:
+                            respond(str(response))
+                        # Then upload the media file
+                        with open(outgoing_media, "rb") as f:
+                            self.bolt.client.files_upload_v2(
+                                file=f.read(),
+                                channel=command["channel_id"],
+                            )
+                    else:
+                        respond(str(response))
+
+                except Exception as e:
+                    self.console.log(f"[red]Plugin error in {plugin_name}: {e}")
+                    respond(f"[Plugin error: {e}]")
+
+            return handler
+
+        for plugin_name in PLUGINS:
+            if plugin_name in blacklist:
+                self.console.log(f"[yellow]Skipping blacklisted plugin: /{plugin_name}")
+                continue
+            slack_command = f"/{plugin_name}"
+            self.console.log(f"[green]Registering Slack command: {slack_command}")
+            self.bolt.command(slack_command)(make_plugin_handler(plugin_name))
 
         self.bolt.event("message")(self.ingestEvent)
         SocketModeHandler(self.bolt, self.slack_creds["SLACK_APP_TOKEN"]).start()
