@@ -3,7 +3,7 @@ import requests
 from . import cache
 import hashlib
 
-
+DEBUG = False
 DEFAULT_UA = "Mozilla/5.0 (X11; Linux x86_64; rv:145.0) Gecko/20100101 Firefox/145.0"
 
 
