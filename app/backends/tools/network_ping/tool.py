@@ -6,13 +6,23 @@ from ..ToolBase import tool
 
 
 # Simple decorator usage - description from docstring
-@tool
+@tool(
+    name="network_ping",
+    description="Ping a domain or IP address to check if it's reachable and measure network latency. Returns response times and packet loss information.",
+    expertise_areas=[
+        "networking",
+        "connectivity",
+        "diagnostics",
+        "latency",
+        "availability",
+    ],
+)
 def network_ping(domain_or_ip: str) -> str:
     """
-    Perform a ping for a given domain or ip.
+    Perform a ping for a given domain or IP address to test connectivity.
 
     Args:
-        domain: The domain name to look up
+        domain_or_ip: The domain name or IP address to ping (e.g., 'google.com', '8.8.8.8')
     """
     try:
         # let's do this from an exec

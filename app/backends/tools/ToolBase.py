@@ -45,6 +45,7 @@ class ToolBase(ABC):
     # Tool metadata (override in subclasses)
     name: str = "base_tool"
     description: str = "Base tool class"
+    expertise_areas: List[str] = []  # Areas of expertise for this tool
 
     def __init__(self, backend=None, media_backend=None, console=None):
         """
@@ -81,7 +82,7 @@ class ToolBase(ABC):
         Returns:
             Dict containing the function schema in OpenAI format
         """
-        return {
+        schema = {
             "type": "function",
             "function": {
                 "name": self.name,
@@ -89,11 +90,26 @@ class ToolBase(ABC):
                 "parameters": {"type": "object", "properties": {}, "required": []},
             },
         }
+        # Ensure description is never empty - this improves tool calling
+        if not schema["function"]["description"]:
+            schema["function"]["description"] = f"Execute the {self.name} tool"
+        return schema
 
     def log(self, message: str):
         """Convenience method to log messages."""
         if self.console:
             self.console.log(f"[Tool:{self.name}] {message}")
+
+    def get_expertise_areas(self) -> List[str]:
+        """
+        Return the areas of expertise for this tool.
+
+        Can be overridden by subclasses to define custom expertise areas.
+
+        Returns:
+            List of expertise area strings (e.g., ['mathematics', 'calculations'])
+        """
+        return self.expertise_areas
 
 
 class DecoratedTool(ToolBase):
@@ -110,6 +126,7 @@ class DecoratedTool(ToolBase):
         name: str | None = None,
         description: str | None = None,
         args_schema: type[BaseModel] | None = None,
+        expertise_areas: List[str] | None = None,
         backend=None,
         media_backend=None,
         console=None,
@@ -122,6 +139,7 @@ class DecoratedTool(ToolBase):
             name: Tool name (defaults to function name)
             description: Tool description (defaults to function docstring)
             args_schema: Pydantic model for input validation
+            expertise_areas: Areas of expertise for this tool
             backend: LLM backend instance
             media_backend: Media generation backend
             console: Rich console for logging
@@ -132,6 +150,7 @@ class DecoratedTool(ToolBase):
         self.name = name or func.__name__
         self.description = description or (func.__doc__ or "").strip()
         self.args_schema = args_schema
+        self.expertise_areas = expertise_areas or []
 
         # Generate schema from function signature
         self._generate_schema()
@@ -144,13 +163,17 @@ class DecoratedTool(ToolBase):
         properties = {}
         required = []
 
+        # Extract parameter descriptions from docstring if available
+        param_docs = self._extract_param_docs()
+
         for param_name, param in sig.parameters.items():
             # Skip injected parameters
             if param_name in ("backend", "media_backend", "console"):
                 continue
 
             param_type = type_hints.get(param_name, str)
-            param_desc = ""
+            # Try to get description from docstring, fallback to param name
+            param_desc = param_docs.get(param_name, f"Parameter: {param_name}")
 
             # Basic type mapping
             json_type = "string"
@@ -186,6 +209,43 @@ class DecoratedTool(ToolBase):
             },
         }
 
+    def _extract_param_docs(self) -> dict:
+        """
+        Extract parameter descriptions from function docstring.
+
+        Looks for Args section in docstring and parses parameter descriptions.
+
+        Returns:
+            Dict mapping parameter names to their descriptions
+        """
+        param_docs = {}
+        doc = inspect.getdoc(self._func)
+        if not doc:
+            return param_docs
+
+        # Simple parser for Google-style docstrings
+        in_args = False
+        lines = doc.split("\n")
+
+        for i, line in enumerate(lines):
+            if line.strip().lower().startswith("args:"):
+                in_args = True
+                continue
+            elif in_args and line.strip() and not line[0].isspace():
+                # End of Args section
+                break
+            elif in_args:
+                # Parse "    param_name: description" format
+                stripped = line.strip()
+                if ":" in stripped and stripped[0].isalpha():
+                    parts = stripped.split(":", 1)
+                    param_name = parts[0].strip()
+                    param_desc = parts[1].strip() if len(parts) > 1 else ""
+                    if param_desc:
+                        param_docs[param_name] = param_desc
+
+        return param_docs
+
     def execute(self, **kwargs) -> ToolResult:
         """Execute the wrapped function."""
         # Inject backend services if function accepts them
@@ -216,6 +276,7 @@ def tool(
     name: str | None = None,
     description: str | None = None,
     args_schema: type[BaseModel] | None = None,
+    expertise_areas: List[str] | None = None,
 ):
     """
     Decorator to create a tool from a function.
@@ -231,20 +292,33 @@ def tool(
             '''Add two numbers.'''
             return str(x + y)
 
-        # With Pydantic schema
+        # With expertise areas
+        @tool(
+            description="Get weather for a location",
+            expertise_areas=["weather", "climate", "forecasting"]
+        )
+        def weather(location: str) -> str:
+            '''Get weather for a location.'''
+            return f"Weather in {location}: 72°F"
+
+        # With Pydantic schema and expertise
         class MyInput(BaseModel):
             location: str = Field(description="City name")
             units: str = Field(default="celsius")
 
-        @tool(args_schema=MyInput)
-        def weather(location: str, units: str = "celsius") -> str:
-            '''Get weather for a location.'''
+        @tool(
+            args_schema=MyInput,
+            expertise_areas=["weather", "meteorology"]
+        )
+        def weather_advanced(location: str, units: str = "celsius") -> str:
+            '''Get weather with custom units.'''
             return f"Weather in {location}: 72°{units[0].upper()}"
 
     Args:
         name: Override the function name
         description: Override the function docstring
         args_schema: Pydantic model for input validation
+        expertise_areas: List of areas this tool has expertise in
 
     Returns:
         Decorated function that can be used as a tool
@@ -257,6 +331,7 @@ def tool(
                 func=func,
                 name=name,
                 description=description,
+                expertise_areas=expertise_areas,
                 args_schema=args_schema,
                 backend=backend,
                 media_backend=media_backend,

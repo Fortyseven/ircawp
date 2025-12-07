@@ -309,6 +309,11 @@ class Openai(Ircawp_Backend):
             ):
                 system_prompt += TOOL_RULES
 
+                # Add capability matrix showing tool expertise areas
+                capability_matrix = self.tool_manager.get_capability_matrix()
+                if capability_matrix:
+                    system_prompt += "\n" + capability_matrix
+
             if system_prompt:
                 system_prompt = system_prompt.format(
                     current_datetime=datetime.now().isoformat()
@@ -373,7 +378,7 @@ class Openai(Ircawp_Backend):
 
                         if DEBUG:
                             self.console.log(
-                                f"[black on yellow]Tool '{tool_name}' result: {tool_result.text[:256]}..."
+                                f"[black on yellow]Tool '{tool_name}' result: `{tool_result.text}`..."
                             )
 
                         # Collect images from tool results

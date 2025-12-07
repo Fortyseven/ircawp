@@ -138,7 +138,9 @@ def process_weather_json(json_text: str) -> tuple[str, str]:
         return "Error: could not decode JSON.", "", True, {}
 
 
-@tool
+@tool(
+    expertise_areas=["weather", "climate", "meteorology", "forecasting", "temperature"]
+)
 def get_weather(location: str) -> str:
     """Get weather for a location."""
     try:

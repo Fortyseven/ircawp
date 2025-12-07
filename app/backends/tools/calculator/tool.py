@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 
 # Simple decorator usage - description from docstring
-@tool
+@tool(expertise_areas=["mathematics", "calculations", "arithmetic", "algebra"])
 def calculator(expression: str) -> str:
     """
     Evaluate a mathematical expression.
@@ -37,6 +37,7 @@ class CalculatorInput(BaseModel):
     name="advanced_calculator",
     description="Evaluate mathematical expressions with custom precision",
     args_schema=CalculatorInput,
+    expertise_areas=["mathematics", "calculations", "precision-math"],
 )
 def advanced_calc(expression: str, precision: int = 2) -> str:
     """Advanced calculator with precision control."""
