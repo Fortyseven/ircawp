@@ -199,7 +199,7 @@ class Openai(Ircawp_Backend):
 
     def runInference(
         self,
-        prompt: str,
+        prompt: str = "",
         system_prompt: str | None = None,
         username: str = "",
         temperature: float = None,
@@ -232,9 +232,6 @@ class Openai(Ircawp_Backend):
                         system_prompt = self.templateReplace(
                             system_prompt, username=username
                         )
-
-            if not prompt or prompt == "":
-                prompt = "_Empty response from LLM._"
 
             prompt = prompt.strip()
 
