@@ -10,6 +10,7 @@ else:
 
 import torch
 from diffusers import ZImagePipeline
+from app.lib.llm_helpers import refinePrompt
 
 
 DEFAULT_FILENAME = "/tmp/ircawp.zimageturbo.png"
@@ -40,11 +41,16 @@ class zimageturbo(MediaBackend):
         self.pipe.to("cpu")
         self.pipe.enable_model_cpu_offload()
 
-    def execute(self, prompt: str, config: dict, batch_id=None) -> str:
+    def execute(
+        self, prompt: str, config: dict = {}, batch_id=None, media=[], backend=None
+    ) -> (str, str):
         if batch_id is not None:
             output_file = f"/tmp/ircawp.zimageturbo.{batch_id}.png"
         else:
             output_file = config.get("output_file", DEFAULT_FILENAME)
+
+        skip_refinement = config.get("skip_refinement", False)
+
         torch.cuda.empty_cache()
         seed = torch.randint(0, 1000000, (1,)).item()
         # self.pipe.unet.load_attn_procs(LORA_PATH, weight=0.75)
@@ -90,8 +96,26 @@ class zimageturbo(MediaBackend):
 
         print("Generating size:", width, "x", height, "seed:", seed, "aspect:", aspect)
 
+        if not skip_refinement:
+            refined_prompt = refinePrompt(prompt.strip(), backend, media)
+
+            final_prompt = refined_prompt.strip()
+
+            if (
+                "i'm sorry" in final_prompt.lower()
+                or "i cannot" in final_prompt.lower()
+            ):
+                backend.console.log(
+                    "[pink on red] prompt refinement refused, using original"
+                )
+                final_prompt = prompt.strip()
+
+            backend.console.log(f"[black on green] refined prompt: '{final_prompt}'")
+        else:
+            final_prompt = prompt.strip()
+
         image = self.pipe(
-            prompt=prompt,
+            prompt=final_prompt,
             width=width,
             height=height,
             num_inference_steps=INF_STEPS,  # This actually results in 8 DiT forwards
@@ -105,14 +129,14 @@ class zimageturbo(MediaBackend):
 
         # upscaled_file = upscaleImage(image, scale=2)
 
-        return output_file
+        return output_file, final_prompt
 
 
 if __name__ == "__main__":
-    backend = zimageturbo(None)
+    media_backend = zimageturbo(None)
 
     # saved_to = backend.execute("A beautiful landscape with mountains and a river")
-    saved_to = backend.execute(
+    saved_to = media_backend.execute(
         "A violent nightmare clown covered in blood; children running in terror."
     )
     print(f"Image saved to {saved_to}")

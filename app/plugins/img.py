@@ -8,7 +8,6 @@ from pathlib import Path
 from PIL import Image
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.media_backends.MediaBackend import MediaBackend
-from app.lib.llm_helpers import refinePrompt
 from app.lib.args import parse_arguments as generic_parse_arguments
 from .__PluginBase import PluginBase
 
@@ -23,6 +22,48 @@ def get_media_aspect_ratio(media_path: str) -> float:
         return img.width / img.height
     except Exception:
         return None
+
+
+def _doBatchImages(prompt, media, backend, media_backend, config):
+    image_paths = []
+    for i in range(config["batch"]):
+        # Call media backend to generate the image
+        image_path, final_prompt = media_backend.execute(
+            prompt=prompt, config=config, batch_id=i, media=media, backend=backend
+        )
+        image_paths.append(image_path)
+
+    # combine them into one image grid
+    try:
+        # Use up to 4 images in a 2x2 grid
+        imgs = image_paths[:4]
+        opened = [Image.open(p).convert("RGB") for p in imgs]
+
+        # Normalize sizes: resize all to the size of the smallest (by area)
+        areas = [im.width * im.height for im in opened]
+        min_idx = areas.index(min(areas))
+        base_w, base_h = opened[min_idx].width, opened[min_idx].height
+        resized = [im.resize((base_w, base_h)) for im in opened]
+
+        # Create grid canvas 2x2 (fill missing with black if <4)
+        grid_w, grid_h = base_w * 2, base_h * 2
+        canvas = Image.new("RGB", (grid_w, grid_h), color=(0, 0, 0))
+
+        positions = [(0, 0), (base_w, 0), (0, base_h), (base_w, base_h)]
+        for i, im in enumerate(resized):
+            canvas.paste(im, positions[i])
+
+        # Save grid next to first image
+        first_path = Path(imgs[0])
+        grid_name = first_path.stem + "_grid.jpg"
+        grid_path = str(first_path.with_name(grid_name))
+        canvas.save(grid_path, format="JPEG", quality=92)
+
+        # Return the grid image
+        return "", grid_path, False, {}
+    except Exception as e:
+        backend.console.log(f"[pink on red] grid compose failed: {e}")
+        # fall through to single image return
 
 
 def parse_arguments(prompt: str) -> tuple[str, Dict[str, Any]]:
@@ -72,85 +113,24 @@ def img(
         if Path(REDO_MEDIA_PATH).is_file():
             Path(REDO_MEDIA_PATH).unlink()
 
-    if prompt.startswith("!!"):
-        # redo prior session run
-        backend.console.log("[red on green] reusing last unrefined prompt or media")
-
-        # if prior run had a supplied image, reuse it
-        have_reuse_media = Path(REDO_MEDIA_PATH).is_file()
-        backend.console.log(f"[red on green] have_reuse_media: {have_reuse_media}")
-        last_media = REDO_MEDIA_PATH if have_reuse_media else ""
-
-        backend.console.log(f"[red on green] MEDIA: {last_media!r}")
-
-        # prompt = last_unrefined_prompt or prompt[2:]
-
-        refined_prompt = refinePrompt(prompt[2:].strip(), backend, [last_media])
-        last_unrefined_prompt = prompt[2:]
-
-    elif prompt.startswith("!"):
+    if prompt.startswith("!"):
         backend.console.log("[white on green] skipping prompt refinement")
-        refined_prompt = prompt[1:]
-        last_unrefined_prompt = prompt[1:]
-    else:
-        last_unrefined_prompt = prompt
-        refined_prompt = refinePrompt(prompt.strip(), backend, media)
+        config["skip_refinement"] = True
+        prompt = prompt[1:]
+
+    final_prompt = ""
 
     # Clean up the refined prompt
-    final_prompt = refined_prompt.strip()
-
-    if "i'm sorry" in final_prompt.lower() or "i cannot" in final_prompt.lower():
-        backend.console.log("[pink on red] prompt refinement refused, using original")
-        final_prompt = prompt.strip()
-
-    backend.console.log(f"[black on green] refined prompt: '{final_prompt}'")
-
     if config.get("batch", 1) > 4:
         config["batch"] = 4
 
     if config.get("batch", 1) > 1:
-        image_paths = []
-        for i in range(config["batch"]):
-            # Call media backend to generate the image
-            image_path = media_backend.execute(
-                prompt=final_prompt, config=config, batch_id=i
-            )
-            image_paths.append(image_path)
-
-        # combine them into one image grid
-        try:
-            # Use up to 4 images in a 2x2 grid
-            imgs = image_paths[:4]
-            opened = [Image.open(p).convert("RGB") for p in imgs]
-
-            # Normalize sizes: resize all to the size of the smallest (by area)
-            areas = [im.width * im.height for im in opened]
-            min_idx = areas.index(min(areas))
-            base_w, base_h = opened[min_idx].width, opened[min_idx].height
-            resized = [im.resize((base_w, base_h)) for im in opened]
-
-            # Create grid canvas 2x2 (fill missing with black if <4)
-            grid_w, grid_h = base_w * 2, base_h * 2
-            canvas = Image.new("RGB", (grid_w, grid_h), color=(0, 0, 0))
-
-            positions = [(0, 0), (base_w, 0), (0, base_h), (base_w, base_h)]
-            for i, im in enumerate(resized):
-                canvas.paste(im, positions[i])
-
-            # Save grid next to first image
-            first_path = Path(imgs[0])
-            grid_name = first_path.stem + "_grid.jpg"
-            grid_path = str(first_path.with_name(grid_name))
-            canvas.save(grid_path, format="JPEG", quality=92)
-
-            # Return the grid image
-            return "", grid_path, False, {}
-        except Exception as e:
-            backend.console.log(f"[pink on red] grid compose failed: {e}")
-            # fall through to single image return
+        return _doBatchImages(prompt, media, backend, media_backend, config)
 
     # Call media backend to generate the image
-    image_path = media_backend.execute(prompt=final_prompt, config=config)
+    image_path, final_prompt = media_backend.execute(
+        prompt=prompt, config=config, media=media, backend=backend
+    )
 
     if media and REDO_MEDIA_PATH not in media[0]:
         # save first media image to a temp file for reuse if asked
