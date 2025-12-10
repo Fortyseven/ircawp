@@ -89,6 +89,9 @@ def img(
 ) -> tuple[str, str, bool]:
     global last_unrefined_prompt
 
+    if not media and not prompt:
+        prompt = "An angry troll screaming 'NO PROMPT, DUMBASS!'"
+
     # Parse command-line style arguments from the prompt
     prompt, config = parse_arguments(prompt)
 
