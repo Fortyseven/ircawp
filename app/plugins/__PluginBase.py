@@ -12,7 +12,6 @@ class PluginBase:
         group: str = "ask",
         system_prompt: str = "",
         emoji_prefix: str = "",
-        imagegen_prefix: str | None = None,
         msg_empty_query: str = "No question provided",
         msg_exception_prefix: Optional[str] = "GENERIC PROBLEMS",
         prompt_required: bool = True,
@@ -25,7 +24,6 @@ class PluginBase:
     ):
         self.system_prompt = system_prompt
         self.emoji_prefix = emoji_prefix
-        self.imagegen_prefix = imagegen_prefix
         self.msg_empty_query = msg_empty_query
         self.msg_exception_prefix = msg_exception_prefix
         self.name = name

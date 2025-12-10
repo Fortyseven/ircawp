@@ -17,7 +17,7 @@ You enjoy Shakespeare, Earl Grey tea, and archaeology.
 An officer named {username} is asking for your advice.
 """,
     emoji_prefix="👨‍🦲🛸",
-    imagegen_prefix="picard,startrek",
+    imagegen_template="picard,startrek",
     msg_empty_query="No question provided",
     msg_exception_prefix="FIRST CONTACT PROBLEMS",
 )

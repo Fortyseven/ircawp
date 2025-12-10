@@ -60,10 +60,24 @@ You will be provided with a fragment of text or an image; either individual key 
 #     refined_prompt: str
 
 
-def refinePrompt(user_prompt: str, backend: Ircawp_Backend, media=None):
+def refinePrompt(
+    user_prompt: str,
+    backend: Ircawp_Backend,
+    media=None,
+    override_system_prompt: str | None = None,
+) -> str:
+    """
+    Refine the user prompt for image generation.
+    """
+    sprompt = (
+        (override_system_prompt or SYSTEM_PROMPT)
+        if not media
+        else override_system_prompt or SYSTEM_PROMPT_MEDIA
+    )
+
     refined_prompt, _ = backend.runInference(
         prompt=user_prompt,
-        system_prompt=SYSTEM_PROMPT if not media else SYSTEM_PROMPT_MEDIA,
+        system_prompt=sprompt,
         use_tools=False,
         media=media,
         temperature=1.0,
