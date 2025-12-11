@@ -45,7 +45,7 @@ class PluginCharacter:
                 system_prompt=self.system_prompt.strip(),
                 use_tools=False,
                 media=media,
-                temperature=1.2,
+                temperature=0.8,
             )
 
             if media_backend:

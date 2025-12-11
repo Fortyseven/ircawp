@@ -80,7 +80,7 @@ def refinePrompt(
         system_prompt=sprompt,
         use_tools=False,
         media=media,
-        temperature=1.0,
+        temperature=0.8,
         # format=ImageGenPromptResponse,
     )
     # response = ImageGenPromptResponse.model_validate_json(refined_prompt)
