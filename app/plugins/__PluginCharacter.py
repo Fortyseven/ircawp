@@ -37,8 +37,8 @@ class PluginCharacter:
             "STEALTH: PluginCharacter execute: ", query, media, backend, media_backend
         )
         image_url = []
-        if not query.strip():
-            return self.msg_empty_query, ""
+        if not query.strip() and not media:
+            return self.msg_empty_query, "", True, {}
         try:
             inf_response, _ = backend.runInference(
                 prompt=query,
