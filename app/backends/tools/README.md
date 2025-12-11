@@ -118,17 +118,14 @@ Tools are automatically discovered on import. No registration needed!
 
 ### Enable/Disable Tools Globally
 
-In `config.json`:
+In `config.yml`:
 
-```json
-{
-  "openai": {
-    "api_url": "https://api.openai.com",
-    "api_key": "your-key",
-    "model": "gpt-4",
-    "tools_enabled": true
-  }
-}
+```yaml
+openai:
+    api_url: https://api.openai.com
+    api_key: your-key
+    model: gpt-4
+    tools_enabled: true
 ```
 
 ### Bypass Tools for Specific Inference

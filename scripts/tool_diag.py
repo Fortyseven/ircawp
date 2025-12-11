@@ -18,7 +18,7 @@ You can also pass JSON args:
 Flags:
   --no-backend    Invoke tool without backend injection (skips LLM refinement)
   --raw           Output only raw tool text result (no formatting)
-  --config PATH   Use alternate config file (default: config.json)
+  --config PATH   Use alternate config file (default: config.yml)
 """
 
 from __future__ import annotations
@@ -50,7 +50,9 @@ def load_config(path: str | None) -> dict:
         console.print(f"[red]Config file not found: {path}")
         sys.exit(2)
     try:
-        return json.loads(p.read_text())
+        import yaml
+
+        return yaml.safe_load(p.read_text())
     except Exception as e:
         console.print(f"[red]Failed to read config: {e}")
         sys.exit(2)

@@ -1,11 +1,11 @@
 """
-load config.json and return it as a dict
+load config.yml and return it as a dict
 """
 
 import os
-import json
+import yaml
 
-CONFIG_FILE = "config.json"
+CONFIG_FILE = "config.yml"
 
 
 def load_config():
@@ -14,7 +14,7 @@ def load_config():
 
     try:
         with open(CONFIG_FILE, "r") as f:
-            return json.load(f)
+            return yaml.safe_load(f)
     except Exception as e:
         raise Exception(f"Error loading config file: {e}")
 

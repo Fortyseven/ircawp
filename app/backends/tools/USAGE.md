@@ -184,14 +184,11 @@ Tools are automatically discovered on import. No registration needed!
 
 ### Enable/Disable Tools
 
-In `config.json`:
+In `config.yaml`:
 
 ```json
-{
-  "openai": {
-    "tools_enabled": true
-  }
-}
+openai:
+    tools_enabled: true
 ```
 
 ### Use Tools in Inference

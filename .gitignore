@@ -2,6 +2,7 @@
 .ruff_cache
 .env*
 config*.json
+config*.yml
 models
 app/plugins/vendor/xtts_api_server/xtts_models/*
 _archive

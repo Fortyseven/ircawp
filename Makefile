@@ -4,7 +4,7 @@ run:
 	uv run -m app
 
 aimee:
-	uv run -m app --config ./config.aimee.json
+	uv run -m app --config ./config.aimee.yml
 
 push-to-wheeljack:
 	rsync -azr -v  \

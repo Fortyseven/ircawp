@@ -441,8 +441,8 @@ def __main__():
     parser = argparse.ArgumentParser(description="ircawp bot runner")
     parser.add_argument(
         "--config",
-        default="config.json",
-        help="Path to config file (default: config.json)",
+        default="config.yml",
+        help="Path to config file (default: config.yml)",
     )
 
     args = parser.parse_args()
@@ -454,9 +454,9 @@ def __main__():
         # Temporarily set environment to influence loader only if needed.
         # Prefer explicit path via local loader.
         with open(args.config, "r") as f:
-            import json
+            import yaml
 
-            cfg = json.load(f)
+            cfg = yaml.safe_load(f)
     except FileNotFoundError:
         # Provide a clear error then exit
         print(f"Config file not found: {args.config}")

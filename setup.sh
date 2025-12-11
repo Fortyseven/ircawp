@@ -4,15 +4,15 @@ PATH_MODELS=models
 
 set -e
 
-function curl_model() {
-    if [ -f "$PATH_MODELS/$2" ]; then
-        echo "!! $PATH_MODELS/$2 already exists, skipping..."
-        return
-    fi
+# function curl_model() {
+#     if [ -f "$PATH_MODELS/$2" ]; then
+#         echo "!! $PATH_MODELS/$2 already exists, skipping..."
+#         return
+#     fi
 
-    echo "* Downloading $2..."
-    curl $1 -o $PATH_MODELS/$2 -L
-}
+#     echo "* Downloading $2..."
+#     curl $1 -o $PATH_MODELS/$2 -L
+# }
 
 # check for venv, set it up if not present
 
@@ -30,7 +30,7 @@ if [ ! -f ".env" ]; then
     cp scripts/example.env .env
 fi
 
-if [ ! -f "config.json" ]; then
-    echo "Copying over default config.json..."
-    cp scripts/config-example.json config.json
+if [ ! -f "config.yml" ]; then
+    echo "Copying over default config.yml..."
+    cp scripts/config-example.yml config.yml
 fi

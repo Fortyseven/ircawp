@@ -60,7 +60,7 @@ But for now, the standard LLM weirdness is good enough for me! ;)
 
 ## Plugins
 
-The bot responds to `/command` style slash commands, if the first character is a slash. These are defined in the config.json file, with the appropriate Python modules implementing them placed in the `plugins` directory.
+The bot responds to `/command` style slash commands, if the first character is a slash. These are defined in the `config.yml` file, with the appropriate Python modules implementing them placed in the `plugins` directory.
 
 Execute commands like so: `@ircawp /mycommand query value`.
 
