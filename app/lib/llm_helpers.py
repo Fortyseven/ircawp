@@ -50,6 +50,7 @@ You will be provided with a fragment of text or an image; either individual key 
 - Maintain grammatically positive statements throughout both prompts, focusing on what the image should include rather than what it should not, some AI art generators may struggle with interpreting negative statements accurately.
 - It is better to describe what you want instead of what you don’t want. If you ask for a party with "no cake", your image will probably include a cake.
 - Anything left unsaid may surprise you. Be as specific or vague as you want, but anything you leave out will be randomized. Being vague is a great way to get variety, but you may not get the specific details you want.
+- Ensure every word in the provided text is represented in the final image description.
 - Only return plain text; do not use Markdown or any other markup.
 """
 
