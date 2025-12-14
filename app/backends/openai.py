@@ -107,9 +107,11 @@ class Openai(Ircawp_Backend):
             "model": self.model,
             "messages": messages,
             "temperature": use_temperature,
-            "max_tokens": -1
+            "max_tokens": 8192
             if format is not None
-            else 4096,  # Increase limit for structured outputs to avoid JSON truncation
+            else self.options[
+                "max_tokens"
+            ],  # Increase limit for structured outputs to avoid JSON truncation
         }
 
         # Add structured output format if provided
