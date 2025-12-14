@@ -150,6 +150,18 @@ class Openai(Ircawp_Backend):
             data=json.dumps(payload),
         )
 
+        if tools or format:
+            # check if json is valid; it may be broken if it exceeded max tokens
+            try:
+                response.json()
+            except json.JSONDecodeError:
+                self.console.log(
+                    "[red]Error: Received invalid JSON response from OpenAI API. "
+                    "This may be due to exceeding max tokens."
+                )
+                self.console.log(f"[red]Response text: {response.text}")
+                return response.text
+
         # If we get a 500 error and tools were provided, it might be that the endpoint
         # doesn't support tools. Try again without tools.
         if response.status_code == 500 and tools:
