@@ -70,7 +70,7 @@ def translate(
         system_prompt=SYSTEM_PROMPT,
         prompt=prompt.strip(),
         format=TranslationResponse,
-        temperature=0.2,
+        temperature=0.4,
         media=media,
         use_tools=False,
     )
@@ -83,6 +83,7 @@ def translate(
             f"Translation failed due to response truncation or parsing error. The text may be too long. Error: {str(e)[:100]}",
             "",
             DISABLE_IMAGEGEN,
+            {},
         )
 
     if if_response.cannot_translate:
