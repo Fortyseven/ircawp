@@ -6,6 +6,15 @@ run:
 aimee:
 	uv run -m app --config ./config.aimee.yml
 
+test:
+	python -m pytest tests/ -v
+
+test-cov:
+	python -m pytest tests/ --cov=app --cov-report=html --cov-report=term
+
+test-quick:
+	python -m pytest tests/ -q
+
 push-to-wheeljack:
 	rsync -azr -v  \
 		--exclude='__pycache__' \

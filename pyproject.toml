@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "ircawp"
 version = "0.1.0"
@@ -47,3 +51,50 @@ dependencies = [
 
 [tool.uv.sources]
 diffusers = { git = "https://github.com/huggingface/diffusers" }
+[tool.hatch.build.targets.wheel]
+packages = [
+    "app",
+]
+include = [
+    "app/**",
+]
+exclude = [
+    "**/__pycache__/**",
+    "tests/**",
+    "_archive/**",
+    "attic/**",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "app/**",
+    "README.md",
+    "pyproject.toml",
+]
+exclude = [
+    "**/__pycache__/**",
+    "tests/**",
+    "_archive/**",
+    "attic/**",
+]
+[project.optional-dependencies]
+test = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.1",
+    "pytest-asyncio>=0.21.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow running tests",
+    "plugin: Tests for plugin framework",
+    "tools: Tests for tool framework",
+]

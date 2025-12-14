@@ -9,7 +9,7 @@ from .Ircawp_Frontend import Ircawp_Frontend
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
-from app.lib.thread_history import ThreadManager
+# from app.lib.thread_history import ThreadManager
 from app.lib.network import depipeText
 
 
