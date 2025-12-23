@@ -6,5 +6,7 @@ class MediaBackend:
         self.backend = backend
         self.last_imagegen_prompt = None
 
-    def execute(self, query: str, config: dict) -> str:
+    def execute(
+        self, prompt: str, config: dict = {}, batch_id=None, media=[], backend=None
+    ) -> str:
         return ""

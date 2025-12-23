@@ -99,7 +99,7 @@ def buildImageGenPrompt(
     time_of_day = " ".join(observed.split(" ")[1:])
     time_of_day = _estimateTimeOfDay(time_of_day)
 
-    return f"professional street-level photo of {location} featuring {temp} {kind_of_weather} weather at {time_of_day}"
+    return f"professional street-level photo of {location} featuring {temp} {kind_of_weather} weather at {time_of_day}."
 
 
 def process_weather_json(json_text: str) -> tuple[str, str]:
@@ -161,7 +161,7 @@ def process_weather_json(json_text: str) -> tuple[str, str]:
         )
 
     except json.decoder.JSONDecodeError:
-        return "Error: could not decode JSON.", "", True, {}
+        return "Error: could not decode JSON.", ""
 
 
 def doWeather(
@@ -169,16 +169,36 @@ def doWeather(
     media: list,
     backend: Ircawp_Backend,
     media_backend: MediaBackend = None,
-) -> tuple[str, str | dict]:
+) -> tuple[str, str, bool, dict]:
     try:
         url_query = f"https://wttr.in/{quote_plus(query)}?format=j1"
         # response = requests.get(url_query, timeout=12, allow_redirects=True)
         content = fetchHtml(url_query, bypass_cache=True)
         processed, prompt = process_weather_json(content)
 
-        image = media_backend.execute(prompt=prompt, config={"aspect": "16:9"})
+        image = ""
+        skip_imagegen = True
 
-        return processed, image, False, {}
+        # Only attempt image generation if a media backend is available
+        if media_backend:
+            try:
+                # Use the common `query` parameter name for media backends
+                backend.console.log(
+                    f"[blue]Generating weather image with prompt: {prompt}"
+                )
+                image_path, final_prompt = media_backend.execute(
+                    prompt=prompt,
+                    config={"aspect": "16:9"},
+                    backend=backend,
+                )
+                skip_imagegen = False
+            except Exception as img_e:
+                # Log via backend console if available; still return text result
+                backend.console.log(f"[yellow]Image generation failed: {img_e}")
+                image_path = ""
+                skip_imagegen = True
+
+        return processed, image_path, skip_imagegen, {}
 
     except Exception as e:
         return "WTTR PROBLEMS: " + str(e), "", True, {}
