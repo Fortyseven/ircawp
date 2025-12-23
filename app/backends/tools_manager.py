@@ -74,11 +74,11 @@ class ToolManager:
         self.tools_enabled = tools_enabled
 
         if not tools_enabled:
-            self.console.log("[yellow]Tools disabled in config")
+            self.console.log("[red on cyan]Tools disabled in config")
             return
 
         all_tools = get_all_tools()
-        self.console.log("[cyan]Initializing tools with schema validation...")
+        self.console.log("[white on cyan]Initializing tools with schema validation...")
 
         for tool_name, tool_factory in all_tools.items():
             try:
@@ -94,15 +94,16 @@ class ToolManager:
                 # Validate schema
                 schema = tool_instance.get_schema()
                 if self._validate_schema(schema, tool_name):
-                    self.console.log(f"- [green]Registered tool: {tool_name}")
+                    self.console.log(f"- [green on cyan]Registered tool: {tool_name}")
                 else:
                     self.console.log(
-                        f"- [yellow]Registered tool (schema warnings): {tool_name}"
+                        f"- [yellow on cyan]Registered tool (schema warnings): {tool_name}"
                     )
 
             except Exception as e:
-                self.console.log(f"[yellow]Failed to initialize tool {tool_name}: {e}")
-
+                self.console.log(
+                    f"[red on cyan]Failed to initialize tool {tool_name}: {e}"
+                )
         # Log capability matrix if tools have expertise areas defined
         if self.available_tools:
             matrix = self.get_capability_matrix()
@@ -121,7 +122,9 @@ class ToolManager:
         # Update media_backend in all existing tool instances
         for tool_name, tool_instance in self.available_tools.items():
             tool_instance.media_backend = media_backend
-            self.console.log(f"- [cyan]Updated media_backend for tool: {tool_name}")
+            self.console.log(
+                f"- [white on cyan]Updated media_backend for tool: {tool_name}"
+            )
 
     def get_tool_schemas(self) -> list:
         """
@@ -137,7 +140,7 @@ class ToolManager:
             # Validate schema quality
             if not self._validate_schema(schema, tool_name):
                 self.console.log(
-                    f"[yellow]Warning: Schema issues detected for {tool_name}"
+                    f"[yellow on cyan]Warning: Schema issues detected for {tool_name}"
                 )
 
             schemas.append(schema)
@@ -161,7 +164,7 @@ class ToolManager:
             desc = func_schema.get("description", "").strip()
             if not desc or len(desc) < 10:
                 self.console.log(
-                    f"[yellow]  - {tool_name}: Description is too short or empty"
+                    f"[yellow on cyan]  - {tool_name}: Description is too short or empty"
                 )
                 return False
 
@@ -172,7 +175,7 @@ class ToolManager:
             # Warn if no parameters (might be intentional, but worth noting)
             if not props:
                 self.console.log(
-                    f"[cyan]  - {tool_name}: No parameters defined (may be intentional)"
+                    f"[yellow on cyan]  - {tool_name}: No parameters defined (may be intentional)"
                 )
 
             # Check parameter descriptions
@@ -180,13 +183,15 @@ class ToolManager:
                 param_desc = param_def.get("description", "").strip()
                 if not param_desc:
                     self.console.log(
-                        f"[yellow]  - {tool_name}.{param_name}: Missing parameter description"
+                        f"[yellow on cyan]  - {tool_name}.{param_name}: Missing parameter description"
                     )
                     return False
 
             return True
         except Exception as e:
-            self.console.log(f"[yellow]  - Error validating {tool_name} schema: {e}")
+            self.console.log(
+                f"[red on cyan]  - Error validating {tool_name} schema: {e}"
+            )
             return False
 
     def execute_tool(self, tool_name: str, arguments: dict) -> ToolResult:
@@ -208,7 +213,7 @@ class ToolManager:
             result = tool.execute(**arguments)
             return result
         except Exception as e:
-            self.console.log(f"[red]Error executing tool {tool_name}: {e}")
+            self.console.log(f"[red on cyan]Error executing tool {tool_name}: {e}")
             return ToolResult(text=f"Error executing tool: {str(e)}")
 
     def is_enabled(self) -> bool:

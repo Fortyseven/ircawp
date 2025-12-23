@@ -385,7 +385,7 @@ class Openai(Ircawp_Backend):
                         tool_args = json.loads(tool_call["function"]["arguments"])
 
                         self.console.log(
-                            f"[cyan]Tool call: {tool_name} with args {tool_args}"
+                            f"[black on cyan]Tool call: {tool_name} with args {tool_args}"
                         )
 
                         # Track tool usage
