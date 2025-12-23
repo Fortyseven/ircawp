@@ -8,6 +8,7 @@ from rich.console import Console
 
 from app.lib.thread_history import ThreadManager
 from app.core.plugin_manager import PluginManager
+from app.core.media_manager import MediaManager
 
 
 class MessageRouter:
@@ -17,9 +18,9 @@ class MessageRouter:
         self,
         console: Console,
         process_text_callback: Callable,
+        media_manager: MediaManager,
         plugin_manager: PluginManager,
         egest_callback: Callable,
-        cleanup_media_callback: Callable,
         config: dict,
         debug: bool = True,
     ):
@@ -29,18 +30,17 @@ class MessageRouter:
         Args:
             console: Rich console for logging
             process_text_callback: Callback for processing text messages
-            process_plugin_callback: Callback for processing plugin commands
+            media_manager: MediaManager instance for managing media files
+            plugin_manager: PluginManager instance for managing plugins
             egest_callback: Callback for sending responses to frontend
-            cleanup_media_callback: Callback for cleaning up media files
             config: Application configuration
             debug: Whether to enable debug logging
         """
         self.console = console
         self.process_text_callback = process_text_callback
-        # self.process_plugin_callback = process_plugin_callback
+        self.media_manager = media_manager
         self.plugin_manager = plugin_manager
         self.egest_callback = egest_callback
-        self.cleanup_media_callback = cleanup_media_callback
         self.config = config
         self.debug = debug
 
@@ -158,7 +158,7 @@ class MessageRouter:
 
                 finally:
                     # Clean up incoming media files - they are no longer needed
-                    self.cleanup_media_callback(incoming_media)
+                    self.media_manager.cleanup_media_files(incoming_media)
 
                 # Always attempt to egest; protect the queue thread from frontend errors
                 try:

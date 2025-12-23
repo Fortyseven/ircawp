@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
-import sys
+import argparse
+import yaml
 
 from rich import print
 from rich.traceback import install
@@ -8,10 +9,10 @@ from rich.console import Console
 
 # from imagegen.BaseImageGen import BaseImageGen
 # from imagegen.SDXS import SDXS
-from app.lib.config import config
 from app.backends.openai import Openai
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.plugins import PLUGINS
+import app.plugins as plugins
 
 
 def processMessagePlugin(plugin: str, message: str, user_id: str, backend_instance):
@@ -28,19 +29,45 @@ def processMessagePlugin(plugin: str, message: str, user_id: str, backend_instan
     """
     console.log(f"Processing plugin: {plugin}")
     message = message.replace(f"/{plugin} ", "").strip()
-    response, media = PLUGINS[plugin].execute(
+    response = PLUGINS[plugin].execute(
         query=message,
         backend=backend_instance,
+        media=[],
     )
 
-    return response, media
+    return response
 
 
 console = Console()
 
 install(show_locals=False)
 
-prompt = " ".join(sys.argv[1:])
+# Parse command-line arguments
+parser = argparse.ArgumentParser(description="CLI interface for IRCAWP")
+parser.add_argument(
+    "--config",
+    type=str,
+    default="config.yml",
+    help="Path to configuration file (default: config.yml)",
+)
+parser.add_argument("prompt", nargs="*", help="The prompt to send")
+
+args = parser.parse_args()
+
+# Load configuration from specified file
+config_file = args.config
+if not os.path.exists(config_file):
+    print(f"[red]Error: Config file {config_file} not found.")
+    os._exit(-1)
+
+try:
+    with open(config_file, "r") as f:
+        config = yaml.safe_load(f)
+except Exception as e:
+    print(f"[red]Error loading config file: {e}")
+    os._exit(-1)
+
+prompt = " ".join(args.prompt)
 
 if not prompt:
     print("Need a prompt.")
@@ -52,8 +79,6 @@ backend_instance = Openai(console=console, config=config, parent=None)
 
 print("\n----------------------------\n")
 
-import app.plugins as plugins
-
 plugins.load(console)
 
 print(f"- PROMPT: [yellow]{prompt}")
@@ -63,7 +88,7 @@ if prompt.startswith("/"):
     print(PLUGINS)
     plugin_name = prompt.split(" ")[0][1:]
     if plugin_name in PLUGINS:
-        response, media_filename = processMessagePlugin(
+        response = processMessagePlugin(
             plugin=plugin_name,
             message=prompt,
             user_id="CLI",
@@ -79,10 +104,3 @@ else:
 
 
 print(f"- ASSISTANT:\n[blue]{response}")
-
-# if media:
-# print(f"- MEDIA: [green]{media}")
-# dont load all this unless we _really_ need it
-# imagegen_instance: BaseImageGen = SDXS()
-# imagegen_instance.generateImage(media, "/tmp/temp.png")
-# os.system(f"catimg /tmp/temp.png")

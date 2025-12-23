@@ -43,7 +43,7 @@ def process_once(router: MessageRouter):
             )
             outgoing_media_filename = tool_images[0] if tool_images else None
     finally:
-        router.cleanup_media_callback(incoming_media)
+        router.media_manager.cleanup_media_files(incoming_media)
 
     router.egest_callback(
         message=inf_response,
@@ -173,8 +173,8 @@ def test_message_router_text_path(mock_console, mock_backend):
         console=mock_console,
         process_text_callback=process_text,
         plugin_manager=plugin_mgr,
+        media_manager=MediaManager(console=mock_console, media_dir="/tmp"),
         egest_callback=egest,
-        cleanup_media_callback=cleanup,
         config={"thread_sleep": 0},
         debug=False,
     )
@@ -209,8 +209,8 @@ def test_message_router_plugin_path(
         console=mock_console,
         process_text_callback=process_text,
         plugin_manager=plugin_mgr,
+        media_manager=MediaManager(console=mock_console, media_dir="/tmp"),
         egest_callback=egest,
-        cleanup_media_callback=cleanup,
         config={"thread_sleep": 0},
         debug=False,
     )

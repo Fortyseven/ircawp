@@ -67,10 +67,9 @@ class Ircawp:
         self.message_router = MessageRouter(
             console=self.console,
             plugin_manager=self.plugin_manager,
+            media_manager=self.media_manager,
             process_text_callback=self._process_text_message,
-            # process_plugin_callback=self._process_plugin_message,
             egest_callback=self._egest_message,
-            cleanup_media_callback=self.media_manager.cleanup_media_files,
             config=self.config,
             debug=DEBUG,
         )
@@ -198,24 +197,8 @@ class Ircawp:
                 except Exception:
                     pass
 
-        # def _process_plugin_message(
-        #     self, plugin_name: str, message: str, user_id: str, media: list = None
-        # ) -> tuple:
-        """
-        Process a message directed to a plugin (internal callback).
-
-        Args:
-            plugin_name: Name of the plugin to execute
-            message (str): The message text
-            user_id (str): User ID who sent the message
-            media: List of media file paths
-
-        Returns:
-            Tuple of (response_text, media_filename, skip_imagegen)
-        """
-        self.plugin_manager.execute_plugin(
-            plugin_name=plugin_name, message=message, user_id=user_id, media=media or []
-        )
+        # Note: Plugin execution is handled by `MessageRouter`. Avoid invoking plugins here
+        # to keep egestion isolated to frontend delivery.
 
     def _process_text_message(
         self, message: str, user_id: str, incoming_media: list = None, aux=None
