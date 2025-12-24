@@ -434,8 +434,11 @@ def _select_candidate_with_content(
         "general-information",
     ]
 )
+# """Search Wikipedia to get more information about a topic. Use only the most general and widely recognized name or topic (e.g., 'CNN', 'Albert Einstein') to retrieve relevant Wikipedia content. Avoid adding qualifiers like 'launch date', 'birth date', or 'history' unless absolutely necessary."""
+
+
 def wikipedia(base_topic: str, backend=None) -> str:
-    """Search Wikipedia to get more information about a topic. Use only the most general and widely recognized name or topic (e.g., 'CNN', 'Albert Einstein') to retrieve relevant Wikipedia content. Avoid adding qualifiers like 'launch date', 'birth date', or 'history' unless absolutely necessary."""
+    """Search Wikipedia and return article content. If the exact article is not found, attempt to find the best match via search.  to retrieve more information about a topic. If the user has a phrase in quotes, use exactly that term."""
     try:
         success, result = _fetch_wikipedia_article(base_topic)
         if success:
