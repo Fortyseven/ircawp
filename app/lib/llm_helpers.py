@@ -55,6 +55,19 @@ You will be provided with a fragment of text or an image; either individual key 
 """
 
 
+def isRejected(refined_prompt: str) -> bool:
+    STOPPHRASES = [
+        "can't fulfill",
+        "cannot create",
+        "cannot fulfill",
+        "cannot generate",
+        "unable to",
+        "refuse to",
+    ]
+    lowered = refined_prompt.lower()
+    return any(phrase in lowered for phrase in STOPPHRASES)
+
+
 # class ImageGenPromptResponse(BaseModel):
 #     """Structured response model for image generation prompt refinement."""
 
@@ -84,6 +97,13 @@ def refinePrompt(
         temperature=0.8,
         # format=ImageGenPromptResponse,
     )
+
+    if isRejected(refined_prompt):
+        backend.console.log(
+            f"[red]Refined prompt indicates inability to generate image; defaulting to unrefined: {refined_prompt}"
+        )
+        return user_prompt
+
     # response = ImageGenPromptResponse.model_validate_json(refined_prompt)
     backend.console.log(
         f"[green]Refined image generation prompt created: {refined_prompt}"
