@@ -9,6 +9,7 @@ from urllib.parse import quote_plus
 
 import wikitextparser as wtp
 from rich.console import Console
+from pydantic import BaseModel, Field
 
 from ..ToolBase import tool
 from app.lib.network import fetchHtml
@@ -18,6 +19,51 @@ SEARCH_RESULTS_LIMIT = 5
 CONTENT_VOTE_MAX_CANDIDATES = 5
 CONTENT_VOTE_MAX_CHARS = 1200
 console = Console()
+
+
+def _fetch_wikipedia_extract(topic: str, max_chars: int = 8000) -> tuple[bool, str]:
+    """Fetch a plain-text extract from the MediaWiki API.
+
+    This avoids raw wikitext parsing issues (templates/units sometimes get dropped),
+    which can otherwise cause the model to fill missing values.
+    """
+    api_url = (
+        "https://en.wikipedia.org/w/api.php?"
+        "action=query"
+        "&format=json"
+        "&formatversion=2"
+        "&prop=extracts"
+        "&explaintext=1"
+        "&redirects=1"
+        f"&exchars={int(max_chars)}"
+        f"&titles={quote_plus(topic)}"
+    )
+
+    raw = fetchHtml(api_url, allow_redirects=True, timeout=12)
+    if isinstance(raw, str) and raw.startswith("[fetchHtml]"):
+        return False, raw
+    if not isinstance(raw, str):
+        raw = str(raw)
+
+    try:
+        data = json.loads(raw)
+        pages = (data.get("query") or {}).get("pages") or []
+        if not pages:
+            return False, f"Wikipedia: no pages returned for '{topic}'."
+
+        page = pages[0]
+        if page.get("missing"):
+            return False, f"Wikipedia does not have an article titled '{topic}'."
+
+        title = page.get("title") or topic
+        extract = (page.get("extract") or "").strip()
+        if not extract:
+            return False, f"Wikipedia: empty extract for '{title}'."
+
+        wiki_link = f"https://en.wikipedia.org/wiki/{str(title).replace(' ', '_')}"
+        return True, f"{extract}\n\nSource: {wiki_link}"
+    except Exception as e:
+        return False, f"Wikipedia: failed to parse API response: {e}"
 
 
 def _extract_redirect_target(raw_content: str) -> str:
@@ -216,6 +262,11 @@ def _fetch_wikipedia_article(
     base_topic: str, max_sections: int = 3
 ) -> tuple[bool, str]:
     """Internal function to fetch and process Wikipedia articles with redirect handling."""
+    # Prefer API extracts first (more reliable plain text)
+    ok, extract = _fetch_wikipedia_extract(base_topic, max_chars=9000)
+    if ok:
+        return True, extract
+
     url_query = f"https://en.wikipedia.org/w/index.php?action=raw&title={quote_plus(base_topic)}"
     raw_content = fetchHtml(url_query, allow_redirects=True, timeout=12)
 
@@ -423,65 +474,73 @@ def _select_candidate_with_content(
     return -1
 
 
+# """Search Wikipedia to get more information about a topic. Use only the most general and widely recognized name or topic (e.g., 'CNN', 'Albert Einstein') to retrieve relevant Wikipedia content. Avoid adding qualifiers like 'launch date', 'birth date', or 'history' unless absolutely necessary."""
+
+
+class WikipediaInput(BaseModel):
+    query: str = Field(
+        description="Wikipedia page title or short topic query (e.g., 'Ada Lovelace', 'carbon-14')"
+    )
+
+
 @tool(
+    description=(
+        "Look up a topic on Wikipedia and return a condensed, readable summary with a source URL. "
+        "Use this for factual questions about people, places, organizations, concepts, history, definitions, and background. "
+        "Input should be a short topic title (e.g., 'Albert Einstein', 'CNN')."
+    ),
+    args_schema=WikipediaInput,
     expertise_areas=[
         "knowledge",
+        "search",
+        "lookup",
         "research",
         "facts",
         "definitions",
         "history",
         "biography",
         "general-information",
-    ]
+    ],
 )
-# """Search Wikipedia to get more information about a topic. Use only the most general and widely recognized name or topic (e.g., 'CNN', 'Albert Einstein') to retrieve relevant Wikipedia content. Avoid adding qualifiers like 'launch date', 'birth date', or 'history' unless absolutely necessary."""
-
-
-def wikipedia(base_topic: str, backend=None) -> str:
-    """Search Wikipedia and return article content. If the exact article is not found, attempt to find the best match via search.  to retrieve more information about a topic. If the user has a phrase in quotes, use exactly that term."""
+def wikipedia(query: str, backend=None) -> str:
+    """Look up a topic on Wikipedia and return condensed article content with a source link."""
     try:
-        success, result = _fetch_wikipedia_article(base_topic)
+        topic = query.strip() if isinstance(query, str) else ""
+        if not topic:
+            return "Wikipedia: missing query"
+
+        success, result = _fetch_wikipedia_article(topic)
         if success:
-            return result, "", False
+            return result
 
         # Attempt search fallback when the direct page is missing
-        candidates = _search_wikipedia(base_topic, limit=SEARCH_RESULTS_LIMIT)
+        candidates = _search_wikipedia(topic, limit=SEARCH_RESULTS_LIMIT)
         if not candidates:
-            return (
-                f"Wikipedia does not have an article titled '{base_topic}', and no close matches were found via search.",
-                "",
-                True,
-            )
+            return f"Wikipedia does not have an article titled '{topic}', and no close matches were found via search."
 
-        chosen_idx = _select_candidate_with_llm(base_topic, candidates, backend)
+        chosen_idx = _select_candidate_with_llm(topic, candidates, backend)
 
         # If multiple candidates or no initial pick, run a second pass using condensed content
         if backend and (chosen_idx == -1 or len(candidates) > 1):
             try:
                 console.log(
-                    f"[cyan]WIKIPEDIA content vote: {len(candidates)} candidates for '{base_topic}'"
+                    f"[cyan]WIKIPEDIA content vote: {len(candidates)} candidates for '{topic}'"
                 )
             except Exception:
                 pass
-            content_idx = _select_candidate_with_content(
-                base_topic, candidates, backend
-            )
+            content_idx = _select_candidate_with_content(topic, candidates, backend)
             if content_idx != -1:
                 chosen_idx = content_idx
 
         if chosen_idx == -1:
             titles = ", ".join(candidate["title"] for candidate in candidates)
-            return (
-                f"No direct article for '{base_topic}'. Closest search titles: {titles}",
-                "",
-                True,
-            )
+            return f"No direct article for '{topic}'. Closest search titles: {titles}"
 
         selected_title = candidates[chosen_idx]["title"]
 
         success, result = _fetch_wikipedia_article(selected_title)
         if success:
-            return f"Matched to '{selected_title}' via search.\n\n{result}", "", False
+            return f"Matched to '{selected_title}' via search.\n\n{result}"
 
         # Try remaining candidates before giving up
         for idx, candidate in enumerate(candidates):
@@ -489,17 +548,9 @@ def wikipedia(base_topic: str, backend=None) -> str:
                 continue
             retry_success, retry_result = _fetch_wikipedia_article(candidate["title"])
             if retry_success:
-                return (
-                    f"Matched to '{candidate['title']}' via search fallback.\n\n{retry_result}",
-                    "",
-                    False,
-                )
+                return f"Matched to '{candidate['title']}' via search fallback.\n\n{retry_result}"
 
-        return (
-            f"Wikipedia does not have an article titled '{base_topic}', and the top search results did not resolve to usable pages.",
-            "",
-            True,
-        )
+        return f"Wikipedia does not have an article titled '{topic}', and the top search results did not resolve to usable pages."
 
     except Exception as e:
-        return f"WIKIPEDIA PROBLEMS: {str(e)}", "", True, {}
+        return f"WIKIPEDIA PROBLEMS: {str(e)}"

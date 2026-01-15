@@ -47,7 +47,7 @@ class ToolBase(ABC):
     description: str = "Base tool class"
     expertise_areas: List[str] = []  # Areas of expertise for this tool
 
-    def __init__(self, backend=None, media_backend=None, console=None):
+    def __init__(self, backend=None, frontend=None, media_backend=None, console=None):
         """
         Initialize tool with access to backend services.
 
@@ -57,6 +57,7 @@ class ToolBase(ABC):
             console: Rich console for logging
         """
         self.backend = backend
+        self.frontend = frontend
         self.media_backend = media_backend
         self.console = console
 
@@ -144,7 +145,9 @@ class DecoratedTool(ToolBase):
             media_backend: Media generation backend
             console: Rich console for logging
         """
-        super().__init__(backend, media_backend, console)
+        # ToolBase.__init__ signature is (backend=None, frontend=None, media_backend=None, console=None)
+        # so we must pass these by keyword to avoid positional mixups.
+        super().__init__(backend=backend, media_backend=media_backend, console=console)
 
         self._func = func
         self.name = name or func.__name__
