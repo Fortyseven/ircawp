@@ -123,7 +123,18 @@ class zimageturbo(MediaBackend):
             generator=torch.Generator("cpu").manual_seed(seed),
         ).images[0]
 
-        image.save(output_file)
+        self._save_image_with_metadata(
+            image,
+            output_file,
+            final_prompt,
+            seed=seed,
+            model="zimageturbo",
+            guidance_scale=CFG_SCALE,
+            inference_steps=INF_STEPS,
+            width=width,
+            height=height,
+            aspect_ratio=str(aspect),
+        )
 
         self.last_imagegen_prompt = final_prompt.strip()
 

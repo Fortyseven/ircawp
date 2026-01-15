@@ -30,4 +30,14 @@ class sd15(MediaBackend):
             guidance_scale=7,
             generator=torch.Generator("cuda").manual_seed(seed),
         ).images[0]
-        image.save(output_file)
+        self._save_image_with_metadata(
+            image,
+            output_file,
+            prompt,
+            seed=seed,
+            model="sd15",
+            guidance_scale=7,
+            inference_steps=25,
+            width=image.width,
+            height=image.height,
+        )

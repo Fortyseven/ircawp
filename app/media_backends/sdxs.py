@@ -39,7 +39,17 @@ class sdxs(MediaBackend):
             safety_checker=None,
         ).images[0]
 
-        image.save(output_file)
+        self._save_image_with_metadata(
+            image,
+            output_file,
+            prompt,
+            seed=seed,
+            model="sdxs",
+            guidance_scale=0.5,
+            inference_steps=1,
+            width=image.width,
+            height=image.height,
+        )
 
         self.backend.console.log(f"[green]SDXS wrote: {output_file}")
 

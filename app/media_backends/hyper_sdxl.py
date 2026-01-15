@@ -57,7 +57,17 @@ class hyper_sdxl(MediaBackend):
 
         print(f"[green]HyperSDXL wrote: {output_file}")
 
-        image.save(output_file)
+        self._save_image_with_metadata(
+            image,
+            output_file,
+            prompt,
+            seed=seed,
+            model="hyper_sdxl",
+            guidance_scale=0,
+            inference_steps=1,
+            width=image.width,
+            height=image.height,
+        )
 
         print("[green]HyperSDXL done")
 
