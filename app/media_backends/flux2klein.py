@@ -17,10 +17,10 @@ from app.lib.llm_helpers import refinePrompt
 DEFAULT_FILENAME = "/tmp/ircawp.flux2klein.png"
 
 DEFAULT_ASPECT = 1.5
-MAX_WIDTH_HEIGHT = 1280
+MAX_OUT_SIZE = 1280
 
 INF_STEPS = 5
-CFG_SCALE = 3.5
+CFG_SCALE = 4
 
 
 class flux2klein(MediaBackend):
@@ -38,6 +38,7 @@ class flux2klein(MediaBackend):
     def execute(
         self, prompt: str, config: dict = {}, batch_id=None, media=[], backend=None
     ) -> (str, str):
+        steps = INF_STEPS
         has_image = False
 
         if media:
@@ -49,10 +50,10 @@ class flux2klein(MediaBackend):
             output_file = config.get("output_file", DEFAULT_FILENAME)
 
         skip_refinement = config.get("skip_refinement", False)
-
         scale_result = config.get("scale", 1.0)
+        do_remaster = config.get("remaster", False)
 
-        torch.cuda.empty_cache()
+        # torch.cuda.empty_cache()
 
         seed = torch.randint(0, 1000000, (1,)).item()
 
@@ -86,14 +87,14 @@ class flux2klein(MediaBackend):
 
             if type(aspect) is float:
                 if aspect >= 1.0:
-                    width = MAX_WIDTH_HEIGHT
-                    height = int(MAX_WIDTH_HEIGHT / aspect)
+                    width = MAX_OUT_SIZE
+                    height = int(MAX_OUT_SIZE / aspect)
                 else:
-                    width = int(MAX_WIDTH_HEIGHT * aspect)
-                    height = MAX_WIDTH_HEIGHT
+                    width = int(MAX_OUT_SIZE * aspect)
+                    height = MAX_OUT_SIZE
             else:
-                width = MAX_WIDTH_HEIGHT
-                height = int(MAX_WIDTH_HEIGHT / DEFAULT_ASPECT)
+                width = MAX_OUT_SIZE
+                height = int(MAX_OUT_SIZE / DEFAULT_ASPECT)
                 print("Invalid aspect ratio provided, using default.")
 
             # Ensure dimensions are divisible by 16
@@ -105,11 +106,20 @@ class flux2klein(MediaBackend):
             )
 
         prompt = prompt.strip()
-
         final_prompt = prompt
 
-        if not skip_refinement and not has_image:
-            refined_prompt = refinePrompt(prompt, backend, media)
+        if do_remaster:
+            backend.console.log("[white on blue] remastering input image")
+            final_prompt = """Transform this image into a modern, cinematic masterpiece as if shot with a professional DSLR camera with a 50mm f/1.4 lens. A sharp, natural, and highly detailed photo. Deblur the entire image, completely remove film grain and digital noise, and restore clarity without altering composition, aspect ratio, or subject structure. Preserve every detail: facial structure, clothing texture, hair, fur, and text styling. Make no changes to pose, anatomy, or typography. Remove haze, dirt, and atmospheric distortion, then enhance dynamic range while maintaining original color tones.
+Specifically target and recover overexposed, blown-out areas using intelligent tone mapping and localized HDR reconstruction, preserve detail in highlights without crushing midtones or shadows. Convert harsh or flat lighting into soft, cinematic lighting with natural falloff and depth. Replace all digital artifacts with ultra-high-fidelity textures, skin, fabric, and fur, matching real-world material properties. Perform professional, balanced natural color correction. Upscale to sharp 4K resolution, resimulate the image as if captured by a professional photographer with precise focus, depth, and lighting control.
+Final output: a photorealistic, high dynamic range (HDR), cinema-quality photograph. A photo that is sharp, clean, and rich in detail, with every element rendered with professional photographic precision. Recovered highlights retain texture and form, avoiding flat white or clipped pixels. A photo achieving a balanced, visually compelling image with full tonal fidelity."""
+            skip_refinement = True
+            steps = 10
+
+        if not skip_refinement:
+            refined_prompt = refinePrompt(
+                prompt, backend, media, is_edit=len(media) > 0
+            )
 
             final_prompt = refined_prompt.strip()
 
@@ -124,6 +134,8 @@ class flux2klein(MediaBackend):
 
             backend.console.log(f"[black on green] refined prompt: '{final_prompt}'")
 
+        # --------------------------------------------------------------
+
         media_pil = []
 
         if has_image:
@@ -133,22 +145,24 @@ class flux2klein(MediaBackend):
             # if the image is < 1024px on the longest side, adjust scale_result accordingly so it's at least 1024px on longest side
             if media_pil[0] is not None:
                 longest_side = max(media_pil[0].width, media_pil[0].height)
-                if longest_side < MAX_WIDTH_HEIGHT:
+                if longest_side < MAX_OUT_SIZE:
                     print("Adjusting scale_result for small input image!")
-                    scale_result = MAX_WIDTH_HEIGHT / longest_side
-                if longest_side > MAX_WIDTH_HEIGHT:
+                    scale_result = MAX_OUT_SIZE / longest_side
+                if longest_side > MAX_OUT_SIZE:
                     print("Adjusting scale_result for large input image!")
-                    scale_result = MAX_WIDTH_HEIGHT / longest_side
+                    scale_result = MAX_OUT_SIZE / longest_side
 
             width = int(media_pil[0].width * scale_result)
             height = int(media_pil[0].height * scale_result)
             aspect = width / height
 
+        # --------------------------------------------------------------
+
         output_image = self.pipe(
             prompt=final_prompt,
             width=width,
             height=height,
-            num_inference_steps=INF_STEPS,
+            num_inference_steps=steps,
             guidance_scale=CFG_SCALE,
             generator=torch.Generator("cpu").manual_seed(seed),
             image=media_pil if has_image else None,
@@ -161,7 +175,7 @@ class flux2klein(MediaBackend):
             seed=seed,
             model="flux2klein",
             guidance_scale=CFG_SCALE,
-            inference_steps=INF_STEPS,
+            inference_steps=steps,
             width=width,
             height=height,
             aspect_ratio=str(aspect),

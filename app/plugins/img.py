@@ -80,6 +80,10 @@ def parse_arguments(prompt: str) -> tuple[str, Dict[str, Any]]:
             "names": ["--scale"],
             "type": float,
         },
+        "remaster": {
+            "names": ["--remaster"],
+            "type": bool,
+        },
     }
 
     return generic_parse_arguments(prompt, arg_specs)

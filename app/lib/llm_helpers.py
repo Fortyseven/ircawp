@@ -60,6 +60,8 @@ Modify this prompt to generate an image that matches the user's request. Preserv
 {}
 """
 
+SYSTEM_PROMPT_EDIT_MEDIA = "The user will ask for changes to the provided image. Your job is to take that request and shape it into a more accurate request based on the image in question. This new request will be passed to the AI editor model that will perform your revised request. Be descriptive about the request in relation to the content of the image. Describe what is in the image, and the spirit of it, as part of your revised request in order to help the editor precisely make the changes. Do not make broad generalizations, give specific, even repeated directions if necessary. Be verbose and exact. Only return the text of the request; do not add further commentary."
+
 
 def isRejected(refined_prompt: str) -> bool:
     STOPPHRASES = [
@@ -85,10 +87,28 @@ def refinePrompt(
     backend: Ircawp_Backend,
     media=None,
     override_system_prompt: str | None = None,
+    is_edit: bool = False,
 ) -> str:
     """
     Refine the user prompt for image generation.
     """
+
+    if is_edit:
+        if not media:
+            backend.console.log(
+                "[red]Error: refinePrompt called with is_edit=True but no media provided."
+            )
+            return user_prompt
+
+        backend.console.log("[blue]Refining edit prompt based on provided image.")
+        refined_prompt, _ = backend.runInference(
+            prompt=user_prompt,
+            system_prompt=override_system_prompt or SYSTEM_PROMPT_EDIT_MEDIA,
+            use_tools=False,
+            media=media,
+            temperature=1.0,
+        )
+        return refined_prompt.strip()
 
     if media:
         sprompt = override_system_prompt or SYSTEM_PROMPT_MEDIA
