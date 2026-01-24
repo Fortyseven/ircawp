@@ -181,31 +181,32 @@ class Slack(Ircawp_Frontend):
 
         # get save user-provided media if present
         if "files" in event:
-            # take first file
-            file_info = event["files"][0]
-            file_url = file_info["url_private_download"]
-            try:
-                resp = requests.get(
-                    file_url,
-                    headers={
-                        "Authorization": f"Bearer {self.slack_creds['SLACK_BOT_TOKEN']}"
-                    },
-                    timeout=30,
+            for file_info in event["files"]:
+                file_url = file_info["url_private_download"]
+                try:
+                    resp = requests.get(
+                        file_url,
+                        headers={
+                            "Authorization": f"Bearer {self.slack_creds['SLACK_BOT_TOKEN']}"
+                        },
+                        timeout=30,
+                    )
+                    resp.raise_for_status()
+                    media_content = resp.content
+                except Exception as e:
+                    self.console.log(
+                        f"[red on light_salmon3]Failed to download media: {e}"
+                    )
+                    media_content = b""
+                # dump to /tmp with uuid prefix to avoid collisions
+                safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", file_info["name"])
+                media_path = os.path.join("/tmp", f"{uuid.uuid4()}_{safe_name}")
+                with open(media_path, "wb") as f:
+                    f.write(media_content)
+                self.console.log(
+                    f"[blue on light_salmon3]Saved media temp file: {media_path}"
                 )
-                resp.raise_for_status()
-                media_content = resp.content
-            except Exception as e:
-                self.console.log(f"[red on light_salmon3]Failed to download media: {e}")
-                media_content = b""
-            # dump to /tmp with uuid prefix to avoid collisions
-            safe_name = re.sub(r"[^A-Za-z0-9._-]", "_", file_info["name"])
-            media_path = os.path.join("/tmp", f"{uuid.uuid4()}_{safe_name}")
-            with open(media_path, "wb") as f:
-                f.write(media_content)
-            self.console.log(
-                f"[blue on light_salmon3]Saved media temp file: {media_path}"
-            )
-            incoming_media.append(media_path)
+                incoming_media.append(media_path)
 
         # Only store history if in a thread (conversation_id is not None)
         # Channel messages are fresh starts with no history

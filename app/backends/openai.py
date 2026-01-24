@@ -152,6 +152,7 @@ class Openai(Ircawp_Backend):
             f"{self.api_url}/v1/chat/completions",
             headers=headers,
             data=json.dumps(payload),
+            verify=False,
         )
 
         if tools or format:
@@ -186,6 +187,7 @@ class Openai(Ircawp_Backend):
                 f"{self.api_url}/v1/chat/completions",
                 headers=headers,
                 data=json.dumps(payload),
+                verify=False,
             )
         elif response.ok:
             # Reset on any successful request.
