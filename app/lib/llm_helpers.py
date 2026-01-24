@@ -54,6 +54,12 @@ You will be provided with a fragment of text or an image; either individual key 
 - Only return plain text; do not use Markdown or any other markup.
 """
 
+SYSTEM_PROMPT_2ND_PASS_MEDIA = """
+Modify this prompt to generate an image that matches the user's request. Preserve the layout and details from the original description, but adjust elements as needed to align with the user's input.
+###
+{}
+"""
+
 
 def isRejected(refined_prompt: str) -> bool:
     STOPPHRASES = [
@@ -83,26 +89,47 @@ def refinePrompt(
     """
     Refine the user prompt for image generation.
     """
-    sprompt = (
-        (override_system_prompt or SYSTEM_PROMPT)
-        if not media
-        else override_system_prompt or SYSTEM_PROMPT_MEDIA
-    )
 
-    refined_prompt, _ = backend.runInference(
-        prompt=user_prompt,
-        system_prompt=sprompt,
-        use_tools=False,
-        media=media,
-        temperature=0.8,
-        # format=ImageGenPromptResponse,
-    )
-
-    if isRejected(refined_prompt):
-        backend.console.log(
-            f"[red]Refined prompt indicates inability to generate image; defaulting to unrefined: {refined_prompt}"
+    if media:
+        sprompt = override_system_prompt or SYSTEM_PROMPT_MEDIA
+        refined_prompt, _ = backend.runInference(
+            prompt="",
+            system_prompt=sprompt,
+            use_tools=False,
+            media=media,
+            temperature=0.8,
         )
-        return user_prompt
+
+        if user_prompt:
+            sprompt = SYSTEM_PROMPT_2ND_PASS_MEDIA.format(refined_prompt).strip()
+            backend.console.log(
+                f"[blue]Refining image description based on user prompt: {sprompt}"
+            )
+            refined_prompt, _ = backend.runInference(
+                prompt=user_prompt,
+                system_prompt=sprompt,
+                use_tools=False,
+                media=media,
+                temperature=0.8,
+            )
+        pass
+    else:
+        sprompt = override_system_prompt or SYSTEM_PROMPT
+
+        refined_prompt, _ = backend.runInference(
+            prompt=user_prompt,
+            system_prompt=sprompt,
+            use_tools=False,
+            media=media,
+            temperature=0.8,
+            # format=ImageGenPromptResponse,
+        )
+
+        if isRejected(refined_prompt):
+            backend.console.log(
+                f"[red]Refined prompt indicates inability to generate image; defaulting to unrefined: {refined_prompt}"
+            )
+            return user_prompt
 
     # response = ImageGenPromptResponse.model_validate_json(refined_prompt)
     backend.console.log(
