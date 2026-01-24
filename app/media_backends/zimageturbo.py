@@ -52,6 +52,7 @@ class zimageturbo(MediaBackend):
         skip_refinement = config.get("skip_refinement", False)
 
         torch.cuda.empty_cache()
+
         seed = torch.randint(0, 1000000, (1,)).item()
         # self.pipe.unet.load_attn_procs(LORA_PATH, weight=0.75)
 
@@ -96,8 +97,12 @@ class zimageturbo(MediaBackend):
 
         print("Generating size:", width, "x", height, "seed:", seed, "aspect:", aspect)
 
+        prompt = prompt.strip()
+
+        final_prompt = prompt
+
         if not skip_refinement:
-            refined_prompt = refinePrompt(prompt.strip(), backend, media)
+            refined_prompt = refinePrompt(prompt, backend, media)
 
             final_prompt = refined_prompt.strip()
 
@@ -111,8 +116,6 @@ class zimageturbo(MediaBackend):
                 final_prompt = prompt.strip()
 
             backend.console.log(f"[black on green] refined prompt: '{final_prompt}'")
-        else:
-            final_prompt = prompt.strip()
 
         image = self.pipe(
             prompt=final_prompt,
