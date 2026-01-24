@@ -13,6 +13,8 @@ def _build_patterns(names: Iterable[str]) -> List[str]:
         patterns.append(rf"{escaped}\s+(\S+)")
         # --arg=value
         patterns.append(rf"{escaped}=(\S+)")
+        # --arg
+        patterns.append(rf"{escaped}\b")
     return patterns
 
 
@@ -45,14 +47,19 @@ def parse_arguments(
         if not matches:
             continue
 
-        value = matches[-1].group(1)
-        caster = spec.get("type", str)
-        try:
-            cast_value = caster(value)
-        except Exception:
-            cast_value = value
-
-        config[logical_name] = cast_value
+        # Check if the pattern has a capturing group (value) or is just a flag
+        last_match = matches[-1]
+        if last_match.lastindex == 1:
+            value = last_match.group(1)
+            caster = spec.get("type", str)
+            try:
+                cast_value = caster(value)
+            except Exception:
+                cast_value = value
+            config[logical_name] = cast_value
+        else:
+            # No value group: treat as boolean flag
+            config[logical_name] = True
 
         for match in reversed(matches):
             cleaned_prompt = (
