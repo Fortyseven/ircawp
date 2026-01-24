@@ -23,7 +23,7 @@ DEFAULT_FILENAME = "/tmp/ircawp.flux2klein.png"
 DEFAULT_ASPECT = 1.5
 MAX_WIDTH_HEIGHT = 1280
 
-INF_STEPS = 5
+INF_STEPS = 6
 CFG_SCALE = 4
 
 
@@ -171,6 +171,8 @@ class flux2klein(MediaBackend):
 
         skip_refinement = config.get("skip_refinement", False)
 
+        scale_result = config.get("scale", 1.0)
+
         torch.cuda.empty_cache()
 
         seed = torch.randint(0, 1000000, (1,)).item()
@@ -250,8 +252,36 @@ class flux2klein(MediaBackend):
         if has_image:
             for image_path in media:
                 media_pil.append(self._load_image_from_media_item(image_path, backend))
-            width = media_pil[0].width
-            height = media_pil[0].height
+
+            # if the image is < 1024px on the longest side, adjust scale_result accordingly so it's at least 1024px on longest side
+            if media_pil[0] is not None:
+                longest_side = max(media_pil[0].width, media_pil[0].height)
+                if longest_side < MAX_WIDTH_HEIGHT:
+                    print("Adjusting scale_result for small input image!")
+                    scale_result = MAX_WIDTH_HEIGHT / longest_side
+                if longest_side > MAX_WIDTH_HEIGHT:
+                    print("Adjusting scale_result for large input image!")
+                    scale_result = MAX_WIDTH_HEIGHT / longest_side
+
+            width = int(media_pil[0].width * scale_result)
+            height = int(media_pil[0].height * scale_result)
+            aspect = width / height
+            print(
+                "Generating size (final):",
+                width,
+                "x",
+                height,
+                "media_pil[0].width",
+                media_pil[0].width,
+                "media_pil[0].height",
+                media_pil[0].height,
+                "seed:",
+                seed,
+                "aspect:",
+                aspect,
+                "scale_result",
+                scale_result,
+            )
 
         output_image = self.pipe(
             prompt=final_prompt,
@@ -273,7 +303,7 @@ class flux2klein(MediaBackend):
             inference_steps=INF_STEPS,
             width=width,
             height=height,
-            aspect_ratio=str(aspect) if not has_image else str(width / height),
+            aspect_ratio=str(aspect),
         )
 
         self.last_imagegen_prompt = final_prompt.strip()

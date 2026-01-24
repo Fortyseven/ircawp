@@ -76,6 +76,10 @@ def parse_arguments(prompt: str) -> tuple[str, Dict[str, Any]]:
             "names": ["--batch"],
             "type": int,
         },
+        "scale": {
+            "names": ["--scale"],
+            "type": float,
+        },
     }
 
     return generic_parse_arguments(prompt, arg_specs)
