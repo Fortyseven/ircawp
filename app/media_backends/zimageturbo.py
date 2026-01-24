@@ -54,7 +54,6 @@ class zimageturbo(MediaBackend):
         torch.cuda.empty_cache()
 
         seed = torch.randint(0, 1000000, (1,)).item()
-        # self.pipe.unet.load_attn_procs(LORA_PATH, weight=0.75)
 
         aspect = config.get("aspect", DEFAULT_ASPECT)
 
