@@ -110,11 +110,14 @@ class flux2klein(MediaBackend):
 
         if do_remaster:
             backend.console.log("[white on blue] remastering input image")
-            final_prompt = """Transform this image into a modern, cinematic masterpiece as if shot with a professional DSLR camera with a 50mm f/1.4 lens. A sharp, natural, and highly detailed photo. Deblur the entire image, completely remove film grain and digital noise, and restore clarity without altering composition, aspect ratio, or subject structure. Preserve every detail: facial structure, clothing texture, hair, fur, and text styling. Make no changes to pose, anatomy, or typography. Remove haze, dirt, and atmospheric distortion, then enhance dynamic range while maintaining original color tones.
+
+            final_prompt = """Transform this image into a modern, cinematic masterpiece as if shot with a professional DSLR camera with a 50mm f/1.4 lens. A sharp, natural, and highly detailed photo. Deblur the entire image, completely remove film grain and digital noise, and restore clarity without altering composition, aspect ratio, or subject structure. Make no changes to pose, anatomy, or typography. Remove haze, dirt, and atmospheric distortion, then enhance dynamic range while maintaining original color tones.
 Specifically target and recover overexposed, blown-out areas using intelligent tone mapping and localized HDR reconstruction, preserve detail in highlights without crushing midtones or shadows. Convert harsh or flat lighting into soft, cinematic lighting with natural falloff and depth. Replace all digital artifacts with ultra-high-fidelity textures, skin, fabric, and fur, matching real-world material properties. Perform professional, balanced natural color correction. Upscale to sharp 4K resolution, resimulate the image as if captured by a professional photographer with precise focus, depth, and lighting control.
-Final output: a photorealistic, high dynamic range (HDR), cinema-quality photograph. A photo that is sharp, clean, and rich in detail, with every element rendered with professional photographic precision. Recovered highlights retain texture and form, avoiding flat white or clipped pixels. A photo achieving a balanced, visually compelling image with full tonal fidelity."""
+Final output: a photorealistic, high dynamic range (HDR), cinema-quality photograph. A photo that is sharp, clean, and rich in detail, with every element rendered with professional photographic precision. Recovered highlights retain texture and form, avoiding flat white or clipped pixels. A photo achieving a balanced, visually compelling image with full tonal fidelity. {}""".format(
+                final_prompt
+            )
             skip_refinement = True
-            steps = 10
+            steps = 8
 
         if not skip_refinement:
             refined_prompt = refinePrompt(
