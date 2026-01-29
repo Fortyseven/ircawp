@@ -11,7 +11,8 @@ from app.media_backends.MediaBackend import MediaBackend
 from app.lib.args import parse_arguments as generic_parse_arguments
 from .__PluginBase import PluginBase
 
-LAST_IMAGE_PATH = "/tmp/ircawp.last_imagegen_media.png"
+LAST_GENERATED_IMAGE_PATH = "/tmp/ircawp.last_imagegen_media.png"
+UNDO_IMAGE_PATH = "/tmp/ircawp.previous_imagegen_media.png"
 last_unrefined_prompt: str = None
 
 
@@ -85,7 +86,11 @@ def parse_arguments(prompt: str) -> tuple[str, Dict[str, Any]]:
             "type": bool,
         },
         "andthen": {
-            "names": ["--andthen", "--then", "--next", "--now"],
+            "names": ["--andthen", "--then", "--next", "--now", "--edit"],
+            "type": bool,
+        },
+        "undo": {
+            "names": ["--undo", "--oops", "--actuallyno"],
             "type": bool,
         },
     }
@@ -107,19 +112,32 @@ def img(
     # Parse command-line style arguments from the prompt
     prompt, config = parse_arguments(prompt)
 
+    # Handle --undo: use previous image if available (takes precedence over --andthen)
+    if config.get("undo", False) and config.get("batch", 1) == 1:
+        if Path(UNDO_IMAGE_PATH).is_file():
+            # If no prompt, just restore the previous image without generating
+            if not prompt or prompt.strip() == "":
+                shutil.copy(UNDO_IMAGE_PATH, LAST_GENERATED_IMAGE_PATH)
+                backend.console.log("[cyan on black] restored previous image (undo)")
+                return "", UNDO_IMAGE_PATH, False, {}
+
+            # Otherwise use previous image as input for new generation
+            media = [UNDO_IMAGE_PATH]
+            backend.console.log("[cyan on black] using previous image for undo")
+
     if config.get("andthen", False):
         # check if we have a saved copy of the prior media run, use that as
         # our media input
 
         # remove LAST_IMAGE_PATH
-        if not Path(LAST_IMAGE_PATH).is_file():
+        if not Path(LAST_GENERATED_IMAGE_PATH).is_file():
             image_path, final_prompt = media_backend.execute(
                 prompt="A red background, white text: 'Sorry, no last image found!'",
                 backend=backend,
             )
             return "", image_path, False, {"imagegen_prompt": final_prompt}
 
-        media = [LAST_IMAGE_PATH]
+        media = [LAST_GENERATED_IMAGE_PATH]
 
     # Handle --aspect match: if media is provided and aspect is match (or not specified),
     # automatically set aspect to the media's aspect ratio
@@ -164,7 +182,11 @@ def img(
     #         f"[red on green] Saved REDO_MEDIA_PATH: {REDO_MEDIA_PATH!r}"
     #     )
 
-    shutil.copy(image_path, LAST_IMAGE_PATH)
+    # Save current LAST_IMAGE_PATH to PREVIOUS_IMAGE_PATH before updating
+    if Path(LAST_GENERATED_IMAGE_PATH).is_file():
+        shutil.copy(LAST_GENERATED_IMAGE_PATH, UNDO_IMAGE_PATH)
+
+    shutil.copy(image_path, LAST_GENERATED_IMAGE_PATH)
 
     # return "Refined prompt:\n```" + final_prompt.strip() + "```", image_path, False
     return "", image_path, False, {"imagegen_prompt": final_prompt}
