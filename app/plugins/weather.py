@@ -13,17 +13,102 @@ from app.lib.network import fetchHtml
 from .__PluginBase import PluginBase
 
 
-def _estimateTimeOfDay(observed: str) -> str:
-    # 'observed' requires '10:00 AM' format
+def _geocodeLocation(query: str, api_key: str) -> tuple[str, float, float]:
+    """Convert location name to coordinates using OpenWeather Geocoding API.
+    Returns (location_name, latitude, longitude)
+    """
+    # Check if query looks like a US ZIP code (5 digits)
+    if query.strip().isdigit() and len(query.strip()) == 5:
+        # Use ZIP code endpoint
+        url = f"https://api.openweathermap.org/geo/1.0/zip?zip={query.strip()},US&appid={api_key}"
+        try:
+            response = fetchHtml(url, bypass_cache=True)
+            data = json.loads(response)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid API response for ZIP code '{query}': {str(e)}")
+
+        if not data or "lat" not in data:
+            raise ValueError(f"ZIP code '{query}' not found")
+
+        location_name = data.get("name", query)
+        if "country" in data:
+            location_name = f"{location_name}, {data['country']}"
+
+        return location_name, data["lat"], data["lon"]
+    else:
+        # Use regular location name endpoint
+        url = f"https://api.openweathermap.org/geo/1.0/direct?q={quote_plus(query)}&limit=1&appid={api_key}"
+        try:
+            response = fetchHtml(url, bypass_cache=True)
+            data = json.loads(response)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid API response for location '{query}': {str(e)}")
+
+        if not data or len(data) == 0:
+            raise ValueError(f"Location '{query}' not found")
+
+        result = data[0]
+        location_name = result["name"]
+        if "state" in result and result["state"]:
+            location_name = f"{location_name}, {result['state']}"
+        elif "country" in result:
+            location_name = f"{location_name}, {result['country']}"
+
+        return location_name, result["lat"], result["lon"]
+
+
+def _fahrenheitToCelsius(fahrenheit: float) -> float:
+    """Convert Fahrenheit to Celsius."""
+    return (fahrenheit - 32) * 5 / 9
+
+
+def _mphToKph(mph: float) -> float:
+    """Convert miles per hour to kilometers per hour."""
+    return mph * 1.60934
+
+
+def _degreesToCompass(degrees: int) -> str:
+    """Convert meteorological degrees to 16-point compass direction."""
+    directions = [
+        "N",
+        "NNE",
+        "NE",
+        "ENE",
+        "E",
+        "ESE",
+        "SE",
+        "SSE",
+        "S",
+        "SSW",
+        "SW",
+        "WSW",
+        "W",
+        "WNW",
+        "NW",
+        "NNW",
+    ]
+    index = round(degrees / 22.5) % 16
+    return directions[index]
+
+
+def _formatLocalTime(timestamp: int, timezone_offset: int) -> str:
+    """Convert Unix UTC timestamp to local formatted time string."""
+    local_dt = datetime.datetime.utcfromtimestamp(timestamp + timezone_offset)
+    return local_dt.strftime("%Y-%m-%d %I:%M %p")
+
+
+def _estimateTimeOfDay(timestamp: int, timezone_offset: int) -> str:
+    # Convert Unix UTC timestamp to local time using timezone offset
     # 8pm to 4am is night
     # 4am to 12pm is morning
     # 12pm to 4pm is afternoon
     # 4pm to 8pm is evening
 
-    if not observed:
+    if not timestamp:
         return "daytime"
 
-    time = datetime.datetime.strptime(observed, "%I:%M %p").time()
+    local_dt = datetime.datetime.utcfromtimestamp(timestamp + timezone_offset)
+    time = local_dt.time()
 
     if time >= datetime.time(20, 0) or time < datetime.time(4, 0):
         return "night"
@@ -37,8 +122,8 @@ def _estimateTimeOfDay(observed: str) -> str:
         return "daytime"
 
 
-def _estimateTemperature(temp: str) -> str:
-    # 'temp' requires '10F (10C)' format
+def _estimateTemperature(temp_f: float) -> str:
+    # Takes numeric temperature in Fahrenheit
     # 0F to 32F is cold
     # 32F to 50F is cool
     # 50F to 70F is warm
@@ -47,10 +132,9 @@ def _estimateTemperature(temp: str) -> str:
     # 100F to 120F is extremely hot
     # 120F+ is dangerously hot
 
-    if not temp:
+    if temp_f is None:
         return "temperature"
 
-    temp_f = int(temp.split(" ")[0][:-1])
     if temp_f < -20:
         return "dangerously cold"
     elif temp_f <= 0:
@@ -81,87 +165,76 @@ def _normalizeWeatherType(weather: str) -> str:
 
 
 def buildImageGenPrompt(
-    where, desc, temps, wind_dir, wind_mph, wind_kph, humidity, observed
+    where: str, desc: str, temp_f: float, timestamp: int, timezone_offset: int
 ) -> str:
     location = where.strip()
 
     kind_of_weather = _normalizeWeatherType(desc.strip())
 
-    temp = temps.strip()
-    temp = _estimateTemperature(temp)
+    temp = _estimateTemperature(temp_f)
 
-    # NOTE: observed is NOT the current time, meaning it might show night
-    # time even if it's currently daytime; I can't help this without doing
-    # my own time zone lookups, etc. Nothing in wttr.in's JSON response
-    # gives me the current time at the locale. If you want this, it will be
-    # much more work. Probably. I didn't look into it.
-
-    time_of_day = " ".join(observed.split(" ")[1:])
-    time_of_day = _estimateTimeOfDay(time_of_day)
+    time_of_day = _estimateTimeOfDay(timestamp, timezone_offset)
 
     return f"professional street-level photo of {location} featuring {temp} {kind_of_weather} weather at {time_of_day}."
 
 
-def process_weather_json(json_text: str) -> tuple[str, str]:
+def process_weather_json(json_text: str, location_name: str) -> tuple[str, str]:
     """
-    https://wttr.in/:help
+    Parse OpenWeather Current Weather Data API 2.5 response.
+    https://openweathermap.org/current
     """
-    # decode
     try:
         weather_data = json.loads(json_text)
 
-        if not weather_data["current_condition"]:
+        if "main" not in weather_data:
             return "Error: no current condition data.", ""
 
-        current = weather_data["current_condition"][0]
-        feels_like_f = current["FeelsLikeF"]
-        feels_like_c = current["FeelsLikeC"]
-        temp_f = current["temp_F"]
-        temp_c = current["temp_C"]
+        main = weather_data["main"]
 
-        temps = f"{temp_f}F ({temp_c}C)"
+        # Temperature (imperial units from API)
+        temp_f = main["temp"]
+        feels_like_f = main["feels_like"]
 
-        if temp_f != feels_like_f:
-            temps = f"{temps}, feels like {feels_like_f}F ({feels_like_c}C)"
+        # Convert to Celsius
+        temp_c = _fahrenheitToCelsius(temp_f)
+        feels_like_c = _fahrenheitToCelsius(feels_like_f)
 
-        humidity = current["humidity"]
-        desc = current["weatherDesc"][0]["value"]
-
-        wind_mph = current["windspeedMiles"]
-        wind_kph = current["windspeedKmph"]
-        wind_dir = current["winddir16Point"]
-
-        observed = current["localObsDateTime"]
+        temps = f"{temp_f:.0f}F ({temp_c:.0f}C)"
 
         if (
-            not weather_data.get("nearest_area", None)
-            or len(weather_data["nearest_area"]) < 1
-        ):
-            where = "Unknown...?"
-        else:
-            where = weather_data["nearest_area"][0]["areaName"][0]["value"]
-            where2 = weather_data["nearest_area"][0]["region"][0]["value"]
+            abs(temp_f - feels_like_f) > 2
+        ):  # Only show "feels like" if difference is noticeable
+            temps = f"{temps}, feels like {feels_like_f:.0f}F ({feels_like_c:.0f}C)"
 
-            where = f"{where}, {where2}"
+        humidity = main["humidity"]
+        desc = weather_data["weather"][0]["description"].title()
+
+        # Wind (imperial units from API)
+        wind_mph = weather_data["wind"]["speed"]
+        wind_kph = _mphToKph(wind_mph)
+        wind_deg = weather_data["wind"].get("deg", 0)
+        wind_dir = _degreesToCompass(wind_deg)
+
+        # Time information
+        timestamp = weather_data["dt"]
+        timezone_offset = weather_data["timezone"]
+        observed = _formatLocalTime(timestamp, timezone_offset)
 
         imagegen_prompt = buildImageGenPrompt(
-            where,
+            location_name,
             desc,
-            temps,
-            wind_dir,
-            wind_mph,
-            wind_kph,
-            humidity,
-            observed,
+            temp_f,
+            timestamp,
+            timezone_offset,
         )
 
         return (
-            f"Weather for {where}: {desc} at 🌡 {temps}, winds 🌬 {wind_dir} at {wind_mph}mph ({wind_kph}kph), 💦 humidity at {humidity}%. (⏰ As of {observed}, local.)",
+            f"Weather for {location_name}: {desc} at 🌡 {temps}, winds 🌬 {wind_dir} at {wind_mph:.0f}mph ({wind_kph:.0f}kph), 💦 humidity at {humidity}%. (⏰ As of {observed}, local.)",
             imagegen_prompt,
         )
 
-    except json.decoder.JSONDecodeError:
-        return "Error: could not decode JSON.", ""
+    except (json.decoder.JSONDecodeError, KeyError) as e:
+        return f"Error: could not parse weather data - {str(e)}", ""
 
 
 def doWeather(
@@ -171,18 +244,41 @@ def doWeather(
     media_backend: MediaBackend = None,
 ) -> tuple[str, str, bool, dict]:
     try:
-        url_query = f"https://wttr.in/{quote_plus(query)}?format=j1"
-        # response = requests.get(url_query, timeout=12, allow_redirects=True)
-        content = fetchHtml(url_query, bypass_cache=True)
-        processed, prompt = process_weather_json(content)
+        # Get API key from config
+        api_key = backend.config.get("weather", {}).get("api_key")
+        if not api_key:
+            return (
+                "Weather API key not configured. Add 'weather.api_key' to config.yml",
+                "",
+                True,
+                {},
+            )
 
-        image = ""
+        disable_imagegen = backend.config.get("weather", {}).get(
+            "disable_imagegen", False
+        )
+
+        # Step 1: Geocode the location query
+        backend.console.log(f"[blue]Geocoding location: {query}")
+        location_name, lat, lon = _geocodeLocation(query, api_key)
+        backend.console.log(f"[green]Found: {location_name} ({lat}, {lon})")
+
+        # Step 2: Fetch weather data using coordinates (imperial units)
+        weather_url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&units=imperial&appid={api_key}"
+        backend.console.log(f"[blue]Fetching weather from: {weather_url}")
+        content = fetchHtml(weather_url, bypass_cache=True)
+
+        # Debug: Log first 200 chars of response
+        backend.console.log(f"[yellow]API Response preview: {content[:200]}")
+
+        processed, prompt = process_weather_json(content, location_name)
+
+        image_path = ""
         skip_imagegen = True
 
         # Only attempt image generation if a media backend is available
-        if media_backend:
+        if media_backend and not disable_imagegen:
             try:
-                # Use the common `query` parameter name for media backends
                 backend.console.log(
                     f"[blue]Generating weather image with prompt: {prompt}"
                 )
@@ -200,8 +296,16 @@ def doWeather(
 
         return processed, image_path, skip_imagegen, {}
 
+    except ValueError as e:
+        # Geocoding error (location not found)
+        return f"Location error: {str(e)}", "", False, {}
     except Exception as e:
-        return "WTTR PROBLEMS: " + str(e), "", True, {}
+        return (
+            f"OpenWeather error: {str(e)}",
+            "",
+            False,
+            {},
+        )
 
 
 plugin = PluginBase(
