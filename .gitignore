@@ -13,3 +13,4 @@ TOOL_CALLING_IMPLEMENTATION.md
 THREAD_FLOW.md
 ztemp.py
 prompts.sqlite3.thisisnotadatabase
+!scripts/config-example.yml
