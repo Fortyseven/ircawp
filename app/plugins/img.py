@@ -11,7 +11,7 @@ from app.media_backends.MediaBackend import MediaBackend
 from app.lib.args import parse_arguments as generic_parse_arguments
 from .__PluginBase import PluginBase
 
-REDO_MEDIA_PATH = "/tmp/ircawp.last_imagegen_media.png"
+LAST_IMAGE_PATH = "/tmp/ircawp.last_imagegen_media.png"
 last_unrefined_prompt: str = None
 
 
@@ -84,6 +84,10 @@ def parse_arguments(prompt: str) -> tuple[str, Dict[str, Any]]:
             "names": ["--remaster"],
             "type": bool,
         },
+        "andthen": {
+            "names": ["--andthen", "--then", "--next", "--now"],
+            "type": bool,
+        },
     }
 
     return generic_parse_arguments(prompt, arg_specs)
@@ -103,6 +107,20 @@ def img(
     # Parse command-line style arguments from the prompt
     prompt, config = parse_arguments(prompt)
 
+    if config.get("andthen", False):
+        # check if we have a saved copy of the prior media run, use that as
+        # our media input
+
+        # remove LAST_IMAGE_PATH
+        if not Path(LAST_IMAGE_PATH).is_file():
+            image_path, final_prompt = media_backend.execute(
+                prompt="A red background, white text: 'Sorry, no last image found!'",
+                backend=backend,
+            )
+            return "", image_path, False, {"imagegen_prompt": final_prompt}
+
+        media = [LAST_IMAGE_PATH]
+
     # Handle --aspect match: if media is provided and aspect is match (or not specified),
     # automatically set aspect to the media's aspect ratio
     if media:
@@ -119,10 +137,6 @@ def img(
                     backend.console.log(
                         f"[cyan on black] matched media aspect ratio: {media_aspect:.2f}"
                     )
-    else:
-        # remove REDO_MEDIA_PATH
-        if Path(REDO_MEDIA_PATH).is_file():
-            Path(REDO_MEDIA_PATH).unlink()
 
     if prompt.startswith("!"):
         backend.console.log("[white on green] skipping prompt refinement")
@@ -143,12 +157,14 @@ def img(
         prompt=prompt, config=config, media=media, backend=backend
     )
 
-    if media and REDO_MEDIA_PATH not in media[0]:
-        # save first media image to a temp file for reuse if asked
-        shutil.copy(media[0], REDO_MEDIA_PATH)
-        backend.console.log(
-            f"[red on green] Saved REDO_MEDIA_PATH: {REDO_MEDIA_PATH!r}"
-        )
+    # if media and REDO_MEDIA_PATH not in media[0]:
+    #     # save first media image to a temp file for reuse if asked
+    #     shutil.copy(media[0], REDO_MEDIA_PATH)
+    #     backend.console.log(
+    #         f"[red on green] Saved REDO_MEDIA_PATH: {REDO_MEDIA_PATH!r}"
+    #     )
+
+    shutil.copy(image_path, LAST_IMAGE_PATH)
 
     # return "Refined prompt:\n```" + final_prompt.strip() + "```", image_path, False
     return "", image_path, False, {"imagegen_prompt": final_prompt}
