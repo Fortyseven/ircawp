@@ -37,7 +37,83 @@ def _geocodeLocation(query: str, api_key: str) -> tuple[str, float, float]:
         return location_name, data["lat"], data["lon"]
     else:
         # Use regular location name endpoint
-        url = f"https://api.openweathermap.org/geo/1.0/direct?q={quote_plus(query)}&limit=1&appid={api_key}"
+        # Normalize query: if it looks like "City, ST" format, convert to "City,ST,US" for US states
+        search_query = query.strip()
+        if "," in search_query:
+            parts = [p.strip() for p in search_query.split(",")]
+            # Common US state abbreviations - only add ",US" if it's one of these
+            us_states = {
+                "AL",
+                "AK",
+                "AZ",
+                "AR",
+                "CA",
+                "CO",
+                "CT",
+                "DE",
+                "FL",
+                "GA",
+                "HI",
+                "ID",
+                "IL",
+                "IN",
+                "IA",
+                "KS",
+                "KY",
+                "LA",
+                "ME",
+                "MD",
+                "MA",
+                "MI",
+                "MN",
+                "MS",
+                "MO",
+                "MT",
+                "NE",
+                "NV",
+                "NH",
+                "NJ",
+                "NM",
+                "NY",
+                "NC",
+                "ND",
+                "OH",
+                "OK",
+                "OR",
+                "PA",
+                "RI",
+                "SC",
+                "SD",
+                "TN",
+                "TX",
+                "UT",
+                "VT",
+                "VA",
+                "WA",
+                "WV",
+                "WI",
+                "WY",
+            }
+            # Map common country name variations to ISO codes
+            country_codes = {
+                "UK": "GB",
+                "USA": "US",
+                "ENGLAND": "GB",
+                "SCOTLAND": "GB",
+                "WALES": "GB",
+            }
+
+            # If it's "City, State" with US state code, add country
+            if len(parts) == 2 and parts[1].upper() in us_states:
+                search_query = f"{parts[0]},{parts[1].upper()},US"
+            elif len(parts) == 2 and parts[1].upper() in country_codes:
+                # Map common country names to ISO codes
+                search_query = f"{parts[0]},{country_codes[parts[1].upper()]}"
+            else:
+                # Otherwise just remove spaces after commas
+                search_query = ",".join(parts)
+
+        url = f"https://api.openweathermap.org/geo/1.0/direct?q={quote_plus(search_query)}&limit=1&appid={api_key}"
         try:
             response = fetchHtml(url, bypass_cache=True)
             data = json.loads(response)
