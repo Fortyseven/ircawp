@@ -93,9 +93,55 @@ def parse_arguments(prompt: str) -> tuple[str, Dict[str, Any]]:
             "names": ["--undo", "--oops", "--actuallyno"],
             "type": bool,
         },
+        "wordle": {
+            "names": ["--wordle"],
+            "type": bool,
+        },
     }
 
     return generic_parse_arguments(prompt, arg_specs)
+
+
+def subcommand_wordle(
+    prompt: str,
+    media: list,
+    backend: Ircawp_Backend,
+    media_backend: MediaBackend = None,
+) -> tuple[str, str, bool]:
+    from pydantic import BaseModel
+
+    class WordleWordsResponse(BaseModel):
+        words: list[str] = []
+
+    SPROMPT = """
+You are an expert at solving Wordle puzzles. Given an image of a Wordle game board, extract the letters and their colors (green, yellow, gray) and provide the next best guess word based on the current state of the board.
+"""
+    # ensure one image is provided
+    if not media or len(media) != 1:
+        return (
+            "Wordle subcommand requires exactly one input image.",
+            "",
+            False,
+            {},
+        )
+
+    # run inference to extract letters from image
+
+    response, _ = backend.runInference(
+        system_prompt=SPROMPT,
+        # prompt=text,
+        media=media,
+        use_tools=False,
+        format=WordleWordsResponse,
+    )
+
+    print(response)
+
+    words = WordleWordsResponse.model_validate_json(response)
+
+    config = {"batch": 4, "aspect": "4:3"}
+
+    return _doBatchImages(" ".join(words.words), [], backend, media_backend, config)
 
 
 def img(
@@ -111,6 +157,9 @@ def img(
 
     # Parse command-line style arguments from the prompt
     prompt, config = parse_arguments(prompt)
+
+    if config.get("wordle", False):
+        return subcommand_wordle(prompt, media, backend, media_backend)
 
     # Handle --undo: use previous image if available (takes precedence over --andthen)
     if config.get("undo", False) and config.get("batch", 1) == 1:
