@@ -133,6 +133,7 @@ You are an expert at solving Wordle puzzles. Given an image of a Wordle game boa
         media=media,
         use_tools=False,
         format=WordleWordsResponse,
+        temperature=0.1,
     )
 
     print(response)
@@ -141,7 +142,17 @@ You are an expert at solving Wordle puzzles. Given an image of a Wordle game boa
 
     config = {"batch": 4, "aspect": "4:3"}
 
-    return _doBatchImages(" ".join(words.words), [], backend, media_backend, config)
+    batch = _doBatchImages(" ".join(words.words), [], backend, media_backend, config)
+
+    # add extracted words to the response
+    foo, bar, baz, quux = batch
+
+    return (
+        f"Extracted words: `{', '.join(words.words)}`",
+        bar,
+        baz,
+        quux,
+    )
 
 
 def img(
