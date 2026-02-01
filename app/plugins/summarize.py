@@ -46,7 +46,7 @@ def summarize(
     special_mode = None
     import re
 
-    if prompt.startswith("/?"):
+    if prompt.startswith("--help"):
         return (
             (
                 "Here are the available summarize modes:\n\n"
