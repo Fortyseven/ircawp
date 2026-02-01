@@ -141,7 +141,7 @@ def refinePrompt(
             system_prompt=sprompt,
             use_tools=False,
             media=media,
-            temperature=0.8,
+            temperature=1.1,
             # format=ImageGenPromptResponse,
         )
 
