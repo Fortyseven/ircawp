@@ -67,39 +67,52 @@ def _doBatchImages(prompt, media, backend, media_backend, config):
         # fall through to single image return
 
 
-def parse_arguments(prompt: str) -> tuple[str, Dict[str, Any]]:
-    arg_specs = {
-        "aspect": {
-            "names": ["--aspect"],
-            "type": str,
-        },
-        "batch": {
-            "names": ["--batch"],
-            "type": int,
-        },
-        "scale": {
-            "names": ["--scale"],
-            "type": float,
-        },
-        "remaster": {
-            "names": ["--remaster"],
-            "type": bool,
-        },
-        "andthen": {
-            "names": ["--andthen", "--then", "--next", "--now", "--edit"],
-            "type": bool,
-        },
-        "undo": {
-            "names": ["--undo", "--oops", "--actuallyno"],
-            "type": bool,
-        },
-        "wordle": {
-            "names": ["--wordle"],
-            "type": bool,
-        },
-    }
+ARG_SPECS = {
+    "aspect": {
+        "names": ["--aspect"],
+        "description": "Set aspect ratio (e.g. 16:9, or decimal 1.78) or 'match' to use input media aspect",
+        "type": str,
+    },
+    "batch": {
+        "names": ["--batch"],
+        "description": "Generate multiple images and combine into a grid (max 4)",
+        "type": int,
+    },
+    "scale": {
+        "names": ["--scale"],
+        "description": "Set the scale factor for image generation",
+        "type": float,
+    },
+    "remaster": {
+        "names": ["--remaster"],
+        "description": "Enable remastering of the generated image (uses a custom prompt to enhance details)",
+        "type": bool,
+    },
+    "andthen": {
+        "names": ["--andthen", "--then", "--next", "--now", "--edit"],
+        "description": "Chain another image edit after this one",
+        "type": bool,
+    },
+    "undo": {
+        "names": ["--undo", "--oops", "--actuallyno", "--no"],
+        "description": "Revert to the previous generated image and perform a new generation using it as input",
+        "type": bool,
+    },
+    "wordle": {
+        "names": ["--wordle"],
+        "description": "Solve a Wordle puzzle from an image of the game board",
+        "type": bool,
+    },
+    "help": {
+        "names": ["--help", "-h"],
+        "description": "Show this help message",
+        "type": bool,
+    },
+}
 
-    return generic_parse_arguments(prompt, arg_specs)
+
+def _parse_arguments(prompt: str) -> tuple[str, Dict[str, Any]]:
+    return generic_parse_arguments(prompt, ARG_SPECS)
 
 
 def subcommand_wordle(
@@ -155,6 +168,28 @@ You are an expert at solving Wordle puzzles. Given an image of a Wordle game boa
     )
 
 
+def subcommand_help() -> tuple[str, str, bool]:
+    help_text = "Available `/img` subcommands:\n"
+
+    for arg, spec in ARG_SPECS.items():
+        names = ", ".join(f"`{name}`" for name in spec["names"])
+        description = spec["description"]
+        help_text += f"{names}: {description}\n"
+
+    return help_text.strip(), "", False, {}
+
+
+def _has_invalid_argument(prompt: str) -> bool:
+    import re
+
+    matches = re.findall(r"--\w+", prompt)
+    valid_args = {name for spec in ARG_SPECS.values() for name in spec["names"]}
+    for match in matches:
+        if match not in valid_args:
+            return True
+    return False
+
+
 def img(
     prompt: str,
     media: list,
@@ -164,13 +199,30 @@ def img(
     global last_unrefined_prompt
 
     if not media and not prompt:
-        prompt = "An angry troll screaming 'NO PROMPT, DUMBASS!'"
+        return (
+            "A prompt or image must be provided. Use `/img --help` for usage information.",
+            "",
+            False,
+            {},
+        )
+
+    if _has_invalid_argument(prompt):
+        backend.console.log(
+            "[yellow on black] Detected command-line style arguments in prompt"
+        )
+        return subcommand_help()
 
     # Parse command-line style arguments from the prompt
-    prompt, config = parse_arguments(prompt)
+    prompt, config = _parse_arguments(prompt)
+
+    if config.get("help", False):
+        return subcommand_help()
 
     if config.get("wordle", False):
         return subcommand_wordle(prompt, media, backend, media_backend)
+
+    # remaster is passed as a config flag to the media
+    # backend, which can choose to use it or not
 
     # Handle --undo: use previous image if available (takes precedence over --andthen)
     if config.get("undo", False) and config.get("batch", 1) == 1:
