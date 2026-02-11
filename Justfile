@@ -1,4 +1,4 @@
-DEST_SSH=wheeljack:~/opt/ircawp-beta/
+DEST_SSH:="wheeljack:~/opt/ircawp-beta/"
 
 run:
 	uv run -m app
@@ -28,4 +28,4 @@ push-to-wheeljack:
 		--exclude='/models' \
 		--exclude '/attic' \
 		./ \
-		$(DEST_SSH)
+		{{DEST_SSH}}
