@@ -65,12 +65,18 @@ SYSTEM_PROMPT_EDIT_MEDIA = "The user will ask for changes to the provided image.
 
 def isRejected(refined_prompt: str) -> bool:
     STOPPHRASES = [
+        "can't comply",
+        "can't create",
         "can't fulfill",
+        "can't fulfill",
+        "can't generate",
+        "cannot comply",
         "cannot create",
         "cannot fulfill",
         "cannot generate",
-        "unable to",
         "refuse to",
+        "unable to",
+        "will not comply",
     ]
     lowered = refined_prompt.lower()
     return any(phrase in lowered for phrase in STOPPHRASES)
