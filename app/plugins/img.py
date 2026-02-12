@@ -3,6 +3,7 @@ Bot plugin that allows the user to pass a raw prompt to the system imagegen back
 """
 
 import shutil
+import glob
 from typing import Dict, Any
 from pathlib import Path
 from PIL import Image
@@ -13,7 +14,13 @@ from .__PluginBase import PluginBase
 
 LAST_GENERATED_IMAGE_PATH = "/tmp/ircawp.last_imagegen_media.png"
 UNDO_IMAGE_PATH = "/tmp/ircawp.previous_imagegen_media.png"
-last_unrefined_prompt: str = None
+LAST_UPLOADED_MEDIA_PREFIX = "/tmp/ircawp.uploaded_media"
+REDO_MEDIA_PATH_PREFIX = "/tmp/ircawp.redo_media"
+
+# Module-level state for --redo functionality
+last_redo_prompt: str = None
+last_redo_media: list = None
+last_redo_config: dict = None
 
 
 def get_media_aspect_ratio(media_path: str) -> float:
@@ -23,6 +30,47 @@ def get_media_aspect_ratio(media_path: str) -> float:
         return img.width / img.height
     except Exception:
         return None
+
+
+def _cleanup_redo_media() -> None:
+    """Remove old redo media files to prevent accumulation."""
+    try:
+        for old_file in glob.glob(f"{REDO_MEDIA_PATH_PREFIX}_*"):
+            Path(old_file).unlink(missing_ok=True)
+    except Exception:
+        pass  # Silently ignore cleanup errors
+
+
+def _save_redo_media(media: list) -> list:
+    """Save media files to persistent temp paths for --redo functionality.
+
+    Args:
+        media: List of media file paths (will be deleted after plugin execution)
+
+    Returns:
+        List of persistent paths in /tmp/ircawp.redo_media_* format
+    """
+    if not media:
+        return []
+
+    # Clean up old redo media files first
+    _cleanup_redo_media()
+
+    persistent_paths = []
+    for i, media_path in enumerate(media):
+        try:
+            # Get file extension from original path
+            ext = Path(media_path).suffix or ".png"
+            persistent_path = f"{REDO_MEDIA_PATH_PREFIX}_{i}{ext}"
+
+            # Copy to persistent location
+            shutil.copy(media_path, persistent_path)
+            persistent_paths.append(persistent_path)
+        except Exception:
+            # If we fail to save any media, bail out
+            return []
+
+    return persistent_paths
 
 
 def _doBatchImages(prompt, media, backend, media_backend, config):
@@ -96,6 +144,11 @@ ARG_SPECS = {
     "undo": {
         "names": ["--undo", "--oops", "--actuallyno", "--no"],
         "description": "Revert to the previous generated image and perform a new generation using it as input",
+        "type": bool,
+    },
+    "redo": {
+        "names": ["--redo", "--tryagain", "--again"],
+        "description": "Re-run the last generation exactly (cannot be combined with prompts, media, or other flags)",
         "type": bool,
     },
     "wordle": {
@@ -196,7 +249,7 @@ def img(
     backend: Ircawp_Backend,
     media_backend: MediaBackend = None,
 ) -> tuple[str, str, bool]:
-    global last_unrefined_prompt
+    global last_redo_prompt, last_redo_media, last_redo_config
 
     if not media and not prompt:
         return (
@@ -214,6 +267,66 @@ def img(
 
     # Parse command-line style arguments from the prompt
     prompt, config = _parse_arguments(prompt)
+
+    # Handle --redo FIRST: validate and restore previous generation state
+    if config.get("redo", False):
+        # Validate: no new prompt provided (after flag parsing)
+        if prompt and prompt.strip():
+            return (
+                "Cannot combine --redo with a new prompt. Use `/img --redo` alone.",
+                "",
+                False,
+                {},
+            )
+
+        # Validate: no new media provided
+        if media:
+            return (
+                "Cannot combine --redo with new media. Use `/img --redo` alone.",
+                "",
+                False,
+                {},
+            )
+
+        # Validate: no other conflicting flags
+        conflicting = [k for k in ["undo", "andthen", "wordle"] if config.get(k)]
+        if conflicting:
+            return (
+                f"Cannot combine --redo with other flags: {', '.join(conflicting)}",
+                "",
+                False,
+                {},
+            )
+
+        # Check if we have saved state
+        if last_redo_prompt is None:
+            return (
+                "No previous generation to redo. Run `/img` first.",
+                "",
+                False,
+                {},
+            )
+
+        # Verify saved media files still exist
+        for media_path in last_redo_media or []:
+            if not Path(media_path).is_file():
+                return (
+                    f"Redo media file missing: {media_path}",
+                    "",
+                    False,
+                    {},
+                )
+
+        # Restore state (overwrites parsed values)
+        prompt = last_redo_prompt
+        media = last_redo_media if last_redo_media else []
+        config = last_redo_config.copy()  # Copy to avoid mutation
+        backend.console.log("[cyan on black] loaded redo state from memory")
+    else:
+        # Save state for future --redo (only if NOT currently doing a redo)
+        last_redo_prompt = prompt
+        last_redo_config = config.copy()  # Copy to avoid external mutations
+        last_redo_media = _save_redo_media(media) if media else []
 
     if config.get("help", False):
         return subcommand_help()
