@@ -19,6 +19,7 @@ REDO_MEDIA_PATH_PREFIX = "/tmp/ircawp.redo_media"
 
 # Module-level state for --redo functionality
 last_redo_prompt: str = None
+last_refined_prompt: str = None
 last_redo_media: list = None
 last_redo_config: dict = None
 
@@ -151,6 +152,11 @@ ARG_SPECS = {
         "description": "Re-run the last generation exactly (cannot be combined with prompts, media, or other flags)",
         "type": bool,
     },
+    "again": {
+        "names": ["--again"],
+        "description": "Perform the prompt again on the most recently generated image (same as --andthen with the same refined prompt)",
+        "type": bool,
+    },
     "wordle": {
         "names": ["--wordle"],
         "description": "Solve a Wordle puzzle from an image of the game board",
@@ -249,7 +255,7 @@ def img(
     backend: Ircawp_Backend,
     media_backend: MediaBackend = None,
 ) -> tuple[str, str, bool]:
-    global last_redo_prompt, last_redo_media, last_redo_config
+    global last_redo_prompt, last_redo_media, last_redo_config, last_refined_prompt
 
     if not media and not prompt:
         return (
@@ -269,7 +275,23 @@ def img(
     prompt, config = _parse_arguments(prompt)
 
     # Handle --redo FIRST: validate and restore previous generation state
-    if config.get("redo", False):
+    if config.get("again", False):
+        if last_refined_prompt is None:
+            return (
+                "No previous refined prompt to use for --again. Run `/img` first.",
+                "",
+                False,
+                {},
+            )
+        # Use the last refined prompt with the most recent media
+        prompt = last_refined_prompt
+        media = (
+            [LAST_GENERATED_IMAGE_PATH]
+            if Path(LAST_GENERATED_IMAGE_PATH).is_file()
+            else []
+        )
+        backend.console.log("[cyan on black] reusing last refined prompt for --again")
+    elif config.get("redo", False):
         # Validate: no new prompt provided (after flag parsing)
         if prompt and prompt.strip():
             return (
@@ -394,6 +416,8 @@ def img(
 
     if config.get("batch", 1) > 1:
         return _doBatchImages(prompt, media, backend, media_backend, config)
+
+    last_refined_prompt = prompt  # for --again
 
     # Call media backend to generate the image
     image_path, final_prompt = media_backend.execute(
