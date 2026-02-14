@@ -6,6 +6,7 @@ from app.lib.network import fetchHtml
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.media_backends.MediaBackend import MediaBackend
 from .__PluginBase import PluginBase
+from app.lib.args import parse_arguments, help_arguments
 
 DISCLAIMER = """IMPORTANT: Do NOT include opinion, interpretations, or infer additional context where it does not exist in the provided text, provided media, or your subsequent summary. Only use the information provided in the text. Do not invent information. Strive for accuracy using ONLY the information provided. This is true for the summary, or for follow-up questions asked by the user about the text: only use what is provided."""
 
@@ -37,39 +38,51 @@ Summarize the following text in a acidic, sarcastic manner, poking fun at the co
 DISABLE_IMAGEGEN = True
 
 
+ARG_SPECS = {
+    "roast": {
+        "names": ["--roast"],
+        "description": "Roast the content in a sarcastic manner",
+        "type": bool,
+    },
+    "full": {
+        "names": ["--full"],
+        "description": "Provide a detailed summary with key points",
+        "type": bool,
+    },
+    "ei5": {
+        "names": ["--ei5"],
+        "description": "Summarize in a way a 5-year-old would understand",
+        "type": bool,
+    },
+    "help": {
+        "names": ["--help", "-h"],
+        "description": "Show this help message",
+        "type": bool,
+    },
+}
+
+
 def summarize(
     prompt: str,
     media: list,
     backend: Ircawp_Backend,
     media_backend: MediaBackend = None,
 ) -> tuple[str, str, bool]:
-    special_mode = None
-    import re
+    prompt, config = parse_arguments(prompt, ARG_SPECS)
+    print("Parsed config:", config)
+    print("Cleaned prompt:", prompt)
 
-    if prompt.startswith("--help"):
-        return (
-            (
-                "Here are the available summarize modes:\n\n"
-                "By default the summarize plugin provides a concise summary of the content.\n\n"
-                "• `/i`: Image mode - provides the basic summary with an imagegen run.\n"
-                "• `/r`: Roast mode - provides a sarcastic summary of the content.\n"
-                "• `/f`: Full mode - provides a detailed summary with key points.\n"
-                "• `/5`: Explain Like I'm 5 mode - summarizes the content in a way a 5-year-old would understand.\n\n"
-                "You can use these modes by adding the corresponding flag at the start of your summarize command, e.g., `/summarize /r <URL>`"
-            ),
-            "",
-            True,
-        )
+    sprompt = SYSTEM_PROMPT
 
-    match = re.match(r"^/(\w)\s+(.+)$", prompt)
-    if match:
-        special_mode = match.group(1)
-        prompt = match.group(2)
-    else:
-        match_end = re.match(r"(.+)\s+/([\w])$", prompt)
-        if match_end:
-            special_mode = match_end.group(2)
-            prompt = match_end.group(1)
+    if config.get("help"):
+        return help_arguments(ARG_SPECS), "", False, {}
+    elif config.get("roast"):
+        sprompt = SYSTEM_PROMPT_ROAST
+        # skip_imagegen = False
+    elif config.get("full"):
+        sprompt = SYSTEM_PROMPT_FULL
+    elif config.get("ei5"):
+        sprompt = SYSTEM_PROMPT_EI5
 
     url = prompt.strip().lstrip("<").rstrip(">")
     # Handle URLs with optional pipe and label, e.g., <http://fudge.com|fudge.com>
@@ -80,38 +93,21 @@ def summarize(
     if not (url.startswith("http://") or url.startswith("https://") or "." in url):
         return "Invalid URL provided.", "", True, {}
 
-    skip_imagegen = True
+    # skip_imagegen = True
 
     text = fetchHtml(url, text_only=True, use_js=True)
 
-    sprompt = None
-
-    match special_mode:
-        case "r":
-            sprompt = SYSTEM_PROMPT_ROAST
-            skip_imagegen = False
-        case "f":
-            sprompt = SYSTEM_PROMPT_FULL
-        case "5":
-            sprompt = SYSTEM_PROMPT_EI5
-        case "i":
-            sprompt = SYSTEM_PROMPT
-            skip_imagegen = False
-        case _:
-            sprompt = SYSTEM_PROMPT
-
-    summary = backend.runInference(
-        system_prompt=sprompt,
-        prompt=text,
+    summary, _ = backend.runInference(
+        system_prompt=sprompt, prompt=text, use_tools=False
     )
 
-    return (summary, "", skip_imagegen, {})
+    return summary, "", True, {}
 
 
 plugin = PluginBase(
     name="Summarize HTML",
     description="Summarizes the given HTML URL.",
-    triggers=["summarize"],
+    triggers=["summarize", "summary"],
     system_prompt="",
     emoji_prefix="",
     msg_empty_query="No prompt provided",

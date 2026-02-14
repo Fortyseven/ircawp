@@ -9,7 +9,7 @@ from pathlib import Path
 from PIL import Image
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.media_backends.MediaBackend import MediaBackend
-from app.lib.args import parse_arguments as generic_parse_arguments
+from app.lib.args import parse_arguments as generic_parse_arguments, help_arguments
 from .__PluginBase import PluginBase
 
 LAST_GENERATED_IMAGE_PATH = "/tmp/ircawp.last_imagegen_media.png"
@@ -227,17 +227,6 @@ You are an expert at solving Wordle puzzles. Given an image of a Wordle game boa
     )
 
 
-def subcommand_help() -> tuple[str, str, bool]:
-    help_text = "Available `/img` subcommands:\n"
-
-    for arg, spec in ARG_SPECS.items():
-        names = ", ".join(f"`{name}`" for name in spec["names"])
-        description = spec["description"]
-        help_text += f"{names}: {description}\n"
-
-    return help_text.strip(), "", False, {}
-
-
 def _has_invalid_argument(prompt: str) -> bool:
     import re
 
@@ -269,7 +258,7 @@ def img(
         backend.console.log(
             "[yellow on black] Detected command-line style arguments in prompt"
         )
-        return subcommand_help()
+        return help_arguments(ARG_SPECS), "", False, {}
 
     # Parse command-line style arguments from the prompt
     prompt, config = _parse_arguments(prompt)
@@ -351,7 +340,7 @@ def img(
         last_redo_media = _save_redo_media(media) if media else []
 
     if config.get("help", False):
-        return subcommand_help()
+        return help_arguments(ARG_SPECS), "", False, {}
 
     if config.get("wordle", False):
         return subcommand_wordle(prompt, media, backend, media_backend)

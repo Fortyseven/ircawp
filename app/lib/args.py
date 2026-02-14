@@ -5,17 +5,33 @@ from typing import Any, Dict, Iterable, List, Tuple
 ArgumentSpec = Dict[str, Any]
 
 
-def _build_patterns(names: Iterable[str]) -> List[str]:
+def _build_patterns(names: Iterable[str], is_flag: bool = False) -> List[str]:
     patterns: List[str] = []
     for name in names:
         escaped = re.escape(name)
-        # --arg value
-        patterns.append(rf"{escaped}\s+(\S+)")
-        # --arg=value
-        patterns.append(rf"{escaped}=(\S+)")
-        # --arg
-        patterns.append(rf"{escaped}\b")
+        if is_flag:
+            # For boolean flags, only match the flag itself
+            patterns.append(rf"{escaped}\b")
+        else:
+            # For value arguments, match various forms
+            # --arg value
+            patterns.append(rf"{escaped}\s+(\S+)")
+            # --arg=value
+            patterns.append(rf"{escaped}=(\S+)")
+            # --arg (fallback to treat as flag)
+            patterns.append(rf"{escaped}\b")
     return patterns
+
+
+def help_arguments(arg_specs: Dict[str, ArgumentSpec]) -> str:
+    help_text = "Available subcommands:\n"
+
+    for arg, spec in arg_specs.items():
+        names = ", ".join(f"`{name}`" for name in spec["names"])
+        description = spec["description"]
+        help_text += f"{names}: {description}\n"
+
+    return help_text.strip()
 
 
 def parse_arguments(
@@ -39,7 +55,9 @@ def parse_arguments(
         names = spec.get("names") or []
         if not names:
             continue
-        for pattern in _build_patterns(names):
+        # Check if this is a boolean flag
+        is_flag = spec.get("type") == bool
+        for pattern in _build_patterns(names, is_flag):
             compiled.append((re.compile(pattern, re.IGNORECASE), logical_name, spec))
 
     for regex, logical_name, spec in compiled:
