@@ -58,6 +58,51 @@ But for now, the standard LLM weirdness is good enough for me! ;)
 -   Run `bot.py` to start the bot. If all your configs and models are in place, and your creds are in `.env`, it should just work.
 -   Use `cli.py` to query the bot from the command line. This is useful for debugging and manually testing plugins.
 
+## Message Prefixes
+
+The bot supports several special prefixes at the start of messages to modify behavior:
+
+### `+` - Continue Conversation
+
+Start your message with `+` to continue the previous conversation with full context:
+
+```
+user: What's the capital of France?
+bot: Paris is the capital of France.
+
+user: +What's its population?
+bot: Paris has a population of about 2.1 million people.
+
+user: +Tell me more about it
+bot: Paris is known for the Eiffel Tower, the Louvre...
+```
+
+**How it works:**
+- Every message **without** `+` starts a fresh conversation (the default behavior)
+- Messages **with** `+` continue from the previous conversation, maintaining full context
+- The conversation is global - anyone in the channel can continue with `+`
+- Media attachments (images) are preserved in the conversation history
+
+**Examples:**
+
+```
+user: Explain quantum physics
+bot: [detailed explanation]
+user: +Can you simplify that?        [continues - bot remembers the physics topic]
+bot: [simpler explanation]
+
+user: What's the weather?             [no + - starts fresh, physics forgotten]
+bot: [weather info]
+user: +What about tomorrow?           [continues - bot remembers weather context]
+bot: [tomorrow's forecast]
+```
+
+### Other Prefixes
+
+- **`!`** - Skip the system prompt (raw LLM response)
+- **`^`** - Prepend the last generated image to your message
+- **`@`** - Use an alternate neutral system prompt
+
 ## Plugins
 
 The bot responds to `/command` style slash commands, if the first character is a slash. These are defined in the `config.yml` file, with the appropriate Python modules implementing them placed in the `plugins` directory.
@@ -68,20 +113,60 @@ A base set of plugins are included, including but not limited to:
 
 -   `/?` and `/help` - dumps all the registered slash commands
 -   `/reverse` - reverses the text you give it (a trivial demo!)
--   `/weather` - queries [wttr.in](https://wttr.in) for the weather in the location you give it (e.g. `@ircawp /weather 90210`)
+-   `/weather` - queries [OpenWeatherMap](https://openweathermap.org) for current weather conditions. Supports ZIP codes, city names, and "City, State" format (e.g. `@ircawp /weather 90210` or `@ircawp /weather Hartford, CT`). Can optionally generate a weather scene image.
 -   `/askjesus` - ask Jesus for advice (e.g. `@ircawp /askjesus should I buy a new car?`) -- and other characters!
 -   `/summarize` - summarizes a webpage given a URL
 -   `/geolocate` - runs rudimentary a geolocation prompt on a provided image
 
 ### Authoring New Plugins
 
-#### This section is outdated -- check the examples; it's easier than ever.
--   Follow the examples in the `/plugins` directory as a template for rolling your own.
-    -   `triggers` are a list of `/cmd` triggers (without the slash) that will cause it to be called.
-    -   The `description` is what it will show up as in the `/help` output.
-    -   ~~The primary entry point is a method called `execute` that takes signature of `(query: str, backend: BaseBackend)` and returns a string that is passed back to the channel.~~
-    -   Everything else is up to you.
--   All of the `*.py` files in the `/plugins` directory will be loaded and registered at runtime.
+Creating a plugin is straightforward. Here's the basic structure:
+
+```python
+from app.backends.Ircawp_Backend import Ircawp_Backend
+from app.media_backends.MediaBackend import MediaBackend
+from .__PluginBase import PluginBase
+
+def my_function(
+    prompt: str,
+    media: list,
+    backend: Ircawp_Backend,
+    media_backend: MediaBackend = None,
+) -> tuple[str, str, bool, dict]:
+    """
+    Your plugin logic here.
+
+    Returns:
+        tuple: (response_text, media_path, skip_imagegen, metadata_dict)
+    """
+    response = f"You said: {prompt}"
+    return response, "", True, {}
+
+plugin = PluginBase(
+    name="My Plugin",
+    description="What shows up in /help output",
+    triggers=["mycommand", "mycmd"],  # /mycommand or /mycmd will trigger this
+    system_prompt="",
+    emoji_prefix="🎯",
+    msg_empty_query="No input provided",
+    msg_exception_prefix="MY PLUGIN ERROR",
+    main=my_function,
+    use_imagegen=False,
+    prompt_required=True,
+    media_required=False,
+)
+```
+
+**Key components:**
+
+- **main function**: Must accept `(prompt, media, backend, media_backend)` and return `(response_text, media_path, skip_imagegen, metadata_dict)`
+- **triggers**: List of command names (without the `/`) that invoke your plugin
+- **description**: Displayed in `/help` output
+- **prompt_required**: Set to `False` if the plugin works without arguments
+- **media_required**: Set to `True` if the plugin needs an image attachment
+- **use_imagegen**: Set to `True` if you want automatic image generation for the response
+
+All `*.py` files in `/app/plugins/` are automatically loaded at runtime. See [8ball.py](app/plugins/8ball.py), [weather.py](app/plugins/weather.py), or other plugins for complete examples.
 
 ## Notes
 
@@ -101,4 +186,4 @@ A base set of plugins are included, including but not limited to:
 
 <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-sa/4.0/88x31.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/">Creative Commons Attribution-ShareAlike 4.0 International License</a>.
 
-&copy; Network47.org, 2025
+&copy; Network47.org, 2025, 2026
