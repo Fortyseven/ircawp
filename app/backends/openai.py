@@ -65,6 +65,10 @@ class Openai(Ircawp_Backend):
 
         self.console.log("System prompt: ", self.system_prompt)
 
+        self.system_prompt_neutral = self.config.get("llm", {}).get(
+            "system_prompt_neutral", None
+        )
+
         # Initialize media_backend as None (will be set by parent after imagegen is created)
         self.media_backend = None
 
@@ -235,6 +239,7 @@ class Openai(Ircawp_Backend):
         use_tools: bool = True,
         aux=None,
         format: Type[BaseModel] | dict | None = None,
+        conversation_history: list[dict] | None = None,
     ) -> str:
         tools = None
         tools_used = []  # Track which tools were called (optionally with args)
@@ -251,11 +256,19 @@ class Openai(Ircawp_Backend):
         response = ""
 
         try:
+            trim_prefix_flag = False
+
             # System prompt handling
             if len(prompt) > 0 and prompt[0] == "!":
                 # use no prompt if starts with !
                 system_prompt = ""
                 self.console.log("Ignoring system prompt due to ! prefix")
+                trim_prefix_flag = True
+            if len(prompt) > 0 and prompt[0] == "@":
+                # use alternate system_prompt_neutral if starts with @
+                system_prompt = self.system_prompt_neutral
+                self.console.log("Using neutral system prompt due to @ prefix")
+                trim_prefix_flag = True
             else:
                 if system_prompt is None:
                     system_prompt = self.system_prompt
@@ -268,6 +281,8 @@ class Openai(Ircawp_Backend):
                         )
 
             prompt = prompt.strip()
+            if trim_prefix_flag:
+                prompt = prompt[1:].strip()
 
             tick = datetime.now()
 
@@ -313,6 +328,27 @@ class Openai(Ircawp_Backend):
                             messages.append({"role": role, "content": content})
                 except Exception as e:
                     self.console.log(f"[yellow]Failed to include thread history: {e}")
+
+            # Inject global conversation history from + prefix
+            if conversation_history:
+                for msg in conversation_history:
+                    role = msg.get("role")
+                    content = msg.get("content", "")
+
+                    if role == "user":
+                        # Reconstruct multimodal content if media present
+                        media_uris = msg.get("media_data_uris", [])
+                        if media_uris:
+                            user_content_parts = [{"type": "text", "text": content}]
+                            for uri in media_uris:
+                                user_content_parts.append(
+                                    {"type": "image_url", "image_url": {"url": uri}}
+                                )
+                            messages.append({"role": "user", "content": user_content_parts})
+                        else:
+                            messages.append({"role": "user", "content": content})
+                    elif role == "assistant":
+                        messages.append({"role": "assistant", "content": content})
 
             # Build user content (supports multimodal if media provided)
             user_content: str | list = prompt

@@ -5,6 +5,7 @@ from rich import console as rich_console
 from rich.traceback import install
 from app.lib.thread_history import ThreadManager
 from app.core import MessageRouter, PluginManager, MediaManager, URLExtractor
+from app.core.message_router import _conversation_history
 
 install(show_locals=True)
 
@@ -71,6 +72,7 @@ class Ircawp:
             process_text_callback=self._process_text_message,
             egest_callback=self._egest_message,
             config=self.config,
+            backend=self.backend,
             debug=DEBUG,
         )
 
@@ -227,6 +229,7 @@ class Ircawp:
             username=user_id,
             media=incoming_media,
             aux=aux,
+            conversation_history=_conversation_history if _conversation_history else None,
         )
 
         return response, tool_images

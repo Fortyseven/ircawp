@@ -10,6 +10,16 @@ from app.lib.thread_history import ThreadManager
 from app.core.plugin_manager import PluginManager
 from app.core.media_manager import MediaManager
 
+# Path to most recently generated image
+LAST_GENERATED_IMAGE_PATH = "/tmp/ircawp.last_imagegen_media.png"
+
+# Global conversation history for + prefix continuation
+_conversation_history: list[dict] = []
+# Structure: [
+#     {"role": "user", "content": "text", "media_data_uris": ["data:image/..."]},
+#     {"role": "assistant", "content": "text"},
+# ]
+
 
 class MessageRouter:
     """Manages message queue and routing to appropriate handlers."""
@@ -22,6 +32,7 @@ class MessageRouter:
         plugin_manager: PluginManager,
         egest_callback: Callable,
         config: dict,
+        backend=None,
         debug: bool = True,
     ):
         """
@@ -34,6 +45,7 @@ class MessageRouter:
             plugin_manager: PluginManager instance for managing plugins
             egest_callback: Callback for sending responses to frontend
             config: Application configuration
+            backend: Backend instance for accessing utilities like image conversion
             debug: Whether to enable debug logging
         """
         self.console = console
@@ -42,6 +54,7 @@ class MessageRouter:
         self.plugin_manager = plugin_manager
         self.egest_callback = egest_callback
         self.config = config
+        self.backend = backend
         self.debug = debug
 
         self.queue: q.Queue = None
@@ -97,6 +110,49 @@ class MessageRouter:
                 message, user_id, incoming_media, thread_history, aux = self.queue.get()
                 message = message.strip()
 
+                # Handle ^ prefix: prepend last generated image to media list
+                if message and message[0] == "^":
+                    message = message[1:].strip()
+
+                    # Check if last generated image exists
+                    from pathlib import Path
+                    last_image_path = Path(LAST_GENERATED_IMAGE_PATH)
+
+                    if last_image_path.is_file():
+                        # Prepend to media list (last image comes FIRST, user media AFTER)
+                        incoming_media = [str(last_image_path)] + (incoming_media or [])
+
+                        if self.debug:
+                            self.console.log(
+                                "[cyan on black]^ prefix: prepending last generated image to media"
+                            )
+                    else:
+                        # Image doesn't exist - log warning but continue processing
+                        self.console.log(
+                            "[yellow on black]^ prefix detected but no last generated image found"
+                        )
+
+                # Handle + prefix: continue previous conversation
+                continue_conversation = False
+                if message and message[0] == "+":
+                    message = message[1:].strip()
+                    continue_conversation = True
+
+                    if self.debug:
+                        self.console.log(
+                            f"[cyan on black]+ prefix: continuing conversation with "
+                            f"{len(_conversation_history)} prior messages"
+                        )
+                else:
+                    # Clear conversation when user doesn't use + (starting fresh)
+                    if _conversation_history:  # Only log if there was history
+                        if self.debug:
+                            self.console.log(
+                                f"[cyan on black]Starting fresh conversation "
+                                f"(cleared {len(_conversation_history)} prior messages)"
+                            )
+                        _conversation_history.clear()
+
                 if self.debug:
                     self.console.log(
                         "[white on purple]Dequeued message:\n",
@@ -105,6 +161,14 @@ class MessageRouter:
                         f"    [purple]|[/purple] with media {incoming_media},\n",
                         f"    [purple]|[/purple] and aux {aux}",
                     )
+
+                # Convert incoming media to data URIs for conversation storage
+                user_media_data_uris = []
+                if (continue_conversation or _conversation_history) and incoming_media and self.backend:
+                    for media_path in incoming_media:
+                        data_uri = self.backend._image_to_data_uri(media_path)
+                        if data_uri:
+                            user_media_data_uris.append(data_uri)
 
                 inf_response: str = ""
                 outgoing_media_filename: Optional[str] = None
@@ -159,6 +223,26 @@ class MessageRouter:
                 finally:
                     # Clean up incoming media files - they are no longer needed
                     self.media_manager.cleanup_media_files(incoming_media)
+
+                # Always store conversation turn (fresh start or continuation)
+                # Store user message
+                user_msg = {"role": "user", "content": message}
+                if user_media_data_uris:
+                    user_msg["media_data_uris"] = user_media_data_uris
+                _conversation_history.append(user_msg)
+
+                # Store assistant response
+                _conversation_history.append({
+                    "role": "assistant",
+                    "content": inf_response
+                })
+
+                if self.debug:
+                    conv_type = "continuing" if continue_conversation else "starting new"
+                    self.console.log(
+                        f"[cyan on black]Stored conversation turn ({conv_type}). "
+                        f"History now has {len(_conversation_history)} messages"
+                    )
 
                 # Always attempt to egest; protect the queue thread from frontend errors
                 try:
