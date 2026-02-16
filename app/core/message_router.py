@@ -116,6 +116,7 @@ class MessageRouter:
 
                     # Check if last generated image exists
                     from pathlib import Path
+
                     last_image_path = Path(LAST_GENERATED_IMAGE_PATH)
 
                     if last_image_path.is_file():
@@ -131,6 +132,18 @@ class MessageRouter:
                         self.console.log(
                             "[yellow on black]^ prefix detected but no last generated image found"
                         )
+
+                # Check if plugin will need the most recent response (before we clear history)
+                saved_most_recent_response = None
+                if message.startswith("/"):
+                    parts = message.split(" ", 1)
+                    if len(parts) > 1 and parts[1].strip() == "+":
+                        # Plugin wants to use most recent response - save it before clearing
+                        if _conversation_history:
+                            for msg in reversed(_conversation_history):
+                                if msg.get("role") == "assistant":
+                                    saved_most_recent_response = msg.get("content", "")
+                                    break
 
                 # Handle + prefix: continue previous conversation
                 continue_conversation = False
@@ -164,7 +177,7 @@ class MessageRouter:
 
                 # Convert incoming media to data URIs for conversation storage
                 user_media_data_uris = []
-                if (continue_conversation or _conversation_history) and incoming_media and self.backend:
+                if incoming_media and self.backend:
                     for media_path in incoming_media:
                         data_uri = self.backend._image_to_data_uri(media_path)
                         if data_uri:
@@ -178,6 +191,24 @@ class MessageRouter:
                     # Check if this is a plugin command
                     if message.startswith("/"):
                         plugin_name = message.split(" ")[0][1:]
+
+                        # Check if plugin arguments are just "+"
+                        # This means "use the most recent assistant response"
+                        parts = message.split(" ", 1)
+                        if len(parts) > 1 and parts[1].strip() == "+":
+                            # Use the saved response from before history was cleared
+                            if saved_most_recent_response:
+                                message = f"{parts[0]} {saved_most_recent_response}"
+
+                                if self.debug:
+                                    self.console.log(
+                                        "[cyan on black]Plugin + argument: using most recent assistant response"
+                                    )
+                            else:
+                                if self.debug:
+                                    self.console.log(
+                                        "[yellow on black]Plugin + argument used but no prior assistant response found"
+                                    )
 
                         # Delegate to plugin processing callback
                         (
@@ -232,13 +263,14 @@ class MessageRouter:
                 _conversation_history.append(user_msg)
 
                 # Store assistant response
-                _conversation_history.append({
-                    "role": "assistant",
-                    "content": inf_response
-                })
+                _conversation_history.append(
+                    {"role": "assistant", "content": inf_response}
+                )
 
                 if self.debug:
-                    conv_type = "continuing" if continue_conversation else "starting new"
+                    conv_type = (
+                        "continuing" if continue_conversation else "starting new"
+                    )
                     self.console.log(
                         f"[cyan on black]Stored conversation turn ({conv_type}). "
                         f"History now has {len(_conversation_history)} messages"

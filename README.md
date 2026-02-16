@@ -82,6 +82,7 @@ bot: Paris is known for the Eiffel Tower, the Louvre...
 - Messages **with** `+` continue from the previous conversation, maintaining full context
 - The conversation is global - anyone in the channel can continue with `+`
 - Media attachments (images) are preserved in the conversation history
+- Plugin responses are also stored, so you can ask follow-up questions about plugin output
 
 **Examples:**
 
@@ -95,6 +96,29 @@ user: What's the weather?             [no + - starts fresh, physics forgotten]
 bot: [weather info]
 user: +What about tomorrow?           [continues - bot remembers weather context]
 bot: [tomorrow's forecast]
+
+user: /weather 06457                  [plugin command]
+bot: Weather for Middletown: Broken Clouds at 40F...
+user: +What should I wear?            [continues - bot remembers the weather]
+bot: I'd recommend layers since it's 40F and cloudy...
+```
+
+**Using `+` as a plugin argument:**
+
+You can also use `+` as an argument to a plugin command to use the most recent response as the plugin's input:
+
+```
+user: /weather Hartford
+bot: Weather for Hartford: Sunny at 72F...
+
+user: /img +                          [generates image using the weather description]
+bot: [image of sunny Hartford weather]
+
+user: /summarize https://example.com
+bot: [summary of the webpage]
+
+user: /askjesus +                     [asks Jesus about the summary]
+bot: [Jesus's perspective on the webpage content]
 ```
 
 ### Other Prefixes
