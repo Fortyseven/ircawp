@@ -263,6 +263,15 @@ def img(
     # Parse command-line style arguments from the prompt
     prompt, config = _parse_arguments(prompt)
 
+    # Validate --remaster requires media
+    if config.get("remaster", False) and not media:
+        return (
+            "The --remaster flag requires a media attachment (input image).",
+            "",
+            False,
+            {},
+        )
+
     # Handle --redo FIRST: validate and restore previous generation state
     if config.get("again", False):
         if last_refined_prompt is None:
