@@ -109,12 +109,17 @@ class Ircawp:
 
     def _init_imagegen(self) -> None:
         """Initialize the image generation backend from config (optional)."""
-        if "imagegen_backend" in self.config:
+        # Read from new nested structure
+        if "imagegen" in self.config and isinstance(self.config["imagegen"], dict):
+            imagegen_backend_id = self.config["imagegen"].get("backend")
+        else:
+            imagegen_backend_id = None
+
+        if imagegen_backend_id:
             self.console.log(
-                f"- [yellow]Setting up image generator:[/yellow] {self.config['imagegen_backend']}"
+                f"- [yellow]Setting up image generator:[/yellow] {imagegen_backend_id}"
             )
 
-            imagegen_backend_id = self.config["imagegen_backend"]
             imagegen_backend = getattr(
                 importlib.import_module(f"app.media_backends.{imagegen_backend_id}"),
                 imagegen_backend_id,

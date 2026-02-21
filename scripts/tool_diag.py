@@ -70,7 +70,12 @@ def instantiate_backend(cfg: dict, use_backend: bool) -> Ircawp_Backend | None:
     try:
         backend = Openai(console=console, parent=None, config=cfg)
         # If imagegen configured, attach it (mimic ircawp.py logic)
-        imagegen_id = cfg.get("imagegen_backend")
+        # Read from new nested structure
+        if "imagegen" in cfg and isinstance(cfg["imagegen"], dict):
+            imagegen_id = cfg["imagegen"].get("backend")
+        else:
+            imagegen_id = None
+
         if imagegen_id:
             try:
                 mod = __import__(

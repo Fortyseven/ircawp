@@ -17,7 +17,6 @@ from app.lib.llm_helpers import refinePrompt
 DEFAULT_FILENAME = "/tmp/ircawp.flux2klein.png"
 
 DEFAULT_ASPECT = 1.5
-MAX_OUT_SIZE = 1280
 
 INF_STEPS = 5
 CFG_SCALE = 4
@@ -34,6 +33,14 @@ class flux2klein(MediaBackend):
 
         self.pipe.to("cpu")
         self.pipe.enable_model_cpu_offload()
+
+    def _get_max_output_size(self) -> int:
+        """Get max output size from config, with fallback to default."""
+        if self.backend and hasattr(self.backend, 'config'):
+            imagegen_config = self.backend.config.get("imagegen", {})
+            if isinstance(imagegen_config, dict):
+                return imagegen_config.get("max_output_size", 1280)
+        return 1280
 
     def execute(
         self, prompt: str, config: dict = {}, batch_id=None, media=[], backend=None
@@ -87,14 +94,14 @@ class flux2klein(MediaBackend):
 
             if type(aspect) is float:
                 if aspect >= 1.0:
-                    width = MAX_OUT_SIZE
-                    height = int(MAX_OUT_SIZE / aspect)
+                    width = self._get_max_output_size()
+                    height = int(self._get_max_output_size() / aspect)
                 else:
-                    width = int(MAX_OUT_SIZE * aspect)
-                    height = MAX_OUT_SIZE
+                    width = int(self._get_max_output_size() * aspect)
+                    height = self._get_max_output_size()
             else:
-                width = MAX_OUT_SIZE
-                height = int(MAX_OUT_SIZE / DEFAULT_ASPECT)
+                width = self._get_max_output_size()
+                height = int(self._get_max_output_size() / DEFAULT_ASPECT)
                 print("Invalid aspect ratio provided, using default.")
 
             # Ensure dimensions are divisible by 16
@@ -148,12 +155,12 @@ Final output: a photorealistic, high dynamic range (HDR), cinema-quality photogr
             # if the image is < 1024px on the longest side, adjust scale_result accordingly so it's at least 1024px on longest side
             if media_pil[0] is not None:
                 longest_side = max(media_pil[0].width, media_pil[0].height)
-                if longest_side < MAX_OUT_SIZE:
+                if longest_side < self._get_max_output_size():
                     print("Adjusting scale_result for small input image!")
-                    scale_result = MAX_OUT_SIZE / longest_side
-                if longest_side > MAX_OUT_SIZE:
+                    scale_result = self._get_max_output_size() / longest_side
+                if longest_side > self._get_max_output_size():
                     print("Adjusting scale_result for large input image!")
-                    scale_result = MAX_OUT_SIZE / longest_side
+                    scale_result = self._get_max_output_size() / longest_side
 
             width = int(media_pil[0].width * scale_result)
             height = int(media_pil[0].height * scale_result)
