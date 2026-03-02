@@ -120,6 +120,7 @@ class Openai(Ircawp_Backend):
             else self.options[
                 "max_tokens"
             ],  # Increase limit for structured outputs to avoid JSON truncation
+            "chat_template_kwargs": {"enable_thinking": False},
         }
 
         # Add structured output format if provided
@@ -344,7 +345,9 @@ class Openai(Ircawp_Backend):
                                 user_content_parts.append(
                                     {"type": "image_url", "image_url": {"url": uri}}
                                 )
-                            messages.append({"role": "user", "content": user_content_parts})
+                            messages.append(
+                                {"role": "user", "content": user_content_parts}
+                            )
                         else:
                             messages.append({"role": "user", "content": content})
                     elif role == "assistant":
