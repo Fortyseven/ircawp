@@ -11,6 +11,8 @@ from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.media_backends.MediaBackend import MediaBackend
 from app.lib.args import parse_arguments as generic_parse_arguments, help_arguments
 from .__PluginBase import PluginBase
+from ._img_utils.wordle import subcommand_wordle
+from ._img_utils.batch import doBatchImages
 
 LAST_GENERATED_IMAGE_PATH = "/tmp/ircawp.last_imagegen_media.png"
 UNDO_IMAGE_PATH = "/tmp/ircawp.previous_imagegen_media.png"
@@ -74,48 +76,6 @@ def _save_redo_media(media: list) -> list:
     return persistent_paths
 
 
-def _doBatchImages(prompt, media, backend, media_backend, config):
-    image_paths = []
-    for i in range(config["batch"]):
-        # Call media backend to generate the image
-        image_path, final_prompt = media_backend.execute(
-            prompt=prompt, config=config, batch_id=i, media=media, backend=backend
-        )
-        image_paths.append(image_path)
-
-    # combine them into one image grid
-    try:
-        # Use up to 4 images in a 2x2 grid
-        imgs = image_paths[:4]
-        opened = [Image.open(p).convert("RGB") for p in imgs]
-
-        # Normalize sizes: resize all to the size of the smallest (by area)
-        areas = [im.width * im.height for im in opened]
-        min_idx = areas.index(min(areas))
-        base_w, base_h = opened[min_idx].width, opened[min_idx].height
-        resized = [im.resize((base_w, base_h)) for im in opened]
-
-        # Create grid canvas 2x2 (fill missing with black if <4)
-        grid_w, grid_h = base_w * 2, base_h * 2
-        canvas = Image.new("RGB", (grid_w, grid_h), color=(0, 0, 0))
-
-        positions = [(0, 0), (base_w, 0), (0, base_h), (base_w, base_h)]
-        for i, im in enumerate(resized):
-            canvas.paste(im, positions[i])
-
-        # Save grid next to first image
-        first_path = Path(imgs[0])
-        grid_name = first_path.stem + "_grid.jpg"
-        grid_path = str(first_path.with_name(grid_name))
-        canvas.save(grid_path, format="JPEG", quality=92)
-
-        # Return the grid image
-        return "", grid_path, False, {}
-    except Exception as e:
-        backend.console.log(f"[pink on red] grid compose failed: {e}")
-        # fall through to single image return
-
-
 ARG_SPECS = {
     "aspect": {
         "names": ["--aspect"],
@@ -172,98 +132,6 @@ ARG_SPECS = {
 
 def _parse_arguments(prompt: str) -> tuple[str, Dict[str, Any]]:
     return generic_parse_arguments(prompt, ARG_SPECS)
-
-
-def subcommand_wordle(
-    prompt: str,
-    media: list,
-    backend: Ircawp_Backend,
-    media_backend: MediaBackend = None,
-) -> tuple[str, str, bool]:
-    from pydantic import BaseModel
-
-    class WordleWordsResponse(BaseModel):
-        words: list[str] = []
-
-    class WordleAlleyCountResponse(BaseModel):
-        alley_count: int = 0
-
-    SPROMPT = """
-You are an expert at solving Wordle puzzles. Given an image of a Wordle game board, extract the letters and their colors (green, yellow, gray) and provide the next best guess word based on the current state of the board.
-"""
-
-    ALLEY_ANALYSIS_PROMPT = """
-Analyze the composite image, which contains four distinct scenes. For each scene, determine if it depicts a street alley—defined as a narrow passage between buildings in an urban setting, with paved ground and structures on both sides. If it looks like a wide alley, it is likely a street and not actually an alley. If you are uncertain, do not count it as an alley. Only count an alley if you are 100% certain. Count the total number of scenes that meet this definition. Return only the numeric count of alleys found.
-"""
-
-    # ensure one image is provided
-    if not media or len(media) != 1:
-        return (
-            "Wordle subcommand requires exactly one input image.",
-            "",
-            False,
-            {},
-        )
-
-    # run inference to extract letters from image
-
-    response, _ = backend.runInference(
-        system_prompt=SPROMPT,
-        # prompt=text,
-        media=media,
-        use_tools=False,
-        format=WordleWordsResponse,
-        temperature=0.1,
-    )
-
-    # print(response)
-
-    words = WordleWordsResponse.model_validate_json(response)
-
-    config = {"batch": 4, "aspect": "4:3"}
-
-    batch = _doBatchImages(" ".join(words.words), [], backend, media_backend, config)
-
-    # add extracted words to the response
-    foo, bar, baz, quux = batch
-
-    # If grid generation failed, return error
-    if baz:
-        return (
-            "Failed to generate image grid for wordle subcommand.",
-            "",
-            # bar,
-            baz,
-            quux,
-        )
-
-    # Grid was successful, now analyze it for alleys
-    try:
-        alley_response, _ = backend.runInference(
-            system_prompt=ALLEY_ANALYSIS_PROMPT,
-            media=[bar],  # bar is the grid_path
-            use_tools=False,
-            format=WordleAlleyCountResponse,
-            temperature=0.1,
-        )
-        alley_data = WordleAlleyCountResponse.model_validate_json(alley_response)
-        alley_count = alley_data.alley_count
-    except Exception as e:
-        backend.console.log(f"[yellow on black] Alley analysis failed: {e}")
-        return (
-            f"Extracted words: `{', '.join(words.words)}` | Alley analysis failed.",
-            bar,
-            False,
-            quux,
-        )
-
-    # Combine extracted words and alley count in the response
-    return (
-        f"Extracted words: `{', '.join(words.words)}` | Alley count: {alley_count}",
-        bar,
-        False,
-        {},
-    )
 
 
 def _has_invalid_argument(prompt: str) -> bool:
@@ -452,7 +320,7 @@ def img(
         config["batch"] = 4
 
     if config.get("batch", 1) > 1:
-        return _doBatchImages(prompt, media, backend, media_backend, config)
+        return doBatchImages(prompt, media, backend, media_backend, config)
 
     last_refined_prompt = prompt  # for --again
 
