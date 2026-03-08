@@ -2,28 +2,12 @@
 Bot plugin that allows the user to pass a raw prompt to the system imagegen backend and post a response.
 """
 
-import shutil
-import glob
 from typing import Dict, Any
-from pathlib import Path
 from PIL import Image
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.media_backends.MediaBackend import MediaBackend
 from app.lib.args import parse_arguments as generic_parse_arguments, help_arguments
 from .__PluginBase import PluginBase
-from ._img_utils.wordle import subcommand_wordle
-from ._img_utils.batch import doBatchImages
-
-LAST_GENERATED_IMAGE_PATH = "/tmp/ircawp.last_imagegen_media.png"
-UNDO_IMAGE_PATH = "/tmp/ircawp.previous_imagegen_media.png"
-LAST_UPLOADED_MEDIA_PREFIX = "/tmp/ircawp.uploaded_media"
-REDO_MEDIA_PATH_PREFIX = "/tmp/ircawp.redo_media"
-
-# Module-level state for --redo functionality
-last_redo_prompt: str = None
-last_refined_prompt: str = None
-last_redo_media: list = None
-last_redo_config: dict = None
 
 
 def get_media_aspect_ratio(media_path: str) -> float:
@@ -33,47 +17,6 @@ def get_media_aspect_ratio(media_path: str) -> float:
         return img.width / img.height
     except Exception:
         return None
-
-
-def _cleanup_redo_media() -> None:
-    """Remove old redo media files to prevent accumulation."""
-    try:
-        for old_file in glob.glob(f"{REDO_MEDIA_PATH_PREFIX}_*"):
-            Path(old_file).unlink(missing_ok=True)
-    except Exception:
-        pass  # Silently ignore cleanup errors
-
-
-def _save_redo_media(media: list) -> list:
-    """Save media files to persistent temp paths for --redo functionality.
-
-    Args:
-        media: List of media file paths (will be deleted after plugin execution)
-
-    Returns:
-        List of persistent paths in /tmp/ircawp.redo_media_* format
-    """
-    if not media:
-        return []
-
-    # Clean up old redo media files first
-    _cleanup_redo_media()
-
-    persistent_paths = []
-    for i, media_path in enumerate(media):
-        try:
-            # Get file extension from original path
-            ext = Path(media_path).suffix or ".png"
-            persistent_path = f"{REDO_MEDIA_PATH_PREFIX}_{i}{ext}"
-
-            # Copy to persistent location
-            shutil.copy(media_path, persistent_path)
-            persistent_paths.append(persistent_path)
-        except Exception:
-            # If we fail to save any media, bail out
-            return []
-
-    return persistent_paths
 
 
 ARG_SPECS = {
@@ -98,23 +41,29 @@ ARG_SPECS = {
         "type": bool,
     },
     "andthen": {
-        "names": ["--andthen", "--then", "--next", "--now", "--edit"],
+        "names": ["--andthen", "--andnow", "--then", "--next", "--now", "--edit"],
         "description": "Chain another image edit after this one",
         "type": bool,
     },
-    "undo": {
-        "names": ["--undo", "--oops", "--actuallyno", "--no"],
-        "description": "Revert to the previous generated image and perform a new generation using it as input",
-        "type": bool,
-    },
+    # "undo": {
+    #     "names": ["--undo", "--oops", "--actuallyno", "--no"],
+    #     "description": "Revert to the previous generated image and perform a new generation using it as input",
+    #     "type": bool,
+    # },
     "redo": {
         "names": ["--redo", "--tryagain", "--again"],
         "description": "Re-run the last generation exactly (cannot be combined with prompts, media, or other flags)",
         "type": bool,
     },
     "again": {
+        # this is like prompting "add a ball" and then doing it again, adding a second ball to the resulting image
         "names": ["--again"],
         "description": "Perform the prompt again on the most recently generated image (same as --andthen with the same refined prompt)",
+        "type": bool,
+    },
+    "remix": {
+        "names": ["--remix"],
+        "description": "Generate a remix of the input image",
         "type": bool,
     },
     "wordle": {
@@ -151,7 +100,15 @@ def img(
     backend: Ircawp_Backend,
     media_backend: MediaBackend = None,
 ) -> tuple[str, str, bool]:
-    global last_redo_prompt, last_redo_media, last_redo_config, last_refined_prompt
+    from ._img_utils.batch import doBatchImages
+    from ._img_utils.single import (
+        doSingleImage,
+        getLastRefinedPrompt,
+        getLastGeneratedMedia,
+    )
+    from ._img_utils.remix import subcommand_remix
+    from ._img_utils.wordle import subcommand_wordle
+    from ._img_utils.redo import submodule_redo
 
     if not media and not prompt:
         return (
@@ -180,8 +137,11 @@ def img(
         )
 
     # Handle --redo FIRST: validate and restore previous generation state
+    if config.get("remix", False):
+        return subcommand_remix(prompt, media, backend, media_backend)
+
     if config.get("again", False):
-        if last_refined_prompt is None:
+        if getLastRefinedPrompt() is None:
             return (
                 "No previous refined prompt to use for --again. Run `/img` first.",
                 "",
@@ -189,71 +149,12 @@ def img(
                 {},
             )
         # Use the last refined prompt with the most recent media
-        prompt = last_refined_prompt
-        media = (
-            [LAST_GENERATED_IMAGE_PATH]
-            if Path(LAST_GENERATED_IMAGE_PATH).is_file()
-            else []
-        )
+        prompt = getLastRefinedPrompt()
+        media = getLastGeneratedMedia()
         backend.console.log("[cyan on black] reusing last refined prompt for --again")
-    elif config.get("redo", False):
-        # Validate: no new prompt provided (after flag parsing)
-        if prompt and prompt.strip():
-            return (
-                "Cannot combine --redo with a new prompt. Use `/img --redo` alone.",
-                "",
-                False,
-                {},
-            )
 
-        # Validate: no new media provided
-        if media:
-            return (
-                "Cannot combine --redo with new media. Use `/img --redo` alone.",
-                "",
-                False,
-                {},
-            )
-
-        # Validate: no other conflicting flags
-        conflicting = [k for k in ["undo", "andthen", "wordle"] if config.get(k)]
-        if conflicting:
-            return (
-                f"Cannot combine --redo with other flags: {', '.join(conflicting)}",
-                "",
-                False,
-                {},
-            )
-
-        # Check if we have saved state
-        if last_redo_prompt is None:
-            return (
-                "No previous generation to redo. Run `/img` first.",
-                "",
-                False,
-                {},
-            )
-
-        # Verify saved media files still exist
-        for media_path in last_redo_media or []:
-            if not Path(media_path).is_file():
-                return (
-                    f"Redo media file missing: {media_path}",
-                    "",
-                    False,
-                    {},
-                )
-
-        # Restore state (overwrites parsed values)
-        prompt = last_redo_prompt
-        media = last_redo_media if last_redo_media else []
-        config = last_redo_config.copy()  # Copy to avoid mutation
-        backend.console.log("[cyan on black] loaded redo state from memory")
-    else:
-        # Save state for future --redo (only if NOT currently doing a redo)
-        last_redo_prompt = prompt
-        last_redo_config = config.copy()  # Copy to avoid external mutations
-        last_redo_media = _save_redo_media(media) if media else []
+    if config.get("redo", False):
+        return submodule_redo(prompt, media, backend, media_backend, config)
 
     if config.get("help", False):
         return help_arguments(ARG_SPECS), "", False, {}
@@ -265,31 +166,34 @@ def img(
     # backend, which can choose to use it or not
 
     # Handle --undo: use previous image if available (takes precedence over --andthen)
-    if config.get("undo", False) and config.get("batch", 1) == 1:
-        if Path(UNDO_IMAGE_PATH).is_file():
-            # If no prompt, just restore the previous image without generating
-            if not prompt or prompt.strip() == "":
-                shutil.copy(UNDO_IMAGE_PATH, LAST_GENERATED_IMAGE_PATH)
-                backend.console.log("[cyan on black] restored previous image (undo)")
-                return "", UNDO_IMAGE_PATH, False, {}
+    # if config.get("undo", False) and config.get("batch", 1) == 1:
+    #     if getUndoMedia():
+    #         # # If no prompt, just restore the previous image without generating
+    #         # if not prompt or prompt.strip() == "":
+    #         #     shutil.copy(UNDO_IMAGE_PATH, LAST_GENERATED_IMAGE_PATH)
+    #         #     backend.console.log("[cyan on black] restored previous image (undo)")
+    #         #     return "", UNDO_IMAGE_PATH, False, {}
 
-            # Otherwise use previous image as input for new generation
-            media = [UNDO_IMAGE_PATH]
-            backend.console.log("[cyan on black] using previous image for undo")
+    #         # Otherwise use previous image as input for new generation
+    #         media = getUndoMedia()
+    #         backend.console.log("[cyan on black] using previous image for undo")
 
     if config.get("andthen", False):
         # check if we have a saved copy of the prior media run, use that as
         # our media input
 
         # remove LAST_IMAGE_PATH
-        if not Path(LAST_GENERATED_IMAGE_PATH).is_file():
-            image_path, final_prompt = media_backend.execute(
-                prompt="A red background, white text: 'Sorry, no last image found!'",
-                backend=backend,
+        if not getLastGeneratedMedia():
+            return (
+                "No previous generation to use for --andthen. Run `/img` first.",
+                "",
+                False,
+                {},
             )
-            return "", image_path, False, {"imagegen_prompt": final_prompt}
-
-        media = [LAST_GENERATED_IMAGE_PATH]
+        media = getLastGeneratedMedia()
+        backend.console.log(
+            "[cyan on black] chaining from last generation for --andthen"
+        )
 
     # Handle --aspect match: if media is provided and aspect is match (or not specified),
     # automatically set aspect to the media's aspect ratio
@@ -313,7 +217,7 @@ def img(
         config["skip_refinement"] = True
         prompt = prompt[1:]
 
-    final_prompt = ""
+    # final_prompt = ""
 
     # Clean up the refined prompt
     if config.get("batch", 1) > 4:
@@ -322,28 +226,9 @@ def img(
     if config.get("batch", 1) > 1:
         return doBatchImages(prompt, media, backend, media_backend, config)
 
-    last_refined_prompt = prompt  # for --again
-
-    # Call media backend to generate the image
-    image_path, final_prompt = media_backend.execute(
-        prompt=prompt, config=config, media=media, backend=backend
-    )
-
-    # if media and REDO_MEDIA_PATH not in media[0]:
-    #     # save first media image to a temp file for reuse if asked
-    #     shutil.copy(media[0], REDO_MEDIA_PATH)
-    #     backend.console.log(
-    #         f"[red on green] Saved REDO_MEDIA_PATH: {REDO_MEDIA_PATH!r}"
-    #     )
-
-    # Save current LAST_IMAGE_PATH to PREVIOUS_IMAGE_PATH before updating
-    if Path(LAST_GENERATED_IMAGE_PATH).is_file():
-        shutil.copy(LAST_GENERATED_IMAGE_PATH, UNDO_IMAGE_PATH)
-
-    shutil.copy(image_path, LAST_GENERATED_IMAGE_PATH)
+    return doSingleImage(prompt, media, backend, media_backend, config)
 
     # return "Refined prompt:\n```" + final_prompt.strip() + "```", image_path, False
-    return "", image_path, False, {"imagegen_prompt": final_prompt}
 
 
 plugin = PluginBase(

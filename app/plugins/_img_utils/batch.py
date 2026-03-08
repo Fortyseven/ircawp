@@ -1,6 +1,7 @@
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.media_backends.MediaBackend import MediaBackend
 from PIL import Image
+from pathlib import Path
 
 
 def doBatchImages(prompt, media, backend, media_backend, config):
