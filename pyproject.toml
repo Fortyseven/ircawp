@@ -22,6 +22,7 @@ dependencies = [
     "charset-normalizer>=3.4.3",
     "commonmark>=0.9.1",
     "diffusers",
+    "faster-whisper>=1.1.0",
     "feedparser>=6.0.11",
     "frozenlist>=1.7.0",
     "idna>=3.10",
@@ -48,6 +49,7 @@ dependencies = [
     "urllib3>=2.5.0",
     "wikitextparser>=0.56.4",
     "yarl>=1.20.1",
+    "yt-dlp>=2026.3.3",
 ]
 
 [tool.uv.sources]
