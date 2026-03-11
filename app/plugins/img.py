@@ -10,15 +10,6 @@ from app.lib.args import parse_arguments as generic_parse_arguments, help_argume
 from .__PluginBase import PluginBase
 
 
-def get_media_aspect_ratio(media_path: str) -> float:
-    """Extract aspect ratio (width/height) from an image file."""
-    try:
-        img = Image.open(media_path)
-        return img.width / img.height
-    except Exception:
-        return None
-
-
 ARG_SPECS = {
     "aspect": {
         "names": ["--aspect"],
@@ -100,7 +91,6 @@ def img(
     backend: Ircawp_Backend,
     media_backend: MediaBackend = None,
 ) -> tuple[str, str, bool]:
-    from ._img_utils.batch import doBatchImages
     from ._img_utils.single import (
         doSingleImage,
         getLastRefinedPrompt,
@@ -138,7 +128,10 @@ def img(
 
     # Handle --redo FIRST: validate and restore previous generation state
     if config.get("remix", False):
-        return subcommand_remix(prompt, media, backend, media_backend)
+        return subcommand_remix(prompt, media, backend, media_backend, config)
+
+    if config.get("redo", False):
+        return submodule_redo(prompt, media, backend, media_backend, config)
 
     if config.get("again", False):
         if getLastRefinedPrompt() is None:
@@ -152,9 +145,6 @@ def img(
         prompt = getLastRefinedPrompt()
         media = getLastGeneratedMedia()
         backend.console.log("[cyan on black] reusing last refined prompt for --again")
-
-    if config.get("redo", False):
-        return submodule_redo(prompt, media, backend, media_backend, config)
 
     if config.get("help", False):
         return help_arguments(ARG_SPECS), "", False, {}
@@ -195,40 +185,8 @@ def img(
             "[cyan on black] chaining from last generation for --andthen"
         )
 
-    # Handle --aspect match: if media is provided and aspect is match (or not specified),
-    # automatically set aspect to the media's aspect ratio
-    if media:
-        aspect_value = config.get("aspect")
-        if aspect_value == "match" or aspect_value is None:
-            media_aspect = get_media_aspect_ratio(media[0])
-            if media_aspect is not None:
-                config["aspect"] = media_aspect
-                if aspect_value is None:
-                    backend.console.log(
-                        f"[cyan on black] defaulting to media aspect ratio: {media_aspect:.2f}"
-                    )
-                else:
-                    backend.console.log(
-                        f"[cyan on black] matched media aspect ratio: {media_aspect:.2f}"
-                    )
-
-    if prompt.startswith("!"):
-        backend.console.log("[white on green] skipping prompt refinement")
-        config["skip_refinement"] = True
-        prompt = prompt[1:]
-
-    # final_prompt = ""
-
-    # Clean up the refined prompt
-    if config.get("batch", 1) > 4:
-        config["batch"] = 4
-
-    if config.get("batch", 1) > 1:
-        return doBatchImages(prompt, media, backend, media_backend, config)
-
+    # this handles 'batch', too
     return doSingleImage(prompt, media, backend, media_backend, config)
-
-    # return "Refined prompt:\n```" + final_prompt.strip() + "```", image_path, False
 
 
 plugin = PluginBase(

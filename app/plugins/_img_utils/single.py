@@ -90,6 +90,7 @@ def _cleanup_redo_media() -> None:
 
 
 def getRedoMedia() -> list:
+    print("DEBUG: getRedoMedia", last_redo_media)
     return last_redo_media
 
 
@@ -130,6 +131,18 @@ def saveRedoMedia(media: list) -> list:
 
 
 ###############################################################################
+
+
+def getMediaAspectRatio(media_path: str) -> float:
+    """Extract aspect ratio (width/height) from an image file."""
+    try:
+        img = Image.open(media_path)
+        return img.width / img.height
+    except Exception:
+        return None
+
+
+###############################################################################
 ###############################################################################
 
 
@@ -143,6 +156,28 @@ def doRedoImage(
     return doSingleImage(prompt, media, backend, media_backend, config)
 
 
+def _handleAspect(config: dict, media: list, backend: Ircawp_Backend):
+    ### ASPECT
+    # Handle --aspect match: if aspect is "match" (or not specified),
+    # automatically set aspect to the media's aspect ratio
+
+    aspect_value = config.get("aspect")
+
+    if aspect_value == "match" or aspect_value is None:
+        media_aspect = getMediaAspectRatio(media[0])
+        print("DEBUG: media_aspect", media_aspect)
+        if media_aspect is not None:
+            config["aspect"] = media_aspect
+            if aspect_value is None:
+                backend.console.log(
+                    f"[cyan on black] defaulting to media aspect ratio: {media_aspect:.2f}"
+                )
+            else:
+                backend.console.log(
+                    f"[cyan on black] matched media aspect ratio: {media_aspect:.2f}"
+                )
+
+
 def doSingleImage(
     prompt: str,
     media: list,
@@ -150,22 +185,38 @@ def doSingleImage(
     media_backend: MediaBackend,
     config: dict,
 ) -> tuple[str, str, bool, dict]:
-    # Call media backend to generate the image
+    setRedoPrompt(prompt)  # for --redo
+    saveRedoMedia(media)  # for --redo
+    setRedoConfig(config)
+
+    if prompt.startswith("!"):
+        backend.console.log("[white on green] skipping prompt refinement")
+        config["skip_refinement"] = True
+        prompt = prompt[1:]
+
+    print("DEBUG: config", config, media)
+
+    if media:
+        _handleAspect(config, media, backend)
+
+    print("DEBUG: config", config)
+
+    ### BATCH
+    if config.get("batch", 1) > 4:
+        config["batch"] = 4
+
+    if config.get("batch", 1) > 1:
+        from ._img_utils.batch import doBatchImages
+
+        return doBatchImages(prompt, media, backend, media_backend, config)
+
+    ###########
+
     image_path, final_prompt = media_backend.execute(
         prompt=prompt, config=config, media=media, backend=backend
     )
 
-    setRedoPrompt(prompt)  # for --redo
-    setRedoConfig(config)
     setLastRefinedPrompt(final_prompt)  # for --again
-
-    # if media and REDO_MEDIA_PATH not in media[0]:
-    #     # save first media image to a temp file for reuse if asked
-    #     shutil.copy(media[0], REDO_MEDIA_PATH)
-    #     backend.console.log(
-    #         f"[red on green] Saved REDO_MEDIA_PATH: {REDO_MEDIA_PATH!r}"
-    #     )
-
     setLastGeneratedMedia(image_path)
 
     return "", image_path, False, {"imagegen_prompt": final_prompt}
