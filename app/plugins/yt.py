@@ -13,6 +13,7 @@ from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.media_backends.MediaBackend import MediaBackend
 from app.lib.youtube import (
     getYouTubeAudio,
+    getYouTubeSubtitles,
     validateYouTubeUrl,
     formatMetadata,
     extractVideoId,
@@ -40,6 +41,11 @@ ARG_SPECS = {
     "summary": {
         "names": ["--summary", "-s"],
         "description": "Generate an LLM summary of the transcript",
+        "type": bool,
+    },
+    "force_transcribe": {
+        "names": ["--force-transcribe", "-f"],
+        "description": "Force audio transcription (skip subtitle extraction)",
         "type": bool,
     },
     "help": {
@@ -155,11 +161,13 @@ def yt(
         help_text = help_arguments(ARG_SPECS)
         usage_text = (
             "**YouTube Transcription Plugin**\n\n"
-            "Downloads YouTube video audio and transcribes it.\n\n"
-            "**Usage:** `/yt <youtube_url> [--summary]`\n\n"
+            "Downloads YouTube video audio and transcribes it. Attempts to use "
+            "subtitles/captions first (fast), falls back to Whisper transcription.\n\n"
+            "**Usage:** `/yt <youtube_url> [--summary] [--force-transcribe]`\n\n"
             "**Examples:**\n"
             "• `/yt https://youtube.com/watch?v=dQw4w9WgXcQ`\n"
-            "• `/yt https://youtu.be/dQw4w9WgXcQ --summary`\n\n"
+            "• `/yt https://youtu.be/dQw4w9WgXcQ --summary`\n"
+            "• `/yt <url> --force-transcribe` (skip subtitle extraction)\n\n"
             f"{help_text}"
         )
         return usage_text, "", True, {}
@@ -236,97 +244,151 @@ def yt(
         response = f"**YouTube Transcription**\n\n{metadata_text}\n\n**Transcript (first 200 chars):**\n```\n{snippet}\n```\n\n*Full transcript attached*"
         return response, transcript_file, True, {}
 
-    # If no cached transcript, check for cached audio or download new
-    cached_audio_path = get_cache(audio_cache_key)
-    audio_path = None
-    metadata = None
-    audio_was_cached = False
-
+    # No cached transcript - need to get one
     try:
-        if cached_audio_path and Path(cached_audio_path).exists():
-            backend.console.log(f"[green]Using cached audio for video {video_id}")
-            audio_path = cached_audio_path
-            audio_was_cached = True
-            # We need metadata, so we'll extract it during transcription
-            # For now, create a minimal metadata dict
-            metadata = {"id": video_id, "title": "Unknown"}
-        else:
-            # Convert duration limit from minutes to seconds
-            max_duration = None
-            if cfg["max_duration_minutes"] is not None:
-                max_duration = cfg["max_duration_minutes"] * 60
+        transcript = None
+        metadata = None
+        transcription_method = None
 
-            # Download audio
-            backend.console.log(f"[blue]Downloading audio from: {url}")
-
-            # Use a persistent temp directory for caching
-            cache_dir = Path(tempfile.gettempdir()) / "ircawp_yt_cache"
-            cache_dir.mkdir(exist_ok=True)
-
-            audio_path, metadata = getYouTubeAudio(
-                url=url,
-                output_dir=str(cache_dir),
-                max_duration=max_duration,
-                max_size_mb=cfg["max_size_mb"],
-            )
-
-            backend.console.log(
-                f"[green]Downloaded: {metadata.get('title', 'Unknown')}"
-            )
-
-            # Cache the audio file path
-            set_cache(audio_cache_key, audio_path, ttl=DEFAULT_AUDIO_CACHE_TTL)
-
-        # Transcribe audio
-        backend.console.log("[blue]Transcribing audio...")
-
-        # Get transcription backend
-        transcription_backend = get_transcription_backend(
-            backend_name=cfg["transcription_backend"], model=cfg["transcription_model"]
-        )
-
-        # Transcribe audio
-        transcript = transcription_backend.transcribe(audio_path)
-
-        backend.console.log(f"[green]Transcription complete ({len(transcript)} chars)")
-
-        # If we used cached audio and don't have full metadata, try to extract it
-        if audio_was_cached and metadata.get("title") == "Unknown":
+        # Try subtitle extraction first (unless forced to transcribe)
+        if not config.get("force_transcribe"):
             try:
-                with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True}) as ydl:
-                    info = ydl.extract_info(url, download=False)
-                    if info:
-                        metadata = {
-                            "title": info.get("title", "Unknown"),
-                            "channel": info.get("channel")
-                            or info.get("uploader", "Unknown"),
-                            "duration": info.get("duration", 0),
-                            "upload_date": info.get("upload_date", ""),
-                            "view_count": info.get("view_count", 0),
-                            "id": video_id,
-                            "url": url,
-                        }
-            except Exception:
-                # If metadata extraction fails, use minimal metadata
-                pass
+                backend.console.log(
+                    f"[blue]Attempting to extract subtitles from: {url}"
+                )
+                transcript, metadata = getYouTubeSubtitles(url)
+
+                if transcript:
+                    transcription_method = metadata.get("subtitle_type", "subtitle")
+                    backend.console.log(
+                        f"[green]Subtitles extracted ({transcription_method}, {len(transcript)} chars)"
+                    )
+                else:
+                    backend.console.log(
+                        "[yellow]No subtitles available, will use audio transcription"
+                    )
+
+            except Exception as e:
+                backend.console.log(f"[yellow]Subtitle extraction failed: {e}")
+                backend.console.log("[yellow]Falling back to audio transcription")
+
+        # Fall back to audio transcription if subtitles not available
+        if not transcript:
+            # Check for cached audio or download new
+            cached_audio_path = get_cache(audio_cache_key)
+            audio_path = None
+            audio_was_cached = False
+
+            try:
+                if cached_audio_path and Path(cached_audio_path).exists():
+                    backend.console.log(
+                        f"[green]Using cached audio for video {video_id}"
+                    )
+                    audio_path = cached_audio_path
+                    audio_was_cached = True
+                    # We need metadata, so we'll extract it during transcription
+                    # For now, create a minimal metadata dict
+                    metadata = {"id": video_id, "title": "Unknown"}
+                else:
+                    # Convert duration limit from minutes to seconds
+                    max_duration = None
+                    if cfg["max_duration_minutes"] is not None:
+                        max_duration = cfg["max_duration_minutes"] * 60
+
+                    # Download audio
+                    backend.console.log(f"[blue]Downloading audio from: {url}")
+
+                    # Use a persistent temp directory for caching
+                    cache_dir = Path(tempfile.gettempdir()) / "ircawp_yt_cache"
+                    cache_dir.mkdir(exist_ok=True)
+
+                    audio_path, metadata = getYouTubeAudio(
+                        url=url,
+                        output_dir=str(cache_dir),
+                        max_duration=max_duration,
+                        max_size_mb=cfg["max_size_mb"],
+                    )
+
+                    backend.console.log(
+                        f"[green]Downloaded: {metadata.get('title', 'Unknown')}"
+                    )
+
+                    # Cache the audio file path
+                    set_cache(audio_cache_key, audio_path, ttl=DEFAULT_AUDIO_CACHE_TTL)
+
+                # Transcribe audio
+                backend.console.log("[blue]Transcribing audio with Whisper...")
+
+                # Get transcription backend
+                transcription_backend = get_transcription_backend(
+                    backend_name=cfg["transcription_backend"],
+                    model=cfg["transcription_model"],
+                )
+
+                # Transcribe audio
+                transcript = transcription_backend.transcribe(audio_path)
+                transcription_method = "whisper"
+
+                backend.console.log(
+                    f"[green]Transcription complete ({len(transcript)} chars)"
+                )
+
+                # If we used cached audio and don't have full metadata, try to extract it
+                if audio_was_cached and metadata.get("title") == "Unknown":
+                    try:
+                        with yt_dlp.YoutubeDL(
+                            {"quiet": True, "no_warnings": True}
+                        ) as ydl:
+                            info = ydl.extract_info(url, download=False)
+                            if info:
+                                metadata = {
+                                    "title": info.get("title", "Unknown"),
+                                    "channel": info.get("channel")
+                                    or info.get("uploader", "Unknown"),
+                                    "duration": info.get("duration", 0),
+                                    "upload_date": info.get("upload_date", ""),
+                                    "view_count": info.get("view_count", 0),
+                                    "id": video_id,
+                                    "url": url,
+                                }
+                    except Exception:
+                        # If metadata extraction fails, use minimal metadata
+                        pass
+
+                # Delete the audio file and clear audio cache after successful transcription
+                try:
+                    if audio_path and Path(audio_path).exists():
+                        Path(audio_path).unlink()
+                        backend.console.log("[yellow]Deleted cached audio file")
+                    # Clear audio cache entry
+                    set_cache(audio_cache_key, None, ttl=0)
+                except Exception as e:
+                    backend.console.log(f"[yellow]Could not delete audio file: {e}")
+
+            except Exception as e:
+                # Audio transcription failed
+                raise RuntimeError(f"Audio transcription failed: {e}") from e
+
+        # At this point we have transcript and metadata (either from subtitles or Whisper)
+        if not transcript or not metadata:
+            raise RuntimeError("Failed to obtain transcript")
+
+        # Add transcription method to metadata
+        metadata["transcription_method"] = transcription_method
 
         # Cache the transcript
         cache_data = {"transcript": transcript, "metadata": metadata}
         set_cache(transcript_cache_key, cache_data, ttl=cfg["cache_ttl_seconds"])
         backend.console.log("[green]Transcript cached")
 
-        # Delete the audio file and clear audio cache after successful transcription
-        try:
-            if audio_path and Path(audio_path).exists():
-                Path(audio_path).unlink()
-                backend.console.log("[yellow]Deleted cached audio file")
-            # Clear audio cache entry
-            set_cache(audio_cache_key, None, ttl=0)
-        except Exception as e:
-            backend.console.log(f"[yellow]Could not delete audio file: {e}")
-
         # Format metadata for display
         metadata_text = formatMetadata(metadata)
+
+        # Add transcription method note
+        if transcription_method in ["manual", "auto-generated"]:
+            method_note = f"\nTranscribed via {transcription_method} subtitles"
+        else:
+            method_note = "\nTranscribed via Whisper AI"
 
         # Generate summary if requested
         if config.get("summary"):
@@ -343,7 +405,7 @@ def yt(
 
             backend.console.log("[green]Summary generated")
 
-            response = f"**YouTube Transcription Summary**\n\n{metadata_text}\n\n**Summary:**\n{summary}"
+            response = f"\n\n{metadata_text}{method_note}\n\n*Summary:*\n{summary}"
             return response, "", True, {}
 
         # Return snippet + full transcript as text file
@@ -356,11 +418,12 @@ def yt(
             f.write("YouTube Transcript\n")
             f.write(f"Video ID: {video_id}\n")
             f.write(f"Title: {metadata.get('title', 'Unknown')}\n")
+            f.write(f"Method: {transcription_method or 'unknown'}\n")
             f.write(f"\n{'=' * 60}\n\n")
             f.write(transcript)
             transcript_file = f.name
 
-        response = f"**YouTube Transcription**\n\n{metadata_text}\n\n**Transcript (first 200 chars):**\n```\n{snippet}\n```\n\n*Full transcript attached*"
+        response = f"**YouTube Transcription**\n\n{metadata_text}{method_note}\n\n**Transcript (first 200 chars):**\n```\n{snippet}\n```\n\n*Full transcript attached*"
         return response, transcript_file, True, {}
 
     except ValueError as e:
