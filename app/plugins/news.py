@@ -5,6 +5,7 @@ Basic News Summary
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.media_backends.MediaBackend import MediaBackend
 from app.lib.network import fetchHtml
+from app.lib.args import parse_arguments, help_arguments
 from .__PluginBase import PluginBase
 from bs4 import BeautifulSoup, Comment
 import datetime
@@ -13,6 +14,26 @@ import datetime
 START_TIME = datetime.datetime.now()
 SITE_URL = "https://drudgereport.com/"
 
+SYSTEM_PROMPT_SUMMARY = """You are a concise news analyst. You will be given a list of news headlines from the Drudge Report.
+Provide a brief, neutral summary of the major themes and top stories represented in these headlines.
+Group related stories together. Be factual and objective. Do not add opinion or invent details not present in the headlines.
+Emojis may be used to react to things. Feel free to provide honest commentary, and present the news in a conversational style.
+The current date and time is: """ + START_TIME.strftime("%Y-%m-%d %H:%M:%S")
+
+
+ARG_SPECS = {
+    "summary": {
+        "names": ["--summary", "-s"],
+        "description": "Run LLM inference to summarize the headlines",
+        "type": bool,
+    },
+    "help": {
+        "names": ["--help", "-h"],
+        "description": "Show this help message",
+        "type": bool,
+    },
+}
+
 
 def news(
     prompt: str,
@@ -20,6 +41,11 @@ def news(
     backend: Ircawp_Backend,
     media_backend: MediaBackend = None,
 ) -> tuple[str, str, bool]:
+    prompt, config = parse_arguments(prompt, ARG_SPECS)
+
+    if config.get("help"):
+        return help_arguments(ARG_SPECS), "", False, {}
+
     content = fetchHtml(SITE_URL)
 
     # page has HTML comments bracketing sections of the site:
@@ -93,6 +119,16 @@ def news(
 
     # Format the headlines for display
     formatted_headlines = "\n".join(f"• {title} ({url})" for title, url in headlines)
+
+    if config.get("summary"):
+        headline_text = "\n".join(f"- {title}" for title, url in headlines)
+        summary, _ = backend.runInference(
+            system_prompt=SYSTEM_PROMPT_SUMMARY,
+            prompt=headline_text,
+            use_tools=False,
+            temperature=0.2,
+        )
+        return summary, "", True, {}
 
     return "Drudge Report Headlines:\n" + formatted_headlines, "", False, {}
 
