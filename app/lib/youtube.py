@@ -1,66 +1,64 @@
-"""YouTube audio download utilities using yt-dlp.
+"""Video audio download utilities using yt-dlp.
 
-Provides functions to download audio from YouTube videos and extract metadata.
+Provides functions to download audio from YouTube, Vimeo, and other video sites
+that yt-dlp supports, and extract metadata.
 """
 
 import re
 import json
+import hashlib
 from pathlib import Path
 from typing import Optional, Tuple, Dict
 import yt_dlp
 import requests
 
 
-def extractVideoId(url: str) -> Optional[str]:
-    """Extract YouTube video ID from URL.
+def extractVideoId(url: str) -> str:
+    """Extract video ID from URL using yt-dlp.
+
+    Attempts to extract the video ID using yt-dlp's info extraction.
+    Falls back to a hash of the URL if extraction fails.
 
     Args:
-        url: YouTube URL
+        url: Video URL (YouTube, Vimeo, etc.)
 
     Returns:
-        Video ID string, or None if not found
+        Video ID string (always returns a valid identifier)
     """
-    patterns = [
-        r"(?:youtube\.com/watch\?v=)([\w-]+)",
-        r"(?:youtube\.com/shorts/)([\w-]+)",
-        r"(?:youtu\.be/)([\w-]+)",
-        r"(?:youtube\.com/embed/)([\w-]+)",
-        r"(?:youtube\.com/v/)([\w-]+)",
-    ]
+    try:
+        # Try to extract ID using yt-dlp
+        with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True}) as ydl:
+            info = ydl.extract_info(url, download=False, process=False)
+            if info and "id" in info:
+                return info["id"]
+    except Exception:
+        pass
 
-    for pattern in patterns:
-        match = re.search(pattern, url, re.IGNORECASE)
-        if match:
-            return match.group(1)
-    return None
+    # Fall back to URL hash for caching
+    return hashlib.md5(url.encode()).hexdigest()[:16]
 
 
 def validateYouTubeUrl(url: str) -> bool:
-    """Validate if a URL is a valid YouTube URL.
+    """Validate if a URL is a valid video URL.
+
+    Note: Despite the function name (kept for backward compatibility),
+    this now validates URLs for any video site supported by yt-dlp
+    (YouTube, Vimeo, Dailymotion, etc.).
 
     Args:
         url: URL string to validate
 
     Returns:
-        True if valid YouTube URL, False otherwise
+        True if URL looks valid (basic format check), False otherwise
     """
-    # Support various YouTube URL formats
-    patterns = [
-        r"(?:https?://)?(?:www\.)?youtube\.com/watch\?v=[\w-]+",
-        r"(?:https?://)?(?:www\.)?youtube\.com/shorts/[\w-]+",
-        r"(?:https?://)?youtu\.be/[\w-]+",
-        r"(?:https?://)?(?:www\.)?youtube\.com/embed/[\w-]+",
-        r"(?:https?://)?(?:www\.)?youtube\.com/v/[\w-]+",
-    ]
-
-    for pattern in patterns:
-        if re.search(pattern, url, re.IGNORECASE):
-            return True
-    return False
+    # Basic URL format validation - just check if it looks like a URL
+    # Let yt-dlp handle the actual site support validation
+    url = url.strip()
+    return bool(re.match(r"^https?://", url, re.IGNORECASE)) or "." in url
 
 
 def formatMetadata(metadata: Dict) -> str:
-    """Format YouTube video metadata for user-friendly display.
+    """Format video metadata for user-friendly display.
 
     Args:
         metadata: Dictionary of video metadata from yt-dlp
@@ -94,13 +92,16 @@ def formatMetadata(metadata: Dict) -> str:
 
 
 def getYouTubeSubtitles(url: str) -> Tuple[Optional[str], Dict]:
-    """Extract subtitles/captions from YouTube video.
+    """Extract subtitles/captions from video.
+
+    Note: Despite the function name (kept for backward compatibility),
+    this works with any video site that yt-dlp supports.
 
     Tries to get manual subtitles first (highest quality), then falls back
     to auto-generated captions. Much faster than audio transcription.
 
     Args:
-        url: YouTube video URL
+        url: Video URL (YouTube, Vimeo, etc.)
 
     Returns:
         Tuple of (subtitle_text, metadata_dict)
@@ -114,7 +115,7 @@ def getYouTubeSubtitles(url: str) -> Tuple[Optional[str], Dict]:
     """
     # Validate URL
     if not validateYouTubeUrl(url):
-        raise ValueError(f"Invalid YouTube URL: {url}")
+        raise ValueError(f"Invalid video URL: {url}")
 
     # Configure yt-dlp to extract subtitle info
     ydl_opts = {
@@ -214,17 +215,31 @@ def getYouTubeSubtitles(url: str) -> Tuple[Optional[str], Dict]:
             if not subtitle_url:
                 return None, metadata
 
-            # Download and parse subtitle content
+            # Download subtitle content
             response = requests.get(subtitle_url, timeout=10)
             if not response.ok:
                 raise RuntimeError(
                     f"Failed to download subtitles: HTTP {response.status_code}"
                 )
 
+            subtitle_content = response.text
+            subtitle_format = subtitle_source[0].get("ext", "")
+
+            # Check if content is an M3U8 playlist (common with Vimeo)
+            if subtitle_content.strip().startswith("#EXTM3U"):
+                # Parse M3U8 to extract actual subtitle URL
+                vtt_url = _parse_m3u8_playlist(subtitle_content, subtitle_url)
+                if vtt_url:
+                    # Download the actual subtitle file
+                    response = requests.get(vtt_url, timeout=10)
+                    if response.ok:
+                        subtitle_content = response.text
+                        subtitle_format = (
+                            "vtt"  # M3U8 playlists typically reference VTT files
+                        )
+
             # Parse subtitle content based on format
-            subtitle_text = _parse_subtitle_content(
-                response.text, subtitle_source[0].get("ext", "")
-            )
+            subtitle_text = _parse_subtitle_content(subtitle_content, subtitle_format)
 
             return subtitle_text, metadata
 
@@ -241,6 +256,28 @@ def getYouTubeSubtitles(url: str) -> Tuple[Optional[str], Dict]:
         if isinstance(e, (ValueError, FileNotFoundError, RuntimeError)):
             raise
         raise RuntimeError(f"Unexpected error extracting subtitles: {e}") from e
+
+
+def _parse_m3u8_playlist(m3u8_content: str, base_url: str) -> Optional[str]:
+    """Parse M3U8 playlist to extract subtitle file URL.
+
+    Args:
+        m3u8_content: Raw M3U8 playlist content
+        base_url: Base URL of the M3U8 file (for resolving relative URLs)
+
+    Returns:
+        Absolute URL to subtitle file, or None if not found
+    """
+    from urllib.parse import urljoin
+
+    # Look for lines that don't start with # (these are the URLs)
+    for line in m3u8_content.split("\n"):
+        line = line.strip()
+        if line and not line.startswith("#"):
+            # Found a URL - resolve it relative to the M3U8 URL
+            return urljoin(base_url, line)
+
+    return None
 
 
 def _parse_subtitle_content(content: str, format_ext: str) -> str:
@@ -292,10 +329,13 @@ def getYouTubeAudio(
     max_duration: Optional[int] = None,
     max_size_mb: Optional[float] = None,
 ) -> Tuple[str, Dict]:
-    """Download audio from YouTube video as MP3.
+    """Download audio from video as MP3.
+
+    Note: Despite the function name (kept for backward compatibility),
+    this works with any video site that yt-dlp supports.
 
     Args:
-        url: YouTube video URL
+        url: Video URL (YouTube, Vimeo, etc.)
         output_dir: Directory to save audio file
         max_duration: Maximum video duration in seconds (None = unlimited)
         max_size_mb: Maximum file size in MB (None = unlimited)
@@ -312,7 +352,7 @@ def getYouTubeAudio(
     """
     # Validate URL
     if not validateYouTubeUrl(url):
-        raise ValueError(f"Invalid YouTube URL: {url}")
+        raise ValueError(f"Invalid video URL: {url}")
 
     # Ensure output directory exists
     output_path = Path(output_dir)

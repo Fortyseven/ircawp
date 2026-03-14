@@ -1,8 +1,8 @@
-"""YouTube audio transcription plugin.
+"""Video transcription plugin.
 
-Downloads YouTube video audio using yt-dlp, transcribes using configurable
-transcription backend (default: faster-whisper), and optionally generates
-LLM summaries of the transcript.
+Downloads video audio from YouTube, Vimeo, and other sites using yt-dlp,
+transcribes using configurable transcription backend (default: faster-whisper),
+and generates LLM summaries by default. Use --transcript flag for full transcript.
 """
 
 import tempfile
@@ -27,7 +27,7 @@ from .__PluginBase import PluginBase
 
 # System prompt for generating summaries of transcripts
 SUMMARY_SYSTEM_PROMPT = """
-You are summarizing a transcript from a YouTube video. Provide a clear, concise summary that captures the main points and key takeaways. Focus on the most important information and structure it in a way that's easy to understand.
+You are summarizing a transcript from a video. Provide a clear, concise summary that captures the main points and key takeaways. Focus on the most important information and structure it in a way that's easy to understand.
 
 Keep the summary under 3-4 paragraphs unless there's significant complexity that requires more detail. Use plain text formatting.
 """
@@ -38,9 +38,9 @@ DEFAULT_TRANSCRIPT_CACHE_TTL = 3600
 DEFAULT_AUDIO_CACHE_TTL = 1800
 
 ARG_SPECS = {
-    "summary": {
-        "names": ["--summary", "-s"],
-        "description": "Generate an LLM summary of the transcript",
+    "transcript": {
+        "names": ["--transcript", "--transcribe", "-t"],
+        "description": "Return full transcript text file (default: summary)",
         "type": bool,
     },
     "force_transcribe": {
@@ -181,17 +181,15 @@ def yt(
     # Validate URL
     if not validateYouTubeUrl(url):
         return (
-            f"Invalid YouTube URL: `{url}`\n\n"
-            "Please provide a valid YouTube URL (youtube.com or youtu.be)",
+            f"Invalid video URL: `{url}`\n\n"
+            "Please provide a valid video URL (YouTube, Vimeo, etc.)",
             "",
             True,
             {},
         )
 
-    # Extract video ID
+    # Extract video ID for caching
     video_id = extractVideoId(url)
-    if not video_id:
-        return "Could not extract video ID from URL", "", True, {}
 
     # Get config values
     cfg = _get_config_values(backend)
@@ -205,44 +203,44 @@ def yt(
         transcript = cached_data["transcript"]
         metadata = cached_data["metadata"]
 
-        # If requesting summary, generate it from cached transcript
-        if config.get("summary"):
-            backend.console.log("[blue]Generating summary from cached transcript...")
-
-            summary_prompt = f"Transcript from video '{metadata.get('title', 'Unknown')}':\n\n{transcript}"
-
-            summary, _ = backend.runInference(
-                system_prompt=SUMMARY_SYSTEM_PROMPT,
-                prompt=summary_prompt,
-                temperature=0.3,
-                use_tools=False,
-            )
-
-            backend.console.log("[green]Summary generated")
-
+        # If requesting full transcript, return snippet + file
+        if config.get("transcript"):
             metadata_text = formatMetadata(metadata)
-            response = f"**YouTube Transcription Summary**\n\n{metadata_text}\n\n**Summary:**\n{summary}"
-            return response, "", True, {}
 
-        # Otherwise, return snippet + full transcript file
+            # Create snippet (first 200 characters)
+            snippet = transcript[:200] + ("..." if len(transcript) > 200 else "")
+
+            # Create temporary text file with full transcript
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".txt", delete=False, prefix=f"transcript_{video_id}_"
+            ) as f:
+                f.write("YouTube Transcript\n")
+                f.write(f"Video ID: {video_id}\n")
+                f.write(f"Title: {metadata.get('title', 'Unknown')}\n")
+                f.write(f"\n{'=' * 60}\n\n")
+                f.write(transcript)
+                transcript_file = f.name
+
+            response = f"**YouTube Transcription**\n\n{metadata_text}\n\n**Transcript (first 200 chars):**\n```\n{snippet}\n```\n\n*Full transcript attached*"
+            return response, transcript_file, True, {}
+
+        # Otherwise (default), generate summary from cached transcript
+        backend.console.log("[blue]Generating summary from cached transcript...")
+
+        summary_prompt = f"Transcript from video '{metadata.get('title', 'Unknown')}':\n\n{transcript}"
+
+        summary, _ = backend.runInference(
+            system_prompt=SUMMARY_SYSTEM_PROMPT,
+            prompt=summary_prompt,
+            temperature=0.3,
+            use_tools=False,
+        )
+
+        backend.console.log("[green]Summary generated")
+
         metadata_text = formatMetadata(metadata)
-
-        # Create snippet (first 200 characters)
-        snippet = transcript[:200] + ("..." if len(transcript) > 200 else "")
-
-        # Create temporary text file with full transcript
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", delete=False, prefix=f"transcript_{video_id}_"
-        ) as f:
-            f.write("YouTube Transcript\n")
-            f.write(f"Video ID: {video_id}\n")
-            f.write(f"Title: {metadata.get('title', 'Unknown')}\n")
-            f.write(f"\n{'=' * 60}\n\n")
-            f.write(transcript)
-            transcript_file = f.name
-
-        response = f"**YouTube Transcription**\n\n{metadata_text}\n\n**Transcript (first 200 chars):**\n```\n{snippet}\n```\n\n*Full transcript attached*"
-        return response, transcript_file, True, {}
+        response = f"**YouTube Transcription Summary**\n\n{metadata_text}\n\n**Summary:**\n{summary}"
+        return response, "", True, {}
 
     # No cached transcript - need to get one
     try:
@@ -390,41 +388,41 @@ def yt(
         else:
             method_note = "\nTranscribed via Whisper AI"
 
-        # Generate summary if requested
-        if config.get("summary"):
-            backend.console.log("[blue]Generating summary...")
+        # If requesting full transcript, return snippet + file
+        if config.get("transcript"):
+            snippet = transcript[:200] + ("..." if len(transcript) > 200 else "")
 
-            summary_prompt = f"Transcript from video '{metadata.get('title', 'Unknown')}':\n\n{transcript}"
+            # Create temporary text file with full transcript
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".txt", delete=False, prefix=f"transcript_{video_id}_"
+            ) as f:
+                f.write("YouTube Transcript\n")
+                f.write(f"Video ID: {video_id}\n")
+                f.write(f"Title: {metadata.get('title', 'Unknown')}\n")
+                f.write(f"Method: {transcription_method or 'unknown'}\n")
+                f.write(f"\n{'=' * 60}\n\n")
+                f.write(transcript)
+                transcript_file = f.name
 
-            summary, _ = backend.runInference(
-                system_prompt=SUMMARY_SYSTEM_PROMPT,
-                prompt=summary_prompt,
-                temperature=0.3,
-                use_tools=False,
-            )
+            response = f"**YouTube Transcription**\n\n{metadata_text}{method_note}\n\n**Transcript (first 200 chars):**\n```\n{snippet}\n```\n\n*Full transcript attached*"
+            return response, transcript_file, True, {}
 
-            backend.console.log("[green]Summary generated")
+        # Otherwise (default), generate summary
+        backend.console.log("[blue]Generating summary...")
 
-            response = f"\n\n{metadata_text}{method_note}\n\n*Summary:*\n{summary}"
-            return response, "", True, {}
+        summary_prompt = f"Transcript from video '{metadata.get('title', 'Unknown')}':\n\n{transcript}"
 
-        # Return snippet + full transcript as text file
-        snippet = transcript[:200] + ("..." if len(transcript) > 200 else "")
+        summary, _ = backend.runInference(
+            system_prompt=SUMMARY_SYSTEM_PROMPT,
+            prompt=summary_prompt,
+            temperature=0.3,
+            use_tools=False,
+        )
 
-        # Create temporary text file with full transcript
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", delete=False, prefix=f"transcript_{video_id}_"
-        ) as f:
-            f.write("YouTube Transcript\n")
-            f.write(f"Video ID: {video_id}\n")
-            f.write(f"Title: {metadata.get('title', 'Unknown')}\n")
-            f.write(f"Method: {transcription_method or 'unknown'}\n")
-            f.write(f"\n{'=' * 60}\n\n")
-            f.write(transcript)
-            transcript_file = f.name
+        backend.console.log("[green]Summary generated")
 
-        response = f"**YouTube Transcription**\n\n{metadata_text}{method_note}\n\n**Transcript (first 200 chars):**\n```\n{snippet}\n```\n\n*Full transcript attached*"
-        return response, transcript_file, True, {}
+        response = f"\n\n{metadata_text}{method_note}\n\n*Summary:*\n{summary}"
+        return response, "", True, {}
 
     except ValueError as e:
         # User-friendly errors (validation, limits, etc.)
@@ -456,9 +454,9 @@ def yt(
 
 # Plugin registration
 plugin = PluginBase(
-    name="YouTube Transcription",
+    name="Video Transcription",
     triggers=["yt", "youtube"],
-    description="Download and transcribe YouTube video audio. Supports optional LLM summaries.",
+    description="Transcribe and summarize videos (YouTube, Vimeo, etc.). Use --transcript for full text.",
     emoji_prefix="🎥",
     main=yt,
     prompt_required=True,
