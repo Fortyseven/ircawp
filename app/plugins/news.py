@@ -20,11 +20,38 @@ Group related stories together. Be factual and objective. Do not add opinion or 
 Emojis may be used to react to things. Feel free to provide honest commentary, and present the news in an entertaining talk show conversational style.
 The current date and time is: """ + START_TIME.strftime("%Y-%m-%d %H:%M:%S")
 
+SYSTEM_PROMPT_ALEXJONES = """You are Alex Jones, the conspiracy theorist and radio show host. You have a bombastic, over-the-top ultraconservative style. Use the provided news headlines and generate a rant that connects them in a sensationalist way, full of paranoia and fear. Use Alex Jones' distinctive voice and style."""
+
+SYSTEM_PROMPT_LIBERAL = """You are a news reporter with a progressive liberal slant. You have a sarcastic, critical style. Use the provided news headlines and generate a rant that connects them from a left-wing perspective."""
+
+SYSTEM_PROMPT_MAGA = """You are a blogger with a far-right, pro-Trump slant. You have an incredibly anal personality, focusing on losses inflicted on anything a liberal might support. MAGA would rather lose a limb than let a liberal get a win. Use the provided news headlines and generate a rant that connects them from this right-wing perspective."""
+
+SYSTEM_PROMPT_JESUS = """You are Jesus Christ, the central figure of Christianity. You have a compassionate, wise, and loving style. Use the provided news headlines and generate a thoughtful message that connects them in a way that offers hope, guidance, and moral insight."""
 
 ARG_SPECS = {
     "summary": {
         "names": ["--summary", "-s"],
         "description": "Run LLM inference to summarize the headlines",
+        "type": bool,
+    },
+    "alexjones": {
+        "names": ["--alexjones", "-a"],
+        "description": "Generate a sensationalist rant in the style of Alex Jones",
+        "type": bool,
+    },
+    "liberal": {
+        "names": ["--liberal", "-l"],
+        "description": "Generate a sensationalist rant in the style of a left-wing conspiracy theorist",
+        "type": bool,
+    },
+    "maga": {
+        "names": ["--maga", "-m"],
+        "description": "Generate a sensationalist rant in the style of a far-right MAGA blogger",
+        "type": bool,
+    },
+    "jesus": {
+        "names": ["--jesus", "-j"],
+        "description": "Generate a thoughtful message in the style of Jesus Christ",
         "type": bool,
     },
     "help": {
@@ -129,6 +156,32 @@ def news(
             temperature=0.2,
         )
         return summary, "", True, {}
+
+    if any(
+        [
+            config.get("alexjones"),
+            config.get("maga"),
+            config.get("liberal"),
+            config.get("jesus"),
+        ]
+    ):
+        if config.get("alexjones"):
+            system_prompt = SYSTEM_PROMPT_ALEXJONES
+        elif config.get("maga"):
+            system_prompt = SYSTEM_PROMPT_MAGA
+        elif config.get("liberal"):
+            system_prompt = SYSTEM_PROMPT_LIBERAL
+        elif config.get("jesus"):
+            system_prompt = SYSTEM_PROMPT_JESUS
+
+        headline_text = "\n".join(f"- {title}" for title, url in headlines)
+        rant, _ = backend.runInference(
+            system_prompt=system_prompt,
+            prompt=headline_text,
+            use_tools=False,
+            temperature=1.0,
+        )
+        return rant, "", True, {}
 
     return "Drudge Report Headlines:\n" + formatted_headlines, "", False, {}
 
