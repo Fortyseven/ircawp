@@ -3,16 +3,33 @@ from datetime import datetime
 
 def template_str(text: str, **kwargs) -> str:
     """
-    A simple template string function.
+    Simple and safe placeholder replacement for prompt strings.
 
-    Currently only supports the `{today}` keyword,
-    but you can add more if you want.
+    Supported built-ins:
+    - {today}: weekday/month/day/year string
+    - {current_datetime}: weekday + ISO-like date + 12-hour time (lowercase am/pm)
+
+    Unknown placeholders are left untouched.
     """
-    return text.format(
-        today=datetime.now().strftime("%A, %B %d, %Y"),
+    now = kwargs.pop("now", datetime.now())
+    hour_12 = now.hour % 12 or 12
+    current_datetime = (
+        f"{now.strftime('%A')}, {now.strftime('%Y-%m-%d')} "
+        f"at {hour_12}:{now.strftime('%M')}{now.strftime('%p').lower()}"
+    )
+
+    values = {
+        "today": now.strftime("%A, %B %d, %Y"),
+        "current_datetime": current_datetime,
         **kwargs,
-    ).strip()
+    }
+
+    rendered = text
+    for key, value in values.items():
+        rendered = rendered.replace(f"{{{key}}}", str(value))
+
+    return rendered.strip()
 
 
 if __name__ == "__main__":
-    print(template_str("Today is {today}. {ass}", ass="ASS!"))
+    print(template_str("Now: {current_datetime}. Today is {today}. {ass}", ass="ASS!"))

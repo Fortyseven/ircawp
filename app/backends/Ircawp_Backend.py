@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Type
 import abc
+from ..lib.template_str import template_str
 
 if TYPE_CHECKING:
     from ircawp import Ircawp
@@ -46,6 +47,5 @@ class Ircawp_Backend:
         """
         pass
 
-    def templateReplace(self, prompt: str, username: str) -> str:
-        prompt = prompt.replace("{username}", username)
-        return prompt
+    def templateReplace(self, prompt: str, username: str = "", **kwargs) -> str:
+        return template_str(prompt, username=username, **kwargs)

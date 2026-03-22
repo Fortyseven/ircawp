@@ -274,13 +274,6 @@ class Openai(Ircawp_Backend):
                 if system_prompt is None:
                     system_prompt = self.system_prompt
 
-                if system_prompt:
-                    # If templateReplace exists, use it
-                    if hasattr(self, "templateReplace"):
-                        system_prompt = self.templateReplace(
-                            system_prompt, username=username
-                        )
-
             prompt = prompt.strip()
             if trim_prefix_flag:
                 prompt = prompt[1:].strip()
@@ -387,9 +380,12 @@ class Openai(Ircawp_Backend):
                     system_prompt += "\n" + capability_matrix
 
             if system_prompt:
-                system_prompt = system_prompt.format(
-                    current_datetime=datetime.now().isoformat()
-                )
+                # Apply all prompt placeholders in one pass.
+                if hasattr(self, "templateReplace"):
+                    system_prompt = self.templateReplace(
+                        system_prompt,
+                        username=username,
+                    )
                 messages = [
                     {"role": "system", "content": system_prompt},
                     *messages,
