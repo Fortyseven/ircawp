@@ -29,7 +29,11 @@ from .__PluginBase import PluginBase
 SUMMARY_SYSTEM_PROMPT = """
 You are summarizing a transcript from a video. Provide a clear, concise summary that captures the main points and key takeaways. Focus on the most important information and structure it in a way that's easy to understand.
 
-Keep the summary under 3-4 paragraphs unless there's significant complexity that requires more detail. Use plain text formatting.
+Keep the summary under 3 paragraphs unless there's significant complexity that requires more detail. Use plain text formatting.
+"""
+
+SUMMARY_EI5_PROMPT = """
+You are summarizing a transcript from a video in a way that a 5-year-old could understand. Provide a very simple, clear summary that captures the main points and key takeaways. Use simple language and analogies that a child might relate to. Focus on the most important information and structure it in a way that's easy to understand for a young child. Keep the summary very concise, ideally 3-4 short paragraphs. Use plain text formatting.
 """
 
 # Default cache TTL for transcripts (1 hour)
@@ -41,6 +45,11 @@ ARG_SPECS = {
     "transcript": {
         "names": ["--transcript", "--transcribe", "-t"],
         "description": "Return full transcript text file (default: summary)",
+        "type": bool,
+    },
+    "ei5": {
+        "names": ["--ei5"],
+        "description": "Return an EI5-style summary (explain like I'm 5)",
         "type": bool,
     },
     "force_transcribe": {
@@ -229,8 +238,13 @@ def yt(
 
         summary_prompt = f"Transcript from video '{metadata.get('title', 'Unknown')}':\n\n{transcript}"
 
+        system_prompt = SUMMARY_SYSTEM_PROMPT
+
+        if config.get("ei5"):
+            system_prompt = SUMMARY_EI5_PROMPT
+
         summary, _ = backend.runInference(
-            system_prompt=SUMMARY_SYSTEM_PROMPT,
+            system_prompt=system_prompt,
             prompt=summary_prompt,
             temperature=0.3,
             use_tools=False,
