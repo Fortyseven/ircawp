@@ -206,7 +206,7 @@ def doSingleImage(
         config["batch"] = 4
 
     if config.get("batch", 1) > 1:
-        from ._img_utils.batch import doBatchImages
+        from .batch import doBatchImages
 
         return doBatchImages(prompt, media, backend, media_backend, config)
 
