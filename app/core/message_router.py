@@ -1,6 +1,7 @@
 """Message queue management and routing."""
 
 import queue as q
+import re
 import threading
 import time
 from typing import Any, Callable, Optional, List
@@ -12,6 +13,26 @@ from app.core.media_manager import MediaManager
 
 # Path to most recently generated image
 LAST_GENERATED_IMAGE_PATH = "/tmp/ircawp.last_imagegen_media.png"
+
+_BARE_URL_RE = re.compile(r"^https?://\S+$")
+_YOUTUBE_URL_RE = re.compile(r"(youtube\.com/(watch|shorts/)|youtu\.be/)")
+
+
+def _is_bare_url(message: str) -> str | None:
+    """Return the URL if the entire message is a single URL, else None.
+
+    Also handles Slack's angle-bracket wrapping: <https://example.com>
+    """
+    # Strip Slack's angle-bracket URL wrapping (no pipe = no label)
+    if message.startswith("<") and message.endswith(">") and "|" not in message:
+        message = message[1:-1]
+    return message if _BARE_URL_RE.match(message) else None
+
+
+def _is_youtube_url(url: str) -> bool:
+    """Return True if the URL points to a YouTube video."""
+    return bool(_YOUTUBE_URL_RE.search(url))
+
 
 # Global conversation history for + prefix continuation
 _conversation_history: list[dict] = []
@@ -165,6 +186,19 @@ class MessageRouter:
                                 f"(cleared {len(_conversation_history)} prior messages)"
                             )
                         _conversation_history.clear()
+
+                # Auto-route bare URLs to the appropriate plugin
+                if not message.startswith("/"):
+                    bare_url = _is_bare_url(message)
+                    if bare_url:
+                        if _is_youtube_url(bare_url):
+                            message = f"/yt {bare_url}"
+                        else:
+                            message = f"/summarize {bare_url}"
+                        if self.debug:
+                            self.console.log(
+                                f"[cyan on black]Auto-routing bare URL to: {message.split()[0]}"
+                            )
 
                 if self.debug:
                     self.console.log(
