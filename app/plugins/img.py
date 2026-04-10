@@ -3,7 +3,6 @@ Bot plugin that allows the user to pass a raw prompt to the system imagegen back
 """
 
 from typing import Dict, Any
-from PIL import Image
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.media_backends.MediaBackend import MediaBackend
 from app.lib.args import parse_arguments as generic_parse_arguments, help_arguments

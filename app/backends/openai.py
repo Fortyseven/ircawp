@@ -49,12 +49,12 @@ class Openai(Ircawp_Backend):
 
         self.options = {}
         self.options["temperature"] = self.oai_config.get("temperature", 1.0)
-        self.options["max_tokens"] = self.oai_config.get("max_tokens", 1024)
+        # self.options["max_tokens"] = self.oai_config.get("max_tokens", 1024)
 
         self.console.log(f"- [yellow]OpenAI API URL: {self.api_url}")
         self.console.log(f"- [yellow]OpenAI Model: {self.model}")
         self.console.log(f"- [yellow]OpenAI Temperature: {self.options['temperature']}")
-        self.console.log(f"- [yellow]OpenAI Max Tokens: {self.options['max_tokens']}")
+        # self.console.log(f"- [yellow]OpenAI Max Tokens: {self.options.get('max_tokens', 'N/A')}}")
 
         self.system_prompt = self.config.get("llm", {}).get("system_prompt", None)
 
@@ -115,11 +115,11 @@ class Openai(Ircawp_Backend):
             "model": self.model,
             "messages": messages,
             "temperature": use_temperature,
-            "max_tokens": 8192
-            if format is not None
-            else self.options[
-                "max_tokens"
-            ],  # Increase limit for structured outputs to avoid JSON truncation
+            "max_tokens": 16384,
+            # if format is not None
+            # else self.options[
+            #     "max_tokens"
+            # ],  # Increase limit for structured outputs to avoid JSON truncation
             "chat_template_kwargs": {"enable_thinking": False},
         }
 
@@ -201,6 +201,7 @@ class Openai(Ircawp_Backend):
         try:
             response.raise_for_status()
         except requests.exceptions.HTTPError as e:
+            self.console.log(f"[blue]Payload sent: {json.dumps(payload, indent=2)}")
             self.console.log(f"[red]HTTP Error: {e}")
             self.console.log(f"[red]Response body: {response.text}")
             raise
