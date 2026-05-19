@@ -101,3 +101,6 @@ markers = [
     "plugin: Tests for plugin framework",
     "tools: Tests for tool framework",
 ]
+
+[tool.uv]
+exclude-newer = "1 week"
