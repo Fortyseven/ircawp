@@ -56,8 +56,15 @@ DEFAULT_BACKEND = CONFIG.get("backend", "flux2klein")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
+# Cache of backend instances (keeps models in memory across requests)
+_backend_cache = {}
+
+
 def get_backend(backend_id: str):
-    """Lazy-load a backend by ID."""
+    """Lazy-load a backend by ID, caching the instance so the model stays in memory."""
+    if backend_id in _backend_cache:
+        return _backend_cache[backend_id]
+
     import importlib
 
     try:
@@ -75,7 +82,9 @@ def get_backend(backend_id: str):
             detail=f"Backend module '{backend_id}' has no '{backend_id}' class",
         )
 
-    return backend_class()
+    instance = backend_class()
+    _backend_cache[backend_id] = instance
+    return instance
 
 
 def _detect_mime(image_path: str) -> str:
@@ -219,7 +228,7 @@ async def images_generations(req: ImageGenerationRequest) -> ImagesResponse:
             batch_id=batch_id,
         )
 
-        console.log(f"[cyan]Generating ({i+1}/{n}) with {backend_id}: {req.prompt[:80]}...")
+        console.log(f"[cyan]Generating ({i+1}/{n}) with {backend_id}: {req.prompt}...")
 
         try:
             result = backend.execute(
