@@ -4,6 +4,11 @@ DEST_SSH_PATH:="~/opt/ircawp-beta/"
 run:
 	uv run -m app
 
+media-server:
+    cd media-server && uv run -m uvicorn app.main:app --reload --port 8100
+media-server-daemon:
+    cd /path/to/ircawp/media-server && nohup uv run -m uvicorn app.main:app --host 0.0.0.0 --port 8100 > /var/log/media-server.log 2>&1 &
+    disown
 aimee:
 	uv run -m app --config ./config.aimee.yml
 

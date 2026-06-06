@@ -1,9 +1,9 @@
-from .hyper_sdxl import hyper_sdxl
-from .sd15 import sd15
-from .sdxs import sdxs
+"""Media backend client module.
 
-__all__ = [
-    "hyper_sdxl",
-    "sd15",
-    "sdxs",
-]
+The MediaBackend class is now an HTTP client to the media-server.
+Backend implementations live in media-server/app/backends/.
+"""
+
+from .MediaBackend import MediaBackend
+
+__all__ = ["MediaBackend"]

@@ -153,6 +153,12 @@ def doRedoImage(
     media = getRedoMedia()
     config = getRedoConfig()
 
+    # Redo skips refinement — reuse the prompt as-is to get closer to the original result
+    # (the original prompt may have a ! prefix from the first run, strip it)
+    if prompt and prompt.startswith("!"):
+        prompt = prompt[1:]
+    config["skip_refinement"] = True
+
     return doSingleImage(prompt, media, backend, media_backend, config)
 
 
@@ -185,13 +191,16 @@ def doSingleImage(
     media_backend: MediaBackend,
     config: dict,
 ) -> tuple[str, str, bool, dict]:
+    from app.lib.llm_helpers import refinePrompt
+
     setRedoPrompt(prompt)  # for --redo
     saveRedoMedia(media)  # for --redo
     setRedoConfig(config)
 
+    skip_refinement = False
     if prompt.startswith("!"):
         backend.console.log("[white on green] skipping prompt refinement")
-        config["skip_refinement"] = True
+        skip_refinement = True
         prompt = prompt[1:]
 
     print("DEBUG: config", config, media)
@@ -208,12 +217,55 @@ def doSingleImage(
     if config.get("batch", 1) > 1:
         from .batch import doBatchImages
 
-        return doBatchImages(prompt, media, backend, media_backend, config)
+        # Refine prompt before batch generation
+        is_edit = len(media) > 0
+        if not skip_refinement:
+            refined_prompt = refinePrompt(prompt, backend, media, is_edit=is_edit)
+            batch_prompt = refined_prompt.strip()
+            if (
+                "i'm sorry" in batch_prompt.lower()
+                or "i cannot" in batch_prompt.lower()
+            ):
+                backend.console.log(
+                    "[pink on red] prompt refinement refused, using original"
+                )
+                batch_prompt = prompt.strip()
+            else:
+                backend.console.log(
+                    f"[black on green] refined prompt: '{batch_prompt}'"
+                )
+        else:
+            batch_prompt = prompt.strip()
+
+        result = doBatchImages(batch_prompt, media, backend, media_backend, config)
+        setLastRefinedPrompt(batch_prompt)  # for --again
+        return result
 
     ###########
 
+    # Prompt refinement — done in the main app before calling media-server
+    # (media-server is strictly prompt-in → image-out, no LLM logic)
+    is_edit = len(media) > 0
+    if not skip_refinement:
+        refined_prompt = refinePrompt(prompt, backend, media, is_edit=is_edit)
+        final_prompt_for_gen = refined_prompt.strip()
+
+        if (
+            "i'm sorry" in final_prompt_for_gen.lower()
+            or "i cannot" in final_prompt_for_gen.lower()
+        ):
+            backend.console.log(
+                "[pink on red] prompt refinement refused, using original"
+            )
+            final_prompt_for_gen = prompt.strip()
+
+        backend.console.log(f"[black on green] refined prompt: '{final_prompt_for_gen}'")
+    else:
+        final_prompt_for_gen = prompt.strip()
+
+    # Call media-server with the refined prompt
     image_path, final_prompt = media_backend.execute(
-        prompt=prompt, config=config, media=media, backend=backend
+        prompt=final_prompt_for_gen, config=config, media=media, backend=backend
     )
 
     setLastRefinedPrompt(final_prompt)  # for --again

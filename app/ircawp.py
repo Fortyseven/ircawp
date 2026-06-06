@@ -108,24 +108,29 @@ class Ircawp:
         )
 
     def _init_imagegen(self) -> None:
-        """Initialize the image generation backend from config (optional)."""
-        # Read from new nested structure
+        """Initialize the image generation client from config (optional).
+
+        The MediaBackend is now an HTTP client to the media-server.
+        """
+        from app.media_backends.MediaBackend import MediaBackend
+
         if "imagegen" in self.config and isinstance(self.config["imagegen"], dict):
-            imagegen_backend_id = self.config["imagegen"].get("backend")
+            imagegen_config = self.config["imagegen"]
+            backend_id = imagegen_config.get("backend")
+            server_url = imagegen_config.get(
+                "media_server_url", "http://localhost:8100"
+            )
         else:
-            imagegen_backend_id = None
+            backend_id = None
+            server_url = None
 
-        if imagegen_backend_id:
+        if backend_id:
             self.console.log(
-                f"- [yellow]Setting up image generator:[/yellow] {imagegen_backend_id}"
+                f"- [yellow]Setting up image generator:[/yellow] {backend_id}"
             )
+            self.console.log(f"  media-server: {server_url}")
 
-            imagegen_backend = getattr(
-                importlib.import_module(f"app.media_backends.{imagegen_backend_id}"),
-                imagegen_backend_id,
-            )
-
-            self.imagegen = imagegen_backend(self.backend)
+            self.imagegen = MediaBackend(server_url=server_url, backend_id=backend_id)
 
             if hasattr(self.backend, "update_media_backend"):
                 self.backend.update_media_backend(self.imagegen)

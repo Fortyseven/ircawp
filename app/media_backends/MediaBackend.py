@@ -1,36 +1,109 @@
-from app.backends.Ircawp_Backend import Ircawp_Backend
-from PIL import Image, PngImagePlugin
+"""HTTP client for the ircawp media-server.
+
+Replaces direct backend instantiation with HTTP calls to the media-server.
+Maintains the same execute() signature so all plugin call-sites remain unchanged.
+"""
+
+import base64
+import json
+import tempfile
+from pathlib import Path
+
+import requests
 
 
 class MediaBackend:
-    def __init__(self, backend: Ircawp_Backend = None):
-        self.backend = backend
+    """HTTP client wrapper for the media-server image generation API."""
+
+    def __init__(self, server_url: str, backend_id: str = "flux2klein"):
+        """
+        Args:
+            server_url: Base URL of the media-server (e.g. "http://localhost:8100")
+            backend_id: Default backend to use (e.g. "flux2klein")
+        """
+        self.server_url = server_url.rstrip("/")
+        self.backend_id = backend_id
         self.last_imagegen_prompt = None
 
     def execute(
-        self, prompt: str, config: dict = {}, batch_id=None, media=[], backend=None
-    ) -> str:
-        return ""
-
-    def _save_image_with_metadata(
-        self, image: Image.Image, output_path: str, prompt: str, **metadata_kwargs
-    ) -> None:
-        """Save PIL Image to PNG with embedded text metadata.
+        self,
+        prompt: str,
+        config: dict = {},
+        batch_id=None,
+        media=[],
+        backend=None,
+    ) -> tuple[str, str]:
+        """Execute image generation via the media-server.
 
         Args:
-            image: PIL Image object to save
-            output_path: Path to save PNG file
-            prompt: The final prompt used during generation
-            **metadata_kwargs: Additional metadata key-value pairs (e.g., seed, model, guidance_scale)
+            prompt: Final prompt (refinement should already be done by caller)
+            config: Generation config (aspect, scale, remaster, etc.)
+            batch_id: Optional batch index for multi-image generation
+            media: List of local file paths to input images
+            backend: Ircawp_Backend (kept for signature compatibility, not used)
+
+        Returns:
+            tuple[str, str]: (local_image_path, final_prompt)
         """
-        pnginfo = PngImagePlugin.PngInfo()
+        url = f"{self.server_url}/generate"
 
-        # Always include the prompt
-        pnginfo.add_text("prompt", str(prompt))
+        # Build form data
+        data = {
+            "prompt": prompt,
+            "backend_id": self.backend_id,
+            "config_json": json.dumps(config),
+        }
 
-        # Add any additional metadata
-        for key, value in metadata_kwargs.items():
-            if value is not None:
-                pnginfo.add_text(key, str(value))
+        # Upload media files
+        files = []
+        if media:
+            for i, media_path in enumerate(media):
+                path = Path(media_path)
+                if path.is_file():
+                    files.append(
+                        (
+                            "media",
+                            (path.name, open(path, "rb"), "application/octet-stream"),
+                        )
+                    )
 
-        image.save(output_path, pnginfo=pnginfo)
+        try:
+            response = requests.post(url, data=data, files=files if files else None)
+            response.raise_for_status()
+            result = response.json()
+
+            # Decode base64 image data and write to local temp file
+            image_b64 = result["image_data"]
+            image_bytes = base64.b64decode(image_b64)
+
+            # Determine extension from mime type
+            mime_type = result.get("mime_type", "image/png")
+            ext = ".png"
+            if "jpeg" in mime_type:
+                ext = ".jpg"
+            elif "webp" in mime_type:
+                ext = ".webp"
+
+            # Write to temp file with a name matching the backend
+            if batch_id is not None:
+                local_path = tempfile.NamedTemporaryFile(
+                    suffix=f".{batch_id}{ext}", delete=False, dir="/tmp"
+                ).name
+            else:
+                local_path = tempfile.NamedTemporaryFile(
+                    suffix=ext, delete=False, dir="/tmp"
+                ).name
+
+            with open(local_path, "wb") as f:
+                f.write(image_bytes)
+
+            final_prompt = result.get("final_prompt", prompt)
+            self.last_imagegen_prompt = final_prompt
+
+            return local_path, final_prompt
+
+        finally:
+            # Close any opened file handles
+            for item in files:
+                if hasattr(item[1][1], "close"):
+                    item[1][1].close()

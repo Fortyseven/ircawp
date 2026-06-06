@@ -21,16 +21,13 @@ PyYAML
 requests
 slack-bolt
 tomli
-torch
-transformers
 typing_extensions
 urllib3
 yarl
 llama-cpp-python
 langchain
 beautifulsoup4
-diffusers
-accelerate
+faster-whisper
 optimum-quanto
 
 tts==0.21.3
