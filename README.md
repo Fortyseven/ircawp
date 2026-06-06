@@ -35,7 +35,7 @@ But for now, the standard LLM weirdness is good enough for me! ;)
     -   Includes weather, news, Hacker News, transcription, translation, YouTube summaries, and a host of chatbot 'personalities' to ask advice of.
 -   Supports media image attachments from Slack for the LLM, or passed to plugins.
 -   **Dedicated media-server** — image generation runs as a separate FastAPI service with an OpenAI-compatible API (`POST /images/generations`, `POST /images/edits`), keeping the bot lightweight and decoupled from heavy GPU work.
--   Multiple image backends: flux2klein (default), ZImage Turbo (GPU, high quality), SDXS (CPU, fast), Hyper SDXL, SD15, and an upscaler.
+-   Multiple image backends supporting GPU and CPU inference, from fast/low-quality to high-fidelity outputs.
 
 # Requirements
 
@@ -61,7 +61,7 @@ The main config is in `config.yml`. Key sections:
 -   `backend`: Which LLM backend to use (currently `openai`)
 -   `openai`: API URL, key, model, temperature, and `tools_enabled` (enable/disable LLM tool calling)
 -   `imagegen`: Image generation settings:
-    -   `backend`: Which image backend (e.g. `flux2klein`, `zimageturbo`, `sdxs`)
+    -   `backend`: Which image backend to use
     -   `media_server_url`: URL of the media-server (e.g. `http://localhost:8100`)
     -   `max_output_size`: Maximum image dimension
 -   `llm`: System prompts (`system_prompt`, `system_prompt_neutral`, `imagegen_prompt`)
@@ -279,14 +279,14 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full architecture diagr
 
 ## Media-Server
 
-The media-server is a standalone FastAPI service that handles image generation. It exposes an OpenAI-compatible API:
+The media-server is a standalone FastAPI service that handles image generation. It exposes an OpenAI-compatible API following the [OpenAI Images spec](https://platform.openai.com/docs/guides/images):
 
--   `POST /images/generations` — text-to-image generation
--   `POST /images/edits` — image editing with input images
+-   `POST /images/generations` — text-to-image generation (JSON body with `prompt`, `n`, `size`, `quality`)
+-   `POST /images/edits` — image editing with input images plus a text prompt
 -   `GET /health` — health check
 -   `GET /image/{filename}` — serve a generated image
 
-Available backends: `flux2klein` (default), `zimageturbo`, `hyper_sdxl`, `sdxs`, `sd15`, `upscaler`.
+Requests use Pydantic models (`ImageGenerationRequest`, `ImageEditRequest`) and return an `ImagesResponse` with a `created` timestamp and `data[]` array of images (each containing `b64_json`). The `size` parameter accepts `WIDTHxHEIGHT` format, and `quality` maps to the backend's remaster setting.
 
 The main bot communicates with the media-server via HTTP through the `MediaBackend` client in `app/media_backends/MediaBackend.py`.
 
