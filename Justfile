@@ -5,7 +5,7 @@ run:
 	uv run -m app
 
 media-server:
-    cd media-server && uv run -m uvicorn app.main:app --reload --port 8100
+    cd media-server && uv run -m app.main
 
 aimee:
 	uv run -m app --config ./config.aimee.yml

@@ -12,6 +12,7 @@ All refinement logic lives in the main ircawp bot.
 from __future__ import annotations
 
 import base64
+import os
 import shutil
 import tempfile
 import time
@@ -21,6 +22,7 @@ from typing import Optional
 
 import yaml
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from rich.console import Console
 
 from app.models import (
@@ -159,11 +161,16 @@ def _decode_image_url(image_url: str) -> bytes:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    ssl_cert = SERVER_CONFIG.get("ssl_cert")
+    ssl_key = SERVER_CONFIG.get("ssl_key")
+    scheme = "https" if (ssl_cert and ssl_key) else "http"
+
     console.log("[green]Media server starting")
     console.log(f"  backend: {DEFAULT_BACKEND}")
     console.log(f"  temp_dir: {_TEMP_DIR}")
-    console.log(f"  host: {SERVER_CONFIG.get('host', '0.0.0.0')}")
-    console.log(f"  port: {SERVER_CONFIG.get('port', 8100)}")
+    console.log(
+        f"  {scheme}://{SERVER_CONFIG.get('host', '0.0.0.0')}:{SERVER_CONFIG.get('port', 8100)}"
+    )
     yield
     console.log("[yellow]Media server shutting down")
     shutil.rmtree(_TEMP_DIR, ignore_errors=True)
@@ -174,6 +181,15 @@ app = FastAPI(
     description="OpenAI-compatible image generation service for ircawp bot",
     version="0.2.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    #    allow_origins=["http://localhost:5173", "https://fortyseven.github.io/chit-v2/"],
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -215,7 +231,7 @@ async def images_generations(req: ImageGenerationRequest) -> ImagesResponse:
         )
 
         console.log(
-            f"[cyan]Generating ({i+1}/{n}) with {backend_id}"
+            f"[cyan]Generating ({i + 1}/{n}) with {backend_id}"
             + (f": {req.prompt}" if req.verbose else "")
         )
 
@@ -233,7 +249,7 @@ async def images_generations(req: ImageGenerationRequest) -> ImagesResponse:
                 image_path = result
                 final_prompt = None
 
-            console.log(f"[green]Generated ({i+1}/{n})")
+            console.log(f"[green]Generated ({i + 1}/{n})")
 
             img = _image_to_response(image_path, final_prompt)
             results.append(img)
@@ -244,7 +260,7 @@ async def images_generations(req: ImageGenerationRequest) -> ImagesResponse:
         except HTTPException:
             raise
         except Exception as e:
-            console.log(f"[red]Generation ({i+1}/{n}) failed: {e}")
+            console.log(f"[red]Generation ({i + 1}/{n}) failed: {e}")
             Path(output_file).unlink(missing_ok=True)
             raise HTTPException(status_code=500, detail=str(e))
 
@@ -264,7 +280,9 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
         raise HTTPException(status_code=400, detail="Prompt is required")
 
     if not req.images:
-        raise HTTPException(status_code=400, detail="At least one input image is required")
+        raise HTTPException(
+            status_code=400, detail="At least one input image is required"
+        )
 
     backend_id = req.model or DEFAULT_BACKEND
     n = req.n
@@ -286,7 +304,9 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
             temp_media_paths.append(str(temp_path))
 
         if not temp_media_paths:
-            raise HTTPException(status_code=400, detail="No valid input images provided")
+            raise HTTPException(
+                status_code=400, detail="No valid input images provided"
+            )
 
         backend = get_backend(backend_id)
         results = []
@@ -302,7 +322,7 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
             )
 
             console.log(
-                f"[cyan]Editing ({i+1}/{n}) with {backend_id}"
+                f"[cyan]Editing ({i + 1}/{n}) with {backend_id}"
                 + (f": {req.prompt}" if req.verbose else "")
             )
 
@@ -319,7 +339,7 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
                     image_path = result
                     final_prompt = None
 
-                console.log(f"[green]Edited ({i+1}/{n})")
+                console.log(f"[green]Edited ({i + 1}/{n})")
 
                 img = _image_to_response(image_path, final_prompt)
                 results.append(img)
@@ -330,7 +350,7 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
             except HTTPException:
                 raise
             except Exception as e:
-                console.log(f"[red]Edit ({i+1}/{n}) failed: {e}")
+                console.log(f"[red]Edit ({i + 1}/{n}) failed: {e}")
                 Path(output_file).unlink(missing_ok=True)
                 raise HTTPException(status_code=500, detail=str(e))
 
@@ -351,12 +371,25 @@ def start():
     """CLI entry point."""
     import uvicorn
 
-    uvicorn.run(
-        "app.main:app",
+    ssl_cert = SERVER_CONFIG.get("ssl_cert")
+    ssl_key = SERVER_CONFIG.get("ssl_key")
+
+    # Expand ~ in paths — YAML stores them literally, ssl module won't
+    if ssl_cert:
+        ssl_cert = os.path.expanduser(ssl_cert)
+    if ssl_key:
+        ssl_key = os.path.expanduser(ssl_key)
+
+    config = uvicorn.Config(
+        app=app,
         host=SERVER_CONFIG.get("host", "0.0.0.0"),
         port=SERVER_CONFIG.get("port", 8100),
-        reload=True,
+        ssl_certfile=ssl_cert or None,
+        ssl_keyfile=ssl_key or None,
     )
+
+    server = uvicorn.Server(config)
+    server.run()
 
 
 if __name__ == "__main__":
