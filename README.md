@@ -29,17 +29,19 @@ But for now, the standard LLM weirdness is good enough for me! ;)
 
 -   Designed to work on lower-end hardware first. (I personally deploy this on a small AMD Ryzen 5 5625U based media box that sits on a shelf.)
 -   Request queue that processes requests in the order received.
--   OpenAI backend (compatiable with Ollama)
+-   OpenAI backend (compatible with Ollama, LMStudio, etc.)
+-   LLM tool calling system — the bot can call external functions (weather, Wikipedia, calculator, network tools) during inference for richer, fact-checked responses.
 -   Easy plugin support to add new `/slash` commands with arguments; return images and text.
-    -   Includes weather and a host of chatbot 'personalities' to ask the advice of.
+    -   Includes weather, news, Hacker News, transcription, translation, YouTube summaries, and a host of chatbot 'personalities' to ask advice of.
 -   Supports media image attachments from Slack for the LLM, or passed to plugins.
--   SDXS image generation (insanely fast!); renders on the CPU by default, but even on that meager Ryzen 5 CPU it can generate about _an image a second_. Sure, they're not fantastic and they're 512x512, but c'mon, man, they're practically free. 😉
--   ZImage Turbo image generation (also fast!), but renders on the GPU -- very high quality.
+-   **Dedicated media-server** — image generation runs as a separate FastAPI service with an OpenAI-compatible API (`POST /images/generations`, `POST /images/edits`), keeping the bot lightweight and decoupled from heavy GPU work.
+-   Multiple image backends: flux2klein (default), ZImage Turbo (GPU, high quality), SDXS (CPU, fast), Hyper SDXL, SD15, and an upscaler.
 
 # Requirements
 
--   Tested with Python 3.11
--   Deployed on a small box with 64gb of RAM (it's overkill; 32gb is recommended though).
+-   Tested with Python 3.11+
+-   [uv](https://github.com/astral-sh/uv) package manager (used for virtual environments and dependency management)
+-   Deployed on a small box with 64gb of RAM (it's overkill; 32gb is recommended though)
 
 ## Installation
 
@@ -47,16 +49,33 @@ But for now, the standard LLM weirdness is good enough for me! ;)
 
 -   You'll need to setup a Slack application. Doing that is beyond the scope of this meager README.
 
--   Modify .env with your Slack API credentials.
+-   Modify `.env` with your Slack API credentials.
+
+-   The bot uses `uv` for package management. Dependencies are managed via `pyproject.toml` and `uv.lock`.
 
 ## Config
 
--   The `prompt` string in the config has some interpolated variables available for dynamic prompt content, including `{today}` for today's date. Add your own as needed.
+The main config is in `config.yml`. Key sections:
+
+-   `frontend`: Which frontend to use (currently `slack`)
+-   `backend`: Which LLM backend to use (currently `openai`)
+-   `openai`: API URL, key, model, temperature, and `tools_enabled` (enable/disable LLM tool calling)
+-   `imagegen`: Image generation settings:
+    -   `backend`: Which image backend (e.g. `flux2klein`, `zimageturbo`, `sdxs`)
+    -   `media_server_url`: URL of the media-server (e.g. `http://localhost:8100`)
+    -   `max_output_size`: Maximum image dimension
+-   `llm`: System prompts (`system_prompt`, `system_prompt_neutral`, `imagegen_prompt`)
+    -   The prompt strings support interpolated variables like `{username}`, `{current_datetime}`. Add your own as needed.
+-   `weather`: OpenWeatherMap API key and options
+
+The media-server has its own `media-server/config.yml` for backend selection, port, and per-backend settings.
 
 ## Usage
 
--   Run `bot.py` to start the bot. If all your configs and models are in place, and your creds are in `.env`, it should just work.
+-   Run `just run` (or `uv run -m app`) to start the bot. If all your configs and models are in place, and your creds are in `.env`, it should just work.
+-   Run `just media-server` (or `cd media-server && uv run -m uvicorn app.main:app --reload --port 8100`) to start the image generation service. The bot needs this running to generate images.
 -   Use `cli.py` to query the bot from the command line. This is useful for debugging and manually testing plugins.
+-   Use `just test` to run the test suite.
 
 ## Message Prefixes
 
@@ -136,29 +155,47 @@ Execute commands like so: `@ircawp /mycommand query value`.
 A base set of plugins are included, including but not limited to:
 
 -   `/?` and `/help` - dumps all the registered slash commands
--   `/reverse` - reverses the text you give it (a trivial demo!)
 -   `/weather` - queries [OpenWeatherMap](https://openweathermap.org) for current weather conditions. Supports ZIP codes, city names, and "City, State" format (e.g. `@ircawp /weather 90210` or `@ircawp /weather Hartford, CT`). Can optionally generate a weather scene image.
 -   `/askjesus` - ask Jesus for advice (e.g. `@ircawp /askjesus should I buy a new car?`) -- and other characters!
+    -   `/askspock`, `/askpicard`, `/askhawkeye`, `/askatherapist` — more personalities
+-   `/8ball` - magic 8-ball fortune teller
 -   `/summarize` - summarizes a webpage given a URL
--   `/geolocate` - runs rudimentary a geolocation prompt on a provided image
+-   `/geolocate` - runs rudimentary geolocation analysis on a provided image
+-   `/hn` - fetches top stories from Hacker News
+-   `/news` - fetches latest news
+-   `/img` - generates an image from a text prompt (via the media-server)
+-   `/translate` - translate text between languages
+-   `/transcribe` - transcribe audio
+-   `/yt` - summarize YouTube videos
+-   `/uptime` - check if a website is up
+-   `/tools` - list available LLM tools
+-   `/raw` - send a raw message to the LLM without system prompt
+
+### LLM Tool Calling
+
+Beyond plugins, the bot supports LLM tool calling — the model can autonomously call tools during conversation for fact-checking, calculations, weather lookups, Wikipedia searches, and network diagnostics. Controlled via `openai.tools_enabled` in config.
 
 ### Authoring New Plugins
 
 Creating a plugin is straightforward. Here's the basic structure:
 
 ```python
-from app.backends.Ircawp_Backend import Ircawp_Backend
-from app.media_backends.MediaBackend import MediaBackend
 from .__PluginBase import PluginBase
 
 def my_function(
     prompt: str,
     media: list,
-    backend: Ircawp_Backend,
-    media_backend: MediaBackend = None,
+    backend,
+    media_backend = None,
 ) -> tuple[str, str, bool, dict]:
     """
     Your plugin logic here.
+
+    Args:
+        prompt: The user's query text
+        media: List of attached media file paths
+        backend: The LLM backend instance (for inference calls)
+        media_backend: The media-server client (for image generation)
 
     Returns:
         tuple: (response_text, media_path, skip_imagegen, metadata_dict)
@@ -191,6 +228,69 @@ plugin = PluginBase(
 - **use_imagegen**: Set to `True` if you want automatic image generation for the response
 
 All `*.py` files in `/app/plugins/` are automatically loaded at runtime. See [8ball.py](app/plugins/8ball.py), [weather.py](app/plugins/weather.py), or other plugins for complete examples.
+
+### Authoring LLM Tools
+
+Tools are different from plugins — they're called autonomously by the LLM during inference (not via slash commands). See [app/backends/tools/README.md](app/backends/tools/README.md) for the full guide. Quick example:
+
+```python
+from .ToolBase import ToolBase, ToolResult
+
+class MyTool(ToolBase):
+    name = "my_tool"
+    description = "What this tool does"
+    expertise_areas = ["category1", "category2"]
+
+    def execute(self, **kwargs) -> ToolResult:
+        result = do_something(kwargs.get("query"))
+        return ToolResult(text=str(result))
+
+    def get_schema(self):
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string", "description": "Search query"}
+                    },
+                    "required": ["query"]
+                }
+            }
+        }
+```
+
+Place tools in `app/backends/tools/<tool_name>/tool.py` — they're auto-discovered.
+
+## Architecture
+
+The bot is structured as a coordinator pattern with decoupled services:
+
+-   **Ircawp** — coordinator that wires dependencies and provides the public API
+-   **MessageRouter** — request queue, dispatch, and thread management
+-   **PluginManager** — plugin discovery, lifecycle, and execution
+-   **MediaManager** — media file handling and cleanup
+-   **URLExtractor** — URL extraction and content fetching
+-   **Media-Server** — separate FastAPI service for image generation (OpenAI-compatible API)
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full architecture diagram and message flow.
+
+## Media-Server
+
+The media-server is a standalone FastAPI service that handles image generation. It exposes an OpenAI-compatible API:
+
+-   `POST /images/generations` — text-to-image generation
+-   `POST /images/edits` — image editing with input images
+-   `GET /health` — health check
+-   `GET /image/{filename}` — serve a generated image
+
+Available backends: `flux2klein` (default), `zimageturbo`, `hyper_sdxl`, `sdxs`, `sd15`, `upscaler`.
+
+The main bot communicates with the media-server via HTTP through the `MediaBackend` client in `app/media_backends/MediaBackend.py`.
+
+See [media-server/README.md](media-server/README.md) for media-server specifics.
 
 ## Notes
 
