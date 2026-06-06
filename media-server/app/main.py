@@ -228,7 +228,8 @@ async def images_generations(req: ImageGenerationRequest) -> ImagesResponse:
             batch_id=batch_id,
         )
 
-        console.log(f"[cyan]Generating ({i+1}/{n}) with {backend_id}: {req.prompt}...")
+        log_msg = f"[cyan]Generating ({i+1}/{n}) with {backend_id}" + (f": {req.prompt}" if req.verbose else "")
+        console.log(log_msg)
 
         try:
             result = backend.execute(
@@ -316,7 +317,8 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
                 batch_id=batch_id,
             )
 
-            console.log(f"[cyan]Editing ({i+1}/{n}) with {backend_id}: {req.prompt[:80]}...")
+            log_msg = f"[cyan]Editing ({i+1}/{n}) with {backend_id}" + (f": {req.prompt}" if req.verbose else "")
+            console.log(log_msg)
 
             try:
                 result = backend.execute(

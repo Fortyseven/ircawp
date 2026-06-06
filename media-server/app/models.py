@@ -34,6 +34,7 @@ class ImageGenerationRequest(BaseModel):
         None, description="Response format. We always return b64_json."
     )
     user: Optional[str] = Field(None, description="End-user identifier (ignored).")
+    verbose: Optional[bool] = Field(False, description="If true, include the full prompt in server logs. Default: false (privacy-first).")
 
 
 class ImageEditRequest(BaseModel):
@@ -50,6 +51,7 @@ class ImageEditRequest(BaseModel):
     input_fidelity: Optional[Literal["high", "low"]] = Field(None, description="Fidelity to original input.")
     mask: Optional[ImageRef] = Field(None, description="Mask image for inpainting.")
     user: Optional[str] = Field(None, description="End-user identifier (ignored).")
+    verbose: Optional[bool] = Field(False, description="If true, include the full prompt in server logs. Default: false (privacy-first).")
 
 
 # ── Response Models ─────────────────────────────────────────────

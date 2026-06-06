@@ -53,6 +53,7 @@ class MediaBackend:
         body = {
             "prompt": prompt,
             "model": self.backend_id,
+            "verbose": True,  # bot-originated requests log full prompts
         }
 
         # Map config to OpenAI-style params
