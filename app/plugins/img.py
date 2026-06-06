@@ -69,7 +69,7 @@ ARG_SPECS = {
 }
 
 
-def _parse_arguments(prompt: str) -> tuple[str, Dict[str, Any]]:
+def _parse_arguments(prompt: str) -> tuple[str, Dict[str, Any], str | None]:
     return generic_parse_arguments(prompt, ARG_SPECS)
 
 
@@ -114,7 +114,9 @@ def img(
         return help_arguments(ARG_SPECS), "", False, {}
 
     # Parse command-line style arguments from the prompt
-    prompt, config = _parse_arguments(prompt)
+    prompt, config, parse_error = _parse_arguments(prompt)
+    if parse_error:
+        return parse_error, "", False, {}
 
     # Validate --remaster requires media
     if config.get("remaster", False) and not media:

@@ -1,5 +1,5 @@
 import re
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 
 ArgumentSpec = Dict[str, Any]
@@ -37,17 +37,19 @@ def help_arguments(arg_specs: Dict[str, ArgumentSpec]) -> str:
 def parse_arguments(
     prompt: str,
     arg_specs: Dict[str, ArgumentSpec],
-) -> Tuple[str, Dict[str, Any]]:
+) -> Tuple[str, Dict[str, Any], Optional[str]]:
     """Generic parser for command-line-style arguments embedded in a prompt.
 
     `arg_specs` is a mapping of logical option name -> spec dict with:
       - "names": iterable of flag strings (e.g. ["--aspect"]) required
       - "type": callable to cast value (default: str)
 
-    Returns (cleaned_prompt, config_dict).
+    Returns (cleaned_prompt, config_dict, error_msg).
+    error_msg is None on success, or a human-readable error string on type cast failure.
     """
 
     config: Dict[str, Any] = {}
+    original_prompt = prompt
     cleaned_prompt = prompt
 
     compiled: List[Tuple[re.Pattern[str], str, ArgumentSpec]] = []
@@ -72,8 +74,11 @@ def parse_arguments(
             caster = spec.get("type", str)
             try:
                 cast_value = caster(value)
-            except Exception:
-                cast_value = value
+            except (ValueError, TypeError):
+                # Determine the flag name used (from the match) for the error message
+                flag_name = last_match.string[last_match.start() : last_match.start() + len(last_match.group(0).split()[0])]
+                type_name = caster.__name__ if hasattr(caster, "__name__") else str(caster)
+                return original_prompt, config, f"Invalid value '{value}' for {flag_name}: expected {type_name}"
             config[logical_name] = cast_value
         else:
             # No value group: treat as boolean flag
@@ -85,4 +90,4 @@ def parse_arguments(
             )
 
     cleaned_prompt = " ".join(cleaned_prompt.split())
-    return cleaned_prompt.strip(), config
+    return cleaned_prompt.strip(), config, None

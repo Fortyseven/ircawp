@@ -68,7 +68,9 @@ def summarize(
     backend: Ircawp_Backend,
     media_backend: MediaBackend = None,
 ) -> tuple[str, str, bool]:
-    prompt, config = parse_arguments(prompt, ARG_SPECS)
+    prompt, config, parse_error = parse_arguments(prompt, ARG_SPECS)
+    if parse_error:
+        return parse_error, "", False, {}
     print("Parsed config:", config)
     print("Cleaned prompt:", prompt)
 

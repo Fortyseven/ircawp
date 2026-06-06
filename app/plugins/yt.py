@@ -163,7 +163,9 @@ def yt(
         Tuple of (response_text, media_path, skip_imagegen, metadata)
     """
     # Parse arguments
-    prompt, config = parse_arguments(prompt, ARG_SPECS)
+    prompt, config, parse_error = parse_arguments(prompt, ARG_SPECS)
+    if parse_error:
+        return parse_error, "", False, {}
 
     # Show help if requested
     if config.get("help"):
