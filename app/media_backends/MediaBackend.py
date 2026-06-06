@@ -2,6 +2,8 @@
 
 Replaces direct backend instantiation with HTTP calls to the media-server.
 Maintains the same execute() signature so all plugin call-sites remain unchanged.
+
+Uses the OpenAI-compatible JSON API (POST /images/generations, POST /images/edits).
 """
 
 import base64
@@ -45,46 +47,88 @@ class MediaBackend:
         Returns:
             tuple[str, str]: (local_image_path, final_prompt)
         """
-        url = f"{self.server_url}/generate"
+        has_media = len(media) > 0
 
-        # Build form data
-        data = {
+        # Build JSON body
+        body = {
             "prompt": prompt,
-            "backend_id": self.backend_id,
-            "config_json": json.dumps(config),
+            "model": self.backend_id,
         }
 
-        # Upload media files
-        files = []
-        if media:
-            for i, media_path in enumerate(media):
+        # Map config to OpenAI-style params
+        if "width" in config and "height" in config:
+            body["size"] = f"{config['width']}x{config['height']}"
+        elif "aspect" in config:
+            # Convert aspect ratio to a size string if max_output_size is provided
+            max_size = config.get("max_output_size", 1024)
+            aspect = config["aspect"]
+            if isinstance(aspect, str) and ":" in aspect:
+                parts = aspect.split(":")
+                if len(parts) == 2:
+                    try:
+                        aspect = float(parts[0]) / float(parts[1])
+                    except ValueError:
+                        aspect = 1.5
+            elif isinstance(aspect, (int, float)):
+                pass
+            else:
+                try:
+                    aspect = float(aspect)
+                except (ValueError, TypeError):
+                    aspect = 1.5
+
+            if aspect >= 1.0:
+                w, h = max_size, int(max_size / aspect)
+            else:
+                w, h = int(max_size * aspect), max_size
+            body["size"] = f"{w}x{h}"
+
+        if config.get("remaster"):
+            body["quality"] = "high"
+
+        # If there are input media, use /images/edits
+        if has_media:
+            url = f"{self.server_url}/images/edits"
+
+            # Encode media as base64 data URLs
+            images = []
+            for media_path in media:
                 path = Path(media_path)
                 if path.is_file():
-                    files.append(
-                        (
-                            "media",
-                            (path.name, open(path, "rb"), "application/octet-stream"),
-                        )
-                    )
+                    with open(path, "rb") as f:
+                        image_bytes = f.read()
+                    image_b64 = base64.b64encode(image_bytes).decode("ascii")
+                    ext = path.suffix.lower()
+                    mime_map = {
+                        ".png": "image/png",
+                        ".jpg": "image/jpeg",
+                        ".jpeg": "image/jpeg",
+                        ".webp": "image/webp",
+                    }
+                    mime = mime_map.get(ext, "image/png")
+                    images.append({"image_url": f"data:{mime};base64,{image_b64}"})
+
+            body["images"] = images
+        else:
+            url = f"{self.server_url}/images/generations"
 
         try:
-            response = requests.post(url, data=data, files=files if files else None)
+            response = requests.post(url, json=body)
             response.raise_for_status()
             result = response.json()
 
-            # Decode base64 image data and write to local temp file
-            image_b64 = result["image_data"]
+            # Extract the first image from the response
+            data = result.get("data", [])
+            if not data:
+                raise ValueError("No image data in response")
+
+            image_b64 = data[0].get("b64_json", "")
             image_bytes = base64.b64decode(image_b64)
 
-            # Determine extension from mime type
-            mime_type = result.get("mime_type", "image/png")
+            # Determine extension from content (default to png)
             ext = ".png"
-            if "jpeg" in mime_type:
-                ext = ".jpg"
-            elif "webp" in mime_type:
-                ext = ".webp"
 
-            # Write to temp file with a name matching the backend
+            # Write to temp file
             if batch_id is not None:
                 local_path = tempfile.NamedTemporaryFile(
                     suffix=f".{batch_id}{ext}", delete=False, dir="/tmp"
@@ -97,13 +141,11 @@ class MediaBackend:
             with open(local_path, "wb") as f:
                 f.write(image_bytes)
 
-            final_prompt = result.get("final_prompt", prompt)
+            # Get final prompt from revised_prompt if available
+            final_prompt = data[0].get("revised_prompt", prompt)
             self.last_imagegen_prompt = final_prompt
 
             return local_path, final_prompt
 
-        finally:
-            # Close any opened file handles
-            for item in files:
-                if hasattr(item[1][1], "close"):
-                    item[1][1].close()
+        except requests.exceptions.RequestException as e:
+            raise RuntimeError(f"Media server request failed: {e}") from e

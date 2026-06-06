@@ -67,18 +67,23 @@ class flux2klein(MediaBackend):
 
         # Compute dimensions
         if not has_image:
-            aspect = self._parse_aspect(config)
-
-            if aspect >= 1.0:
-                width = max_output_size
-                height = int(max_output_size / aspect)
+            # Check if width/height are provided directly (from size param)
+            if "width" in config and "height" in config:
+                width = config["width"]
+                height = config["height"]
             else:
-                width = int(max_output_size * aspect)
-                height = max_output_size
+                aspect = self._parse_aspect(config)
 
-            # Ensure dimensions are divisible by 16
-            width = round(width / 16) * 16
-            height = round(height / 16) * 16
+                if aspect >= 1.0:
+                    width = max_output_size
+                    height = int(max_output_size / aspect)
+                else:
+                    width = int(max_output_size * aspect)
+                    height = max_output_size
+
+                # Ensure dimensions are divisible by 16
+                width = round(width / 16) * 16
+                height = round(height / 16) * 16
         else:
             # Dimensions will be set from input image below
             width, height = max_output_size, int(max_output_size / DEFAULT_ASPECT)

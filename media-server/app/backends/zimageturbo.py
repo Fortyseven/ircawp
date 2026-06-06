@@ -58,22 +58,27 @@ class zimageturbo(MediaBackend):
 
         seed = torch.randint(0, 1000000, (1,)).item()
 
-        aspect = self._parse_aspect(config)
-
-        if isinstance(aspect, float):
-            if aspect >= 1.0:
-                width = MAX_WIDTH_HEIGHT
-                height = int(MAX_WIDTH_HEIGHT / aspect)
-            else:
-                width = int(MAX_WIDTH_HEIGHT * aspect)
-                height = MAX_WIDTH_HEIGHT
+        # Check if width/height are provided directly (from size param)
+        if "width" in config and "height" in config:
+            width = config["width"]
+            height = config["height"]
         else:
-            width = MAX_WIDTH_HEIGHT
-            height = int(MAX_WIDTH_HEIGHT / DEFAULT_ASPECT)
+            aspect = self._parse_aspect(config)
 
-        # Ensure dimensions are divisible by 16
-        width = round(width / 16) * 16
-        height = round(height / 16) * 16
+            if isinstance(aspect, float):
+                if aspect >= 1.0:
+                    width = MAX_WIDTH_HEIGHT
+                    height = int(MAX_WIDTH_HEIGHT / aspect)
+                else:
+                    width = int(MAX_WIDTH_HEIGHT * aspect)
+                    height = MAX_WIDTH_HEIGHT
+            else:
+                width = MAX_WIDTH_HEIGHT
+                height = int(MAX_WIDTH_HEIGHT / DEFAULT_ASPECT)
+
+            # Ensure dimensions are divisible by 16
+            width = round(width / 16) * 16
+            height = round(height / 16) * 16
 
         prompt = prompt.strip()
         final_prompt = prompt

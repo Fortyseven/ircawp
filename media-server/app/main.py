@@ -1,6 +1,10 @@
 """
 ircawp media-server: image generation HTTP service.
 
+OpenAI-compatible API:
+  POST /images/generations  — text-to-image
+  POST /images/edits        — image editing
+
 Strictly prompt-in → image-out. No LLM calls, no prompt refinement.
 All refinement logic lives in the main ircawp bot.
 """
@@ -8,17 +12,29 @@ All refinement logic lives in the main ircawp bot.
 from __future__ import annotations
 
 import base64
+import io
 import json
 import os
 import tempfile
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
 import yaml
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from PIL import Image
 from rich.console import Console
+
+from app.models import (
+    Image,
+    ImageEditRequest,
+    ImageGenerationRequest,
+    ImagesResponse,
+    ensure_divisible_by_16,
+    parse_size,
+)
 
 console = Console()
 
@@ -62,9 +78,87 @@ def get_backend(backend_id: str):
     return backend_class()
 
 
+def _detect_mime(image_path: str) -> str:
+    """Detect mime type from file extension."""
+    ext = Path(image_path).suffix.lower()
+    mime_map = {
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".webp": "image/webp",
+    }
+    return mime_map.get(ext, "image/png")
+
+
+def _image_to_response(image_path: str, final_prompt: str | None = None) -> Image:
+    """Convert a generated image file to an Image response object."""
+    with open(image_path, "rb") as f:
+        image_bytes = f.read()
+    image_b64 = base64.b64encode(image_bytes).decode("ascii")
+
+    img = Image(
+        b64_json=image_b64,
+    )
+    if final_prompt:
+        img.revised_prompt = final_prompt
+    return img
+
+
+def _build_backend_config(
+    *,
+    size: Optional[str],
+    quality: Optional[str],
+    batch_id=None,
+    extra: dict | None = None,
+) -> dict:
+    """Build the config dict passed to backend.execute() from request params."""
+    config = {}
+
+    if extra:
+        config.update(extra)
+
+    # Parse size into width/height if provided
+    parsed = parse_size(size)
+    if parsed:
+        width, height = ensure_divisible_by_16(*parsed)
+        config["width"] = width
+        config["height"] = height
+    elif size:
+        # Invalid size string — let the backend use its default
+        pass
+
+    # Map quality to remaster flag
+    if quality == "high":
+        config["remaster"] = True
+    elif quality == "low":
+        config["remaster"] = False
+    # "standard", "medium", "auto", "hd" — don't set remaster
+
+    if batch_id is not None:
+        config["batch_id"] = batch_id
+
+    return config
+
+
+def _decode_image_url(image_url: str) -> bytes:
+    """Decode a data URL or return raw bytes for a base64 string."""
+    if image_url.startswith("data:"):
+        # data:image/png;base64,...
+        header, b64_data = image_url.split(",", 1)
+        return base64.b64decode(b64_data)
+    elif image_url.startswith("http://") or image_url.startswith("https://"):
+        raise HTTPException(
+            status_code=400,
+            detail="External URLs are not supported for image input. Use base64 data URLs.",
+        )
+    else:
+        # Assume it's a raw base64 string
+        return base64.b64decode(image_url)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    console.log(f"[green]Media server starting")
+    console.log("[green]Media server starting")
     console.log(f"  backend: {DEFAULT_BACKEND}")
     console.log(f"  output_dir: {OUTPUT_DIR}")
     console.log(f"  host: {SERVER_CONFIG.get('host', '0.0.0.0')}")
@@ -75,10 +169,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="ircawp Media Server",
-    description="Image generation service for ircawp bot",
-    version="0.1.0",
+    description="OpenAI-compatible image generation service for ircawp bot",
+    version="0.2.0",
     lifespan=lifespan,
 )
+
+
+# ── Health & Static ─────────────────────────────────────────────
 
 
 @app.get("/health")
@@ -95,86 +192,154 @@ async def serve_image(filename: str):
     return FileResponse(image_path, media_type="image/png")
 
 
-@app.post("/generate")
-async def generate(
-    prompt: str = Form(...),
-    backend_id: str = Form(default=DEFAULT_BACKEND),
-    config_json: str = Form(default="{}"),
-    media: list[UploadFile] = File(default=[]),
-):
-    """Generate an image from a prompt.
+# ── POST /images/generations ────────────────────────────────────
 
-    Args:
-        prompt: Final, ready-to-use prompt (refinement already done by caller)
-        backend_id: Which backend to use (e.g. 'flux2klein')
-        config_json: JSON config string (aspect, scale, batch_id, remaster, etc.)
-        media: Optional input images for img2img workflows
-    """
-    if not prompt or not prompt.strip():
+
+@app.post("/images/generations", response_model=ImagesResponse)
+async def images_generations(req: ImageGenerationRequest) -> ImagesResponse:
+    """Create images from a text prompt (OpenAI-compatible)."""
+    if not req.prompt or not req.prompt.strip():
         raise HTTPException(status_code=400, detail="Prompt is required")
 
-    # Parse config
-    try:
-        config = json.loads(config_json)
-    except json.JSONDecodeError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid config JSON: {e}")
+    backend_id = req.model or DEFAULT_BACKEND
+    n = req.n
 
-    # Save uploaded media to temp files
+    # Validate n cap
+    if n > 4:
+        raise HTTPException(status_code=400, detail="n must be between 1 and 4")
+
+    backend = get_backend(backend_id)
+    results = []
+
+    for i in range(n):
+        batch_id = i if n > 1 else None
+        config = _build_backend_config(
+            size=req.size,
+            quality=req.quality,
+            batch_id=batch_id,
+        )
+
+        console.log(f"[cyan]Generating ({i+1}/{n}) with {backend_id}: {req.prompt[:80]}...")
+
+        try:
+            result = backend.execute(
+                prompt=req.prompt.strip(),
+                config=config,
+                media=[],
+            )
+
+            # Handle both (path, prompt) tuple and single path return
+            if isinstance(result, tuple):
+                image_path, final_prompt = result
+            else:
+                image_path = result
+                final_prompt = None
+
+            console.log(f"[green]Generated ({i+1}/{n}): {image_path}")
+
+            img = _image_to_response(image_path, final_prompt)
+            results.append(img)
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            console.log(f"[red]Generation ({i+1}/{n}) failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    return ImagesResponse(
+        created=int(time.time()),
+        data=results,
+    )
+
+
+# ── POST /images/edits ──────────────────────────────────────────
+
+
+@app.post("/images/edits", response_model=ImagesResponse)
+async def images_edits(req: ImageEditRequest) -> ImagesResponse:
+    """Create edited/extended images from input images + prompt (OpenAI-compatible)."""
+    if not req.prompt or not req.prompt.strip():
+        raise HTTPException(status_code=400, detail="Prompt is required")
+
+    if not req.images:
+        raise HTTPException(status_code=400, detail="At least one input image is required")
+
+    backend_id = req.model or DEFAULT_BACKEND
+    n = req.n
+
+    if n > 4:
+        raise HTTPException(status_code=400, detail="n must be between 1 and 4")
+
+    # Decode input images to temp files
     temp_media_paths = []
     try:
-        for file in media:
-            if file and file.filename:
-                temp_path = Path(tempfile.mkdtemp()) / file.filename
-                with open(temp_path, "wb") as f:
-                    content = await file.read()
-                    f.write(content)
-                temp_media_paths.append(str(temp_path))
+        for img_ref in req.images:
+            if img_ref.image_url:
+                image_bytes = _decode_image_url(img_ref.image_url)
+            elif img_ref.file_id:
+                # file_id is treated as a local path or filename in OUTPUT_DIR
+                image_path = OUTPUT_DIR / img_ref.file_id
+                if image_path.is_file():
+                    image_bytes = image_path.read_bytes()
+                else:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"File not found: {img_ref.file_id}",
+                    )
+            else:
+                continue
 
-        # Get backend instance
+            temp_path = Path(tempfile.mkdtemp()) / f"input_{len(temp_media_paths)}.png"
+            temp_path.write_bytes(image_bytes)
+            temp_media_paths.append(str(temp_path))
+
+        if not temp_media_paths:
+            raise HTTPException(status_code=400, detail="No valid input images provided")
+
         backend = get_backend(backend_id)
+        results = []
 
-        # Execute generation
-        console.log(f"[cyan]Generating with {backend_id}: {prompt[:80]}...")
-        result = backend.execute(
-            prompt=prompt,
-            config=config,
-            media=temp_media_paths,
+        for i in range(n):
+            batch_id = i if n > 1 else None
+            config = _build_backend_config(
+                size=req.size,
+                quality=req.quality,
+                batch_id=batch_id,
+            )
+
+            console.log(f"[cyan]Editing ({i+1}/{n}) with {backend_id}: {req.prompt[:80]}...")
+
+            try:
+                result = backend.execute(
+                    prompt=req.prompt.strip(),
+                    config=config,
+                    media=temp_media_paths,
+                )
+
+                if isinstance(result, tuple):
+                    image_path, final_prompt = result
+                else:
+                    image_path = result
+                    final_prompt = None
+
+                console.log(f"[green]Edited ({i+1}/{n}): {image_path}")
+
+                img = _image_to_response(image_path, final_prompt)
+                results.append(img)
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                console.log(f"[red]Edit ({i+1}/{n}) failed: {e}")
+                raise HTTPException(status_code=500, detail=str(e))
+
+        return ImagesResponse(
+            created=int(time.time()),
+            data=results,
         )
 
-        # Handle both (path, prompt) tuple and single path return
-        if isinstance(result, tuple):
-            image_path, final_prompt = result
-        else:
-            image_path = result
-            final_prompt = prompt
-
-        console.log(f"[green]Generated: {image_path}")
-
-        # Read image file and encode as base64 for transfer
-        with open(image_path, "rb") as f:
-            image_bytes = f.read()
-        image_b64 = base64.b64encode(image_bytes).decode("ascii")
-
-        # Detect mime type from extension
-        ext = Path(image_path).suffix.lower()
-        mime_map = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
-        mime_type = mime_map.get(ext, "image/png")
-
-        return JSONResponse(
-            content={
-                "image_data": image_b64,
-                "mime_type": mime_type,
-                "final_prompt": final_prompt,
-            }
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        console.log(f"[red]Generation failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
     finally:
-        # Cleanup temp media files
+        # Cleanup temp files
         import shutil
 
         for temp_dir in set(str(Path(p).parent) for p in temp_media_paths):
@@ -182,6 +347,9 @@ async def generate(
                 shutil.rmtree(temp_dir, ignore_errors=True)
             except Exception:
                 pass
+
+
+# ── CLI Entry Point ─────────────────────────────────────────────
 
 
 def start():
