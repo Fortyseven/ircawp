@@ -284,7 +284,7 @@ The media-server is a standalone FastAPI service that handles image generation. 
 -   `POST /images/generations` — text-to-image generation (JSON body with `prompt`, `n`, `size`, `quality`)
 -   `POST /images/edits` — image editing with input images plus a text prompt
 -   `GET /health` — health check
--   `GET /image/{filename}` — serve a generated image
+
 
 Requests use Pydantic models (`ImageGenerationRequest`, `ImageEditRequest`) and return an `ImagesResponse` with a `created` timestamp and `data[]` array of images (each containing `b64_json`). The `size` parameter accepts `WIDTHxHEIGHT` format, and `quality` maps to the backend's remaster setting.
 

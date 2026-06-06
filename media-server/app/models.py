@@ -11,13 +11,12 @@ from pydantic import BaseModel, Field
 
 
 class ImageRef(BaseModel):
-    """A reference to an input image (URL or base64 data URL)."""
+    """A reference to an input image (base64 data URL)."""
 
-    file_id: Optional[str] = None
     image_url: Optional[str] = None
 
     def __bool__(self):
-        return self.file_id is not None or self.image_url is not None
+        return self.image_url is not None
 
 
 class ImageGenerationRequest(BaseModel):

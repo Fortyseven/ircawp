@@ -12,9 +12,7 @@ All refinement logic lives in the main ircawp bot.
 from __future__ import annotations
 
 import base64
-import io
-import json
-import os
+import shutil
 import tempfile
 import time
 from contextlib import asynccontextmanager
@@ -23,8 +21,6 @@ from typing import Optional
 
 import yaml
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
-from PIL import Image
 from rich.console import Console
 
 from app.models import (
@@ -49,11 +45,15 @@ def load_config(path: str = "config.yml") -> dict:
 
 CONFIG = load_config()
 SERVER_CONFIG = CONFIG.get("server", {})
-OUTPUT_DIR = Path(CONFIG.get("output_dir", "/tmp/ircawp_generated"))
 DEFAULT_BACKEND = CONFIG.get("backend", "flux2klein")
 
-# Ensure output directory exists
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+# Temporary directory for generated images (cleaned up on shutdown)
+_TEMP_DIR = Path(tempfile.mkdtemp())
+
+
+def _new_temp_file(suffix=".png") -> Path:
+    """Create a unique temp file path for a generated image."""
+    return _TEMP_DIR / f"img_{time.time_ns()}{suffix}"
 
 
 # Cache of backend instances (keeps models in memory across requests)
@@ -87,18 +87,6 @@ def get_backend(backend_id: str):
     return instance
 
 
-def _detect_mime(image_path: str) -> str:
-    """Detect mime type from file extension."""
-    ext = Path(image_path).suffix.lower()
-    mime_map = {
-        ".png": "image/png",
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".webp": "image/webp",
-    }
-    return mime_map.get(ext, "image/png")
-
-
 def _image_to_response(image_path: str, final_prompt: str | None = None) -> Image:
     """Convert a generated image file to an Image response object."""
     with open(image_path, "rb") as f:
@@ -118,6 +106,7 @@ def _build_backend_config(
     size: Optional[str],
     quality: Optional[str],
     batch_id=None,
+    output_file: Optional[str] = None,
     extra: dict | None = None,
 ) -> dict:
     """Build the config dict passed to backend.execute() from request params."""
@@ -125,6 +114,9 @@ def _build_backend_config(
 
     if extra:
         config.update(extra)
+
+    if output_file:
+        config["output_file"] = output_file
 
     # Parse size into width/height if provided
     parsed = parse_size(size)
@@ -169,11 +161,12 @@ def _decode_image_url(image_url: str) -> bytes:
 async def lifespan(app: FastAPI):
     console.log("[green]Media server starting")
     console.log(f"  backend: {DEFAULT_BACKEND}")
-    console.log(f"  output_dir: {OUTPUT_DIR}")
+    console.log(f"  temp_dir: {_TEMP_DIR}")
     console.log(f"  host: {SERVER_CONFIG.get('host', '0.0.0.0')}")
     console.log(f"  port: {SERVER_CONFIG.get('port', 8100)}")
     yield
     console.log("[yellow]Media server shutting down")
+    shutil.rmtree(_TEMP_DIR, ignore_errors=True)
 
 
 app = FastAPI(
@@ -184,21 +177,12 @@ app = FastAPI(
 )
 
 
-# ── Health & Static ─────────────────────────────────────────────
+# ── Health ──────────────────────────────────────────────────────
 
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "backend": DEFAULT_BACKEND, "output_dir": str(OUTPUT_DIR)}
-
-
-@app.get("/image/{filename}")
-async def serve_image(filename: str):
-    """Serve a generated image by filename."""
-    image_path = OUTPUT_DIR / filename
-    if not image_path.is_file():
-        raise HTTPException(status_code=404, detail=f"Image not found: {filename}")
-    return FileResponse(image_path, media_type="image/png")
+    return {"status": "ok", "backend": DEFAULT_BACKEND}
 
 
 # ── POST /images/generations ────────────────────────────────────
@@ -222,14 +206,18 @@ async def images_generations(req: ImageGenerationRequest) -> ImagesResponse:
 
     for i in range(n):
         batch_id = i if n > 1 else None
+        output_file = str(_new_temp_file())
         config = _build_backend_config(
             size=req.size,
             quality=req.quality,
             batch_id=batch_id,
+            output_file=output_file,
         )
 
-        log_msg = f"[cyan]Generating ({i+1}/{n}) with {backend_id}" + (f": {req.prompt}" if req.verbose else "")
-        console.log(log_msg)
+        console.log(
+            f"[cyan]Generating ({i+1}/{n}) with {backend_id}"
+            + (f": {req.prompt}" if req.verbose else "")
+        )
 
         try:
             result = backend.execute(
@@ -245,15 +233,19 @@ async def images_generations(req: ImageGenerationRequest) -> ImagesResponse:
                 image_path = result
                 final_prompt = None
 
-            console.log(f"[green]Generated ({i+1}/{n}): {image_path}")
+            console.log(f"[green]Generated ({i+1}/{n})")
 
             img = _image_to_response(image_path, final_prompt)
             results.append(img)
+
+            # Remove temp file — image is already encoded in the response
+            Path(image_path).unlink(missing_ok=True)
 
         except HTTPException:
             raise
         except Exception as e:
             console.log(f"[red]Generation ({i+1}/{n}) failed: {e}")
+            Path(output_file).unlink(missing_ok=True)
             raise HTTPException(status_code=500, detail=str(e))
 
     return ImagesResponse(
@@ -281,25 +273,15 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
         raise HTTPException(status_code=400, detail="n must be between 1 and 4")
 
     # Decode input images to temp files
+    temp_dir = Path(tempfile.mkdtemp())
     temp_media_paths = []
     try:
         for img_ref in req.images:
-            if img_ref.image_url:
-                image_bytes = _decode_image_url(img_ref.image_url)
-            elif img_ref.file_id:
-                # file_id is treated as a local path or filename in OUTPUT_DIR
-                image_path = OUTPUT_DIR / img_ref.file_id
-                if image_path.is_file():
-                    image_bytes = image_path.read_bytes()
-                else:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"File not found: {img_ref.file_id}",
-                    )
-            else:
+            if not img_ref.image_url:
                 continue
 
-            temp_path = Path(tempfile.mkdtemp()) / f"input_{len(temp_media_paths)}.png"
+            image_bytes = _decode_image_url(img_ref.image_url)
+            temp_path = temp_dir / f"input_{len(temp_media_paths)}.png"
             temp_path.write_bytes(image_bytes)
             temp_media_paths.append(str(temp_path))
 
@@ -311,14 +293,18 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
 
         for i in range(n):
             batch_id = i if n > 1 else None
+            output_file = str(_new_temp_file())
             config = _build_backend_config(
                 size=req.size,
                 quality=req.quality,
                 batch_id=batch_id,
+                output_file=output_file,
             )
 
-            log_msg = f"[cyan]Editing ({i+1}/{n}) with {backend_id}" + (f": {req.prompt}" if req.verbose else "")
-            console.log(log_msg)
+            console.log(
+                f"[cyan]Editing ({i+1}/{n}) with {backend_id}"
+                + (f": {req.prompt}" if req.verbose else "")
+            )
 
             try:
                 result = backend.execute(
@@ -333,15 +319,19 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
                     image_path = result
                     final_prompt = None
 
-                console.log(f"[green]Edited ({i+1}/{n}): {image_path}")
+                console.log(f"[green]Edited ({i+1}/{n})")
 
                 img = _image_to_response(image_path, final_prompt)
                 results.append(img)
+
+                # Remove temp file — image is already encoded in the response
+                Path(image_path).unlink(missing_ok=True)
 
             except HTTPException:
                 raise
             except Exception as e:
                 console.log(f"[red]Edit ({i+1}/{n}) failed: {e}")
+                Path(output_file).unlink(missing_ok=True)
                 raise HTTPException(status_code=500, detail=str(e))
 
         return ImagesResponse(
@@ -350,14 +340,8 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
         )
 
     finally:
-        # Cleanup temp files
-        import shutil
-
-        for temp_dir in set(str(Path(p).parent) for p in temp_media_paths):
-            try:
-                shutil.rmtree(temp_dir, ignore_errors=True)
-            except Exception:
-                pass
+        # Cleanup input temp files
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 # ── CLI Entry Point ─────────────────────────────────────────────
