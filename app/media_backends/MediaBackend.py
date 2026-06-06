@@ -147,5 +147,12 @@ class MediaBackend:
 
             return local_path, final_prompt
 
+        except requests.exceptions.HTTPError as e:
+            # Surface the actual server error response
+            try:
+                error_detail = response.json().get("detail", str(e))
+            except Exception:
+                error_detail = response.text[:200] if hasattr(response, 'text') else str(e)
+            raise RuntimeError(f"Media server error ({response.status_code}): {error_detail}") from e
         except requests.exceptions.RequestException as e:
             raise RuntimeError(f"Media server request failed: {e}") from e
