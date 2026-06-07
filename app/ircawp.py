@@ -239,7 +239,9 @@ class Ircawp:
             username=user_id,
             media=incoming_media,
             aux=aux,
-            conversation_history=_conversation_history if _conversation_history else None,
+            conversation_history=_conversation_history
+            if _conversation_history
+            else None,
         )
 
         return response, tool_images

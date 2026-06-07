@@ -7,7 +7,6 @@ Uses the OpenAI-compatible JSON API (POST /images/generations, POST /images/edit
 """
 
 import base64
-import json
 import tempfile
 from pathlib import Path
 
@@ -157,7 +156,11 @@ class MediaBackend:
             try:
                 error_detail = response.json().get("detail", str(e))
             except Exception:
-                error_detail = response.text[:200] if hasattr(response, 'text') else str(e)
-            raise RuntimeError(f"Media server error ({response.status_code}): {error_detail}") from e
+                error_detail = (
+                    response.text[:200] if hasattr(response, "text") else str(e)
+                )
+            raise RuntimeError(
+                f"Media server error ({response.status_code}): {error_detail}"
+            ) from e
         except requests.exceptions.RequestException as e:
             raise RuntimeError(f"Media server request failed: {e}") from e
