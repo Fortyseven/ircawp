@@ -12,6 +12,7 @@ import tempfile
 from pathlib import Path
 
 import requests
+import urllib3
 
 
 class MediaBackend:
@@ -114,7 +115,10 @@ class MediaBackend:
             url = f"{self.server_url}/images/generations"
 
         try:
-            response = requests.post(url, json=body)
+            # Disable SSL verification for self-signed / private CA certs.
+            # Safe for private/home setups; for production, trust the CA instead.
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+            response = requests.post(url, json=body, verify=False)
             response.raise_for_status()
             result = response.json()
 
