@@ -1,15 +1,50 @@
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.media_backends.MediaBackend import MediaBackend
+from app.lib.llm_helpers import refinePrompt
 from PIL import Image
 from pathlib import Path
 
 
-def doBatchImages(prompt, media, backend, media_backend, config):
+def doBatchImages(
+    prompt,
+    media,
+    backend,
+    media_backend,
+    config,
+    skip_refinement: bool = False,
+):
     image_paths = []
+    is_edit = len(media) > 0
+
     for i in range(config["batch"]):
+        # Refine prompt independently for each image in the batch
+        if not skip_refinement:
+            refined_prompt = refinePrompt(
+                prompt, backend, media, is_edit=is_edit
+            )
+            batch_prompt = refined_prompt.strip()
+            if (
+                "i'm sorry" in batch_prompt.lower()
+                or "i cannot" in batch_prompt.lower()
+            ):
+                backend.console.log(
+                    f"[pink on red] batch image {i + 1}: refinement refused, using original"
+                )
+                batch_prompt = prompt.strip()
+            else:
+                backend.console.log(
+                    f"[black on green] batch image {i + 1} refined prompt: '{batch_prompt}'"
+                )
+        else:
+            batch_prompt = prompt.strip()
+
         # Call media backend to generate the image
         image_path, final_prompt = media_backend.execute(
-            prompt=prompt, config=config, batch_id=i, media=media, backend=backend
+            prompt=batch_prompt,
+            config=config,
+            batch_id=i,
+            media=media,
+            backend=backend,
         )
         image_paths.append(image_path)
 

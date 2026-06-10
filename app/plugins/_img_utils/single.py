@@ -217,28 +217,10 @@ def doSingleImage(
     if config.get("batch", 1) > 1:
         from .batch import doBatchImages
 
-        # Refine prompt before batch generation
-        is_edit = len(media) > 0
-        if not skip_refinement:
-            refined_prompt = refinePrompt(prompt, backend, media, is_edit=is_edit)
-            batch_prompt = refined_prompt.strip()
-            if (
-                "i'm sorry" in batch_prompt.lower()
-                or "i cannot" in batch_prompt.lower()
-            ):
-                backend.console.log(
-                    "[pink on red] prompt refinement refused, using original"
-                )
-                batch_prompt = prompt.strip()
-            else:
-                backend.console.log(
-                    f"[black on green] refined prompt: '{batch_prompt}'"
-                )
-        else:
-            batch_prompt = prompt.strip()
-
-        result = doBatchImages(batch_prompt, media, backend, media_backend, config)
-        setLastRefinedPrompt(batch_prompt)  # for --again
+        # Pass original prompt — refinement happens per-image inside the loop
+        result = doBatchImages(
+            prompt, media, backend, media_backend, config, skip_refinement
+        )
         return result
 
     ###########
