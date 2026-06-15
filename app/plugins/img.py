@@ -11,7 +11,7 @@ from .__PluginBase import PluginBase
 
 ARG_SPECS = {
     "aspect": {
-        "names": ["--aspect"],
+        "names": ["--aspect", "--ratio"],
         "description": "Set aspect ratio (e.g. 16:9, or decimal 1.78) or 'match' to use input media aspect",
         "type": str,
     },
