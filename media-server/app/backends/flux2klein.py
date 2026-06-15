@@ -66,24 +66,23 @@ class flux2klein(MediaBackend):
         max_output_size = config.get("max_output_size", DEFAULT_MAX_OUTPUT_SIZE)
 
         # Compute dimensions
-        if not has_image:
-            # Check if width/height are provided directly (from size param)
-            if "width" in config and "height" in config:
-                width = config["width"]
-                height = config["height"]
+        # Explicit width/height from config (e.g. --aspect) always take priority
+        if "width" in config and "height" in config:
+            width = config["width"]
+            height = config["height"]
+        elif not has_image:
+            aspect = self._parse_aspect(config)
+
+            if aspect >= 1.0:
+                width = max_output_size
+                height = int(max_output_size / aspect)
             else:
-                aspect = self._parse_aspect(config)
+                width = int(max_output_size * aspect)
+                height = max_output_size
 
-                if aspect >= 1.0:
-                    width = max_output_size
-                    height = int(max_output_size / aspect)
-                else:
-                    width = int(max_output_size * aspect)
-                    height = max_output_size
-
-                # Ensure dimensions are divisible by 16
-                width = round(width / 16) * 16
-                height = round(height / 16) * 16
+            # Ensure dimensions are divisible by 16
+            width = round(width / 16) * 16
+            height = round(height / 16) * 16
         else:
             # Dimensions will be set from input image below
             width, height = max_output_size, int(max_output_size / DEFAULT_ASPECT)
@@ -106,14 +105,16 @@ Final output: a photorealistic, high dynamic range (HDR), cinema-quality photogr
                 media_pil.append(load_image(image_path))
 
             if media_pil[0] is not None:
-                longest_side = max(media_pil[0].width, media_pil[0].height)
-                if longest_side < max_output_size:
-                    scale_result = max_output_size / longest_side
-                elif longest_side > max_output_size:
-                    scale_result = max_output_size / longest_side
+                # Only derive dimensions from input image if config didn't specify them
+                if "width" not in config or "height" not in config:
+                    longest_side = max(media_pil[0].width, media_pil[0].height)
+                    if longest_side < max_output_size:
+                        scale_result = max_output_size / longest_side
+                    elif longest_side > max_output_size:
+                        scale_result = max_output_size / longest_side
 
-                width = int(media_pil[0].width * scale_result)
-                height = int(media_pil[0].height * scale_result)
+                    width = int(media_pil[0].width * scale_result)
+                    height = int(media_pil[0].height * scale_result)
                 aspect = width / height
             else:
                 aspect = DEFAULT_ASPECT
