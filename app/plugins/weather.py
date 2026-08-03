@@ -1,6 +1,5 @@
 """
-Bot plugin to summarize a web page using a smaller,
-faster model than the default chat model.
+Bot plugin to report the weather for a given location using the OpenWeather API.
 """
 
 import json
