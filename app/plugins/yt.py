@@ -256,7 +256,12 @@ def yt(
 
         metadata_text = formatMetadata(metadata)
         response = f"**YouTube Transcription Summary**\n\n{metadata_text}\n\n**Summary:**\n{summary}"
-        return response, "", True, {}
+        return response, "", True, {
+            "source_content": transcript,
+            "source_type": "yt_transcript",
+            "video_id": video_id,
+            "title": metadata.get("title", ""),
+        }
 
     # No cached transcript - need to get one
     try:
@@ -438,7 +443,12 @@ def yt(
         backend.console.log("[green]Summary generated")
 
         response = f"\n\n{metadata_text}{method_note}\n\n*Summary:*\n{summary}"
-        return response, "", True, {}
+        return response, "", True, {
+            "source_content": transcript,
+            "source_type": "yt_transcript",
+            "video_id": video_id,
+            "title": metadata.get("title", ""),
+        }
 
     except ValueError as e:
         # User-friendly errors (validation, limits, etc.)

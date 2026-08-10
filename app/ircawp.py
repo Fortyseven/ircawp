@@ -6,6 +6,7 @@ from rich.traceback import install
 from app.lib.thread_history import ThreadManager
 from app.core import MessageRouter, PluginManager, MediaManager, URLExtractor
 from app.core.message_router import _conversation_history
+from app.core import message_router  # Access _plugin_context via module to avoid import staleness
 
 install(show_locals=True)
 
@@ -233,15 +234,53 @@ class Ircawp:
         if incoming_media is None:
             incoming_media = []
 
+        # Build conversation history, injecting plugin source context for follow-ups
+        conversation_hist = list(_conversation_history) if _conversation_history else []
+
+        # Access _plugin_context via module to avoid Python import staleness
+        # (reassigning a module-level variable doesn't update direct imports)
+        plugin_ctx = message_router._plugin_context
+
+        self.console.log(
+            f"[magenta]_process_text_message: message='{message[:50]}...', "
+            f"has_conversation_history={bool(conversation_hist)}, "
+            f"has_plugin_context={bool(plugin_ctx)}, "
+            f"plugin_context_type={plugin_ctx.get('type', 'N/A') if plugin_ctx else 'N/A'}"
+        )
+
+        # Inject plugin source context for follow-up queries (+ prefix)
+        # Only inject if there's existing conversation history (implies continuation)
+        if plugin_ctx and conversation_hist:
+            source = plugin_ctx["source_content"]
+            source_type = plugin_ctx.get("type", "unknown")
+            context_msg = {
+                "role": "user",
+                "content": (
+                    f"The following source content was provided for context ({source_type}):"
+                    f"\n---BEGIN SOURCE CONTENT---\n{source}\n---END SOURCE CONTENT---"
+                ),
+            }
+            conversation_hist.insert(0, context_msg)
+            self.console.log(
+                f"[magenta]Injected plugin context ({source_type}, {len(source)} chars) into conversation"
+            )
+        else:
+            if plugin_ctx and not conversation_hist:
+                self.console.log(
+                    "[yellow]Plugin context exists but no conversation history - NOT injecting (fresh session)"
+                )
+            elif not plugin_ctx and conversation_hist:
+                self.console.log(
+                    "[yellow]No plugin context to inject"
+                )
+
         response, tool_images = self.backend.runInference(
             prompt=message,
             system_prompt=None,
             username=user_id,
             media=incoming_media,
             aux=aux,
-            conversation_history=_conversation_history
-            if _conversation_history
-            else None,
+            conversation_history=conversation_hist if conversation_hist else None,
         )
 
         return response, tool_images

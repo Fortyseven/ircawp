@@ -103,7 +103,10 @@ def summarize(
         system_prompt=sprompt, prompt=text, use_tools=False
     )
 
-    return summary, "", True, {}
+    return summary, "", True, {
+        "source_content": text,
+        "source_type": "html",
+    }
 
 
 plugin = PluginBase(

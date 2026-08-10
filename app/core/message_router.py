@@ -41,6 +41,10 @@ _conversation_history: list[dict] = []
 #     {"role": "assistant", "content": "text"},
 # ]
 
+# Source content from the most recent plugin (for + follow-up queries)
+_plugin_context: dict | None = None
+# Structure: {"source_content": "full text", "type": "yt_transcript" | "html"}
+
 
 class MessageRouter:
     """Manages message queue and routing to appropriate handlers."""
@@ -121,6 +125,8 @@ class MessageRouter:
         Continuously processes messages from the queue and routes them
         to appropriate handlers (plugins or text processing).
         """
+        global _plugin_context
+
         while True:
             time.sleep(self.thread_sleep)
 
@@ -186,6 +192,13 @@ class MessageRouter:
                                 f"(cleared {len(_conversation_history)} prior messages)"
                             )
                         _conversation_history.clear()
+                    # Also clear plugin context on fresh session
+                    if _plugin_context:
+                        if self.debug:
+                            self.console.log(
+                                "[cyan on black]Cleared plugin context (fresh session)"
+                            )
+                        _plugin_context = None
 
                 # Auto-route bare URLs to the appropriate plugin
                 if not message.startswith("/"):
@@ -249,12 +262,26 @@ class MessageRouter:
                             inf_response,
                             outgoing_media_filename,
                             skip_imagegen,
+                            plugin_meta,
                         ) = self.plugin_manager.execute_plugin(
                             plugin_name=plugin_name,
                             message=message,
                             user_id=user_id,
                             media=incoming_media or [],
                         )
+
+                        # Capture source_content from plugin metadata for follow-up queries
+                        if plugin_meta.get("source_content"):
+                            _plugin_context = {
+                                "source_content": plugin_meta["source_content"],
+                                "type": plugin_meta.get("source_type", "unknown"),
+                            }
+                            if self.debug:
+                                self.console.log(
+                                    f"[cyan on black]Captured plugin context "
+                                    f"({plugin_meta.get('source_type', 'unknown')}, "
+                                    f"{len(_plugin_context['source_content'])} chars)"
+                                )
 
                         if self.debug:
                             self.console.log(

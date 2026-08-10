@@ -26,7 +26,7 @@ def process_once(router: MessageRouter):
     try:
         if message.startswith("/"):
             plugin_name = message.split(" ")[0][1:]
-            inf_response, outgoing_media_filename, _ = (
+            inf_response, outgoing_media_filename, _, _ = (
                 router.plugin_manager.execute_plugin(
                     plugin_name=plugin_name,
                     message=message,
@@ -115,10 +115,11 @@ def test_plugin_manager_execute(
     )
     mgr.plugins = clean_plugin_registry
 
-    resp, media, skip = mgr.execute_plugin("test", "/test hello", "user1")
+    resp, media, skip, meta = mgr.execute_plugin("test", "/test hello", "user1")
     assert resp == "Test response"
     assert media == ""
     assert skip is True
+    assert meta == {}
     mock_plugin.execute.assert_called_once()
     args, kwargs = mock_plugin.execute.call_args
     assert kwargs["query"] == "hello"
@@ -129,10 +130,11 @@ def test_plugin_manager_not_found(mock_console, mock_backend):
         console=mock_console, backend=mock_backend, imagegen=None, debug=True
     )
     mgr.plugins = {}
-    resp, media, skip = mgr.execute_plugin("missing", "/missing hi", "user")
+    resp, media, skip, meta = mgr.execute_plugin("missing", "/missing hi", "user")
     assert resp == "Plugin missing not found."
     assert media is None
     assert skip is True
+    assert meta == {}
 
 
 def test_plugin_manager_has_and_get(

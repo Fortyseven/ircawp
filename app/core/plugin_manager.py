@@ -60,7 +60,7 @@ class PluginManager:
 
     def execute_plugin(
         self, plugin_name: str, message: str, user_id: str, media: List[str] = None
-    ) -> Tuple[str, Optional[str], bool]:
+    ) -> Tuple[str, Optional[str], bool, dict]:
         """
         Execute a plugin with the given parameters.
 
@@ -71,10 +71,10 @@ class PluginManager:
             media: List of media file paths
 
         Returns:
-            Tuple of (response_text, media_filename, skip_imagegen)
+            Tuple of (response_text, media_filename, skip_imagegen, metadata)
         """
         if not self.has_plugin(plugin_name):
-            return f"Plugin {plugin_name} not found.", None, True
+            return f"Plugin {plugin_name} not found.", None, True, {}
 
         self.console.log(f"[white on green]Processing plugin: {plugin_name}")
 
@@ -100,7 +100,7 @@ class PluginManager:
                 f"media: {outgoing_media}, skip_imagegen: {skip_imagegen}"
             )
 
-        return response, outgoing_media, skip_imagegen
+        return response, outgoing_media, skip_imagegen, meta
 
     def is_plugin_command(self, message: str) -> bool:
         """
