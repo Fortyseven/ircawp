@@ -227,7 +227,7 @@ plugin = PluginBase(
 - **media_required**: Set to `True` if the plugin needs an image attachment
 - **use_imagegen**: Set to `True` if you want automatic image generation for the response
 
-All `*.py` files in `/app/plugins/` are automatically loaded at runtime. See [8ball.py](app/plugins/8ball.py), [weather.py](app/plugins/weather.py), or other plugins for complete examples.
+All `*.py` files in `app/plugins/` are automatically loaded at runtime. See [8ball.py](app/plugins/8ball.py), [weather.py](app/plugins/weather.py), or other plugins for complete examples.
 
 ### Authoring LLM Tools
 
