@@ -14,8 +14,8 @@ DEFAULT_FILENAME = "/tmp/ircawp_generated/sd15.png"
 
 
 class sd15(MediaBackend):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, backend_config: dict = {}):
+        super().__init__(backend_config)
         self.repo = "/models/stable-diffusion/custom/2023-04/526mixV15_v15.safetensors"
         self.pipe = StableDiffusionPipeline.from_single_file(
             self.repo, revision="fp16", torch_dtype=torch.float16

@@ -1,4 +1,9 @@
-"""FLUX.2 Klein backend for media-server.
+"""Qwen-Image-2.1 backend for media-server.
+
+Uses a GGUF 4-bit quantized transformer (self-quantized from the official
+Qwen/Qwen-Image-2.1 weights via scripts/convert_qwenimage21_to_gguf.py +
+llama-quantize) with the text encoder (4-bit bitsandbytes) and VAE from the
+base Qwen/Qwen-Image-2.1 repo.
 
 Prompt refinement is handled by the client (ircawp bot).
 This backend receives a final, ready-to-use prompt.
@@ -6,27 +11,97 @@ This backend receives a final, ready-to-use prompt.
 
 from .MediaBackend import MediaBackend
 
+import os
+
 import torch
-from diffusers import Flux2KleinPipeline
+from diffusers import QwenImage21Pipeline
+from diffusers.quantizers.quantization_config import GGUFQuantizationConfig
 from diffusers.utils import load_image
 
 
-DEFAULT_FILENAME = "/tmp/ircawp_generated/flux2klein.png"
+def _register_qwenimage21_single_file():
+    """Register QwenImage21Transformer2DModel for from_single_file loading.
+
+    The 2.1 transformer class is not in diffusers' SINGLE_FILE_LOADABLE_CLASSES
+    compatibility list, so from_single_file raises ValueError. The mapping for
+    QwenImageTransformer2DModel is an identity checkpoint mapping, which is
+    exactly what we need for the GGUF state dict, so we register the same
+    mapping for the 2.1 class.
+    """
+    from diffusers import QwenImage21Transformer2DModel
+    from diffusers.loaders.single_file_model import SINGLE_FILE_LOADABLE_CLASSES
+
+    if "QwenImage21Transformer2DModel" not in SINGLE_FILE_LOADABLE_CLASSES:
+        SINGLE_FILE_LOADABLE_CLASSES["QwenImage21Transformer2DModel"] = {
+            "checkpoint_mapping_fn": lambda checkpoint, **kwargs: checkpoint,
+            "default_subfolder": "transformer",
+        }
+
+
+_register_qwenimage21_single_file()
+
+BASE_MODEL = "Qwen/Qwen-Image-2.1"
+DEFAULT_GGUF = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "models",
+    "qwen_image_2.1_Q4_K_S.gguf",
+)
+DEFAULT_FILENAME = "/tmp/ircawp_generated/qwenimage21.png"
 DEFAULT_ASPECT = 1.5
 DEFAULT_MAX_OUTPUT_SIZE = 1024
+DEFAULT_STEPS = 40
+REMASTER_EXTRA_STEPS = 4
 
-INF_STEPS = 5
-CFG_SCALE = 4
 
-
-class flux2klein(MediaBackend):
+class qwenimage21(MediaBackend):
     def __init__(self, backend_config: dict = {}):
         super().__init__(backend_config)
-        self.pipe = Flux2KleinPipeline.from_pretrained(
-            "black-forest-labs/FLUX.2-klein-4B",
-            torch_dtype=torch.bfloat16,
+
+        gguf_path = self.backend_config.get("gguf", DEFAULT_GGUF)
+        text_encoder_4bit = self.backend_config.get("text_encoder_4bit", True)
+
+        # from_single_file requires a valid URL (or local file path). Normalize
+        # a bare "repo_id/file.gguf" into a full HuggingFace resolve URL.
+        if not gguf_path.startswith(
+            ("http://", "https://", "hf.co", "huggingface.co")
+        ) and not os.path.isfile(gguf_path):
+            repo_id, _, filename = gguf_path.rpartition("/")
+            gguf_path = f"https://huggingface.co/{repo_id}/blob/main/{filename}"
+
+        # Load GGUF-quantized transformer
+        from diffusers import QwenImage21Transformer2DModel
+
+        transformer = QwenImage21Transformer2DModel.from_single_file(
+            gguf_path,
+            quantization_config=GGUFQuantizationConfig(compute_dtype=torch.bfloat16),
+            config=BASE_MODEL,
+            subfolder="transformer",
         )
-        self.pipe.to("cpu")
+
+        # Build pipeline — text encoder + VAE from base repo
+        pipe_kwargs = {
+            "transformer": transformer,
+            "torch_dtype": torch.bfloat16,
+        }
+        if text_encoder_4bit:
+            from diffusers.quantizers import PipelineQuantizationConfig
+
+            # The text encoder is a transformers model, so it needs
+            # transformers' BitsAndBytesConfig (NOT diffusers' — they are
+            # distinct classes and transformers' AutoHfQuantizer rejects the
+            # diffusers one).
+            from transformers.utils.quantization_config import BitsAndBytesConfig
+
+            pipe_kwargs["quantization_config"] = PipelineQuantizationConfig(
+                quant_mapping={
+                    "text_encoder": BitsAndBytesConfig(
+                        load_in_4bit=True,
+                        bnb_4bit_compute_dtype=torch.bfloat16,
+                    )
+                }
+            )
+
+        self.pipe = QwenImage21Pipeline.from_pretrained(BASE_MODEL, **pipe_kwargs)
         self.pipe.enable_model_cpu_offload()
 
     def _parse_aspect(self, config: dict) -> float:
@@ -50,12 +125,12 @@ class flux2klein(MediaBackend):
         batch_id=None,
         media=[],
     ) -> tuple[str, str]:
-        steps = INF_STEPS
+        steps = config.get("steps", DEFAULT_STEPS)
         has_image = len(media) > 0
 
         # Output path
         if batch_id is not None:
-            output_file = f"/tmp/ircawp_generated/flux2klein.{batch_id}.png"
+            output_file = f"/tmp/ircawp_generated/qwenimage21.{batch_id}.png"
         else:
             output_file = config.get("output_file", DEFAULT_FILENAME)
 
@@ -94,7 +169,7 @@ class flux2klein(MediaBackend):
             final_prompt = (
                 """Enhance this image while faithfully preserving its original style, medium, composition, colors, and subject. Increase sharpness, clarity, and fine detail. Remove blur, noise, grain, compression artifacts, and haze. Restore crisp edges and clean lines. Keep the existing art style exactly as it is — do not change the medium, do not add photorealism, do not alter the pose, anatomy, proportions, or any text. The result should look like a cleaner, higher-fidelity version of the same image.. {}"""
             ).format(final_prompt)
-            steps = 8
+            steps += REMASTER_EXTRA_STEPS
 
         # Load input media
         media_pil = []
@@ -125,7 +200,6 @@ class flux2klein(MediaBackend):
             width=width,
             height=height,
             num_inference_steps=steps,
-            guidance_scale=CFG_SCALE,
             generator=torch.Generator("cpu").manual_seed(seed),
             image=media_pil if has_image else None,
         ).images[0]
@@ -135,8 +209,7 @@ class flux2klein(MediaBackend):
             output_file,
             final_prompt,
             seed=seed,
-            model="flux2klein",
-            guidance_scale=CFG_SCALE,
+            model="qwenimage21",
             inference_steps=steps,
             width=width,
             height=height,

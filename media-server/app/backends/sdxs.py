@@ -12,8 +12,8 @@ DEFAULT_FILENAME = "/tmp/ircawp_generated/sdxs.png"
 
 
 class sdxs(MediaBackend):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, backend_config: dict = {}):
+        super().__init__(backend_config)
 
         self.repo = "IDKiro/sdxs-512-dreamshaper"
         self.pipe = StableDiffusionPipeline.from_pretrained(

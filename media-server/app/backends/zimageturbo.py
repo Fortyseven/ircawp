@@ -20,8 +20,8 @@ MODEL = "Tongyi-MAI/Z-Image-Turbo"
 
 
 class zimageturbo(MediaBackend):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, backend_config: dict = {}):
+        super().__init__(backend_config)
         self.pipe = ZImagePipeline.from_pretrained(
             MODEL,
             torch_dtype=torch.bfloat16,

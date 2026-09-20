@@ -16,8 +16,8 @@ DEVICE = "cuda"
 
 
 class hyper_sdxl(MediaBackend):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, backend_config: dict = {}):
+        super().__init__(backend_config)
 
         unet = UNet2DConditionModel.from_config(
             BASE_MODEL_ID,

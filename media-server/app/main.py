@@ -84,7 +84,8 @@ def get_backend(backend_id: str):
             detail=f"Backend module '{backend_id}' has no '{backend_id}' class",
         )
 
-    instance = backend_class()
+    backend_config = CONFIG.get("backends", {}).get(backend_id, {})
+    instance = backend_class(backend_config)
     _backend_cache[backend_id] = instance
     return instance
 
@@ -105,14 +106,19 @@ def _image_to_response(image_path: str, final_prompt: str | None = None) -> Imag
 
 def _build_backend_config(
     *,
+    backend_id: str,
     size: Optional[str],
     quality: Optional[str],
     batch_id=None,
     output_file: Optional[str] = None,
     extra: dict | None = None,
 ) -> dict:
-    """Build the config dict passed to backend.execute() from request params."""
-    config = {}
+    """Build the config dict passed to backend.execute() from request params.
+
+    Per-backend settings from config.yml (backends.<id>) form the base;
+    request-derived values (size, quality, output_file) override them.
+    """
+    config = dict(CONFIG.get("backends", {}).get(backend_id, {}))
 
     if extra:
         config.update(extra)
@@ -224,6 +230,7 @@ async def images_generations(req: ImageGenerationRequest) -> ImagesResponse:
         batch_id = i if n > 1 else None
         output_file = str(_new_temp_file())
         config = _build_backend_config(
+            backend_id=backend_id,
             size=req.size,
             quality=req.quality,
             batch_id=batch_id,
@@ -315,6 +322,7 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
             batch_id = i if n > 1 else None
             output_file = str(_new_temp_file())
             config = _build_backend_config(
+                backend_id=backend_id,
                 size=req.size,
                 quality=req.quality,
                 batch_id=batch_id,

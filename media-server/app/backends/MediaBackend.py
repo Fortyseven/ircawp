@@ -8,7 +8,8 @@ from PIL import Image, PngImagePlugin
 
 
 class MediaBackend:
-    def __init__(self):
+    def __init__(self, backend_config: dict = {}):
+        self.backend_config = backend_config
         self.last_imagegen_prompt = None
 
     def execute(
