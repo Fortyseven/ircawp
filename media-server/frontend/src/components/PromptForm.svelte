@@ -1,6 +1,7 @@
 <script>
     import { untrack } from "svelte";
     import ImageUpload from "./ImageUpload.svelte";
+    import { saveDraft } from "../lib/draft.js";
     import {
         DEFAULT_ASPECT_RATIO,
         DEFAULT_OUTPUT_SIZE,
@@ -14,14 +15,19 @@
         backends = [],
         defaultBackend = "",
         settings = {},
+        draft = {},
         generating = false,
         ongenerate,
         onabort,
     } = $props();
 
-    const initialSettings = untrack(() => settings);
+    const initialDraft = untrack(() => draft);
+    const initialSettings = untrack(() => ({
+        ...settings,
+        ...initialDraft.settings,
+    }));
 
-    let prompt = $state("");
+    let prompt = $state(initialDraft.prompt ?? "");
     let model = $state(initialSettings.model ?? "");
     let aspectRatio = $state(
         initialSettings.aspectRatio ?? DEFAULT_ASPECT_RATIO,
@@ -29,11 +35,11 @@
     let outputSize = $state(initialSettings.outputSize ?? DEFAULT_OUTPUT_SIZE);
     let trueCfgScale = $state(initialSettings.trueCfgScale ?? 2.0);
     let seed = $state(initialSettings.seed ?? undefined);
-    let hadImages = false;
     let quality = $state(initialSettings.quality ?? "standard");
     let n = $state(initialSettings.n ?? 1);
     let steps = $state(initialSettings.steps ?? undefined);
-    let images = $state([]);
+    let images = $state(initialDraft.images ?? []);
+    let hadImages = initialDraft.images?.length > 0;
 
     const aspectRatioGroups = $derived(getAspectRatioGroups(images.length > 0));
     const matchesSource = $derived(aspectRatio === MATCH_SOURCE);
@@ -53,6 +59,23 @@
         }
 
         hadImages = hasImages;
+    });
+
+    $effect(() => {
+        saveDraft({
+            prompt,
+            images,
+            settings: {
+                model,
+                aspectRatio,
+                outputSize,
+                trueCfgScale,
+                seed,
+                quality,
+                n,
+                steps,
+            },
+        });
     });
 
     function submit() {

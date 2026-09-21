@@ -10,11 +10,13 @@
         deleteGeneration,
         clearHistory,
     } from "./lib/db.js";
+    import { loadDraft } from "./lib/draft.js";
     import { loadSettings, saveSettings } from "./lib/settings.js";
 
     let backends = $state([]);
     let defaultBackend = $state("");
     let settings = $state(loadSettings());
+    let draft = $state(loadDraft());
     let generating = $state(false);
     let error = $state("");
     let results = $state(null);
@@ -164,6 +166,7 @@
                     {backends}
                     {defaultBackend}
                     {settings}
+                    {draft}
                     {generating}
                     ongenerate={handleGenerate}
                     onabort={handleAbort}
