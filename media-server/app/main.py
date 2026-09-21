@@ -23,6 +23,7 @@ from typing import Optional
 import yaml
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from rich.console import Console
 
 from app.models import (
@@ -207,6 +208,14 @@ async def health():
     return {"status": "ok", "backend": DEFAULT_BACKEND}
 
 
+@app.get("/backends")
+async def backends():
+    return {
+        "default": DEFAULT_BACKEND,
+        "backends": sorted((CONFIG.get("backends") or {}).keys()),
+    }
+
+
 # ── POST /images/generations ────────────────────────────────────
 
 
@@ -223,7 +232,14 @@ async def images_generations(req: ImageGenerationRequest) -> ImagesResponse:
     if n > 4:
         raise HTTPException(status_code=400, detail="n must be between 1 and 4")
 
-    backend = get_backend(backend_id)
+    try:
+        backend = get_backend(backend_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        console.log(f"[red]Backend '{backend_id}' failed to load: {e}")
+        raise HTTPException(status_code=500, detail=f"Backend load failed: {e}")
+
     results = []
 
     for i in range(n):
@@ -315,7 +331,14 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
                 status_code=400, detail="No valid input images provided"
             )
 
-        backend = get_backend(backend_id)
+        try:
+            backend = get_backend(backend_id)
+        except HTTPException:
+            raise
+        except Exception as e:
+            console.log(f"[red]Backend '{backend_id}' failed to load: {e}")
+            raise HTTPException(status_code=500, detail=f"Backend load failed: {e}")
+
         results = []
 
         for i in range(n):
@@ -370,6 +393,18 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
     finally:
         # Cleanup input temp files
         shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+# ── Static Frontend Mount ───────────────────────────────────────
+# Serve the built Svelte frontend (media-server/frontend/dist) at `/`.
+# Mounted AFTER all API routes so API routes take precedence.
+_FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
+if _FRONTEND_DIST.is_dir():
+    app.mount("/", StaticFiles(directory=_FRONTEND_DIST, html=True), name="frontend")
+else:
+    console.log(
+        f"[yellow]Frontend dist not found at {_FRONTEND_DIST} — serving API only"
+    )
 
 
 # ── CLI Entry Point ─────────────────────────────────────────────

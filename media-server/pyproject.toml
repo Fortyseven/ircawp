@@ -31,3 +31,9 @@ diffusers = { git = "https://github.com/huggingface/diffusers" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+]

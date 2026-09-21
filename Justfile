@@ -7,6 +7,12 @@ run:
 media-server:
     cd media-server && uv run -m app.main
 
+media-server-build:
+    cd media-server/frontend && npm install && npm run build
+
+media-server-dev:
+    cd media-server/frontend && npm run dev
+
 aimee:
 	uv run -m app --config ./config.aimee.yml
 
