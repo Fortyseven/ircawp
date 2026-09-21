@@ -128,6 +128,7 @@ See `app/backends/tools/README.md` and `docs/TOOL_CALLING_IMPLEMENTATION.md` for
 
 ## Testing
 
+- Ask before creating tests; not every change requires a new test
 - Tests use `pytest` with fixtures in `tests/conftest.py`
 - Key fixtures: `mock_backend`, `mock_media_backend`, `mock_console`, `mock_plugin`, `mock_tool`
 - Run: `just test` or `python -m pytest tests/ -v`
