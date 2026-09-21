@@ -1,7 +1,6 @@
 <script>
     import { untrack } from "svelte";
     import ImageUpload from "./ImageUpload.svelte";
-    import { saveDraft } from "../lib/draft.js";
     import {
         DEFAULT_ASPECT_RATIO,
         DEFAULT_OUTPUT_SIZE,
@@ -10,36 +9,60 @@
         dimensionsForAspect,
         getAspectRatioGroups,
     } from "../lib/size-options.js";
+    import { loadDraft, saveDraft } from "../lib/draft.js";
 
     let {
         backends = [],
         defaultBackend = "",
         settings = {},
-        draft = {},
         generating = false,
         ongenerate,
         onabort,
     } = $props();
 
-    const initialDraft = untrack(() => draft);
-    const initialSettings = untrack(() => ({
-        ...settings,
-        ...initialDraft.settings,
-    }));
+    const initialSettings = untrack(() => settings);
+    const initialDraft = untrack(() => loadDraft());
+    const initialDraftSettings =
+        initialDraft.settings && typeof initialDraft.settings === "object"
+            ? initialDraft.settings
+            : {};
+    const initialImages = Array.isArray(initialDraft.images)
+        ? initialDraft.images
+        : [];
 
     let prompt = $state(initialDraft.prompt ?? "");
-    let model = $state(initialSettings.model ?? "");
-    let aspectRatio = $state(
-        initialSettings.aspectRatio ?? DEFAULT_ASPECT_RATIO,
+    let model = $state(
+        initialDraftSettings.model ?? initialSettings.model ?? "",
     );
-    let outputSize = $state(initialSettings.outputSize ?? DEFAULT_OUTPUT_SIZE);
-    let trueCfgScale = $state(initialSettings.trueCfgScale ?? 2.0);
-    let seed = $state(initialSettings.seed ?? undefined);
-    let quality = $state(initialSettings.quality ?? "standard");
-    let n = $state(initialSettings.n ?? 1);
-    let steps = $state(initialSettings.steps ?? undefined);
-    let images = $state(initialDraft.images ?? []);
-    let hadImages = initialDraft.images?.length > 0;
+    let aspectRatio = $state(
+        initialDraftSettings.aspectRatio ??
+            initialSettings.aspectRatio ??
+            DEFAULT_ASPECT_RATIO,
+    );
+    let outputSize = $state(
+        initialDraftSettings.outputSize ??
+            initialSettings.outputSize ??
+            DEFAULT_OUTPUT_SIZE,
+    );
+    let trueCfgScale = $state(
+        initialDraftSettings.trueCfgScale ??
+            initialSettings.trueCfgScale ??
+            2.0,
+    );
+    let seed = $state(
+        initialDraftSettings.seed ?? initialSettings.seed ?? undefined,
+    );
+    let hadImages = initialImages.length > 0;
+    let n = $state(initialDraftSettings.n ?? initialSettings.n ?? 1);
+    let steps = $state(
+        initialDraftSettings.steps ?? initialSettings.steps ?? undefined,
+    );
+    let images = $state(initialImages);
+    let rewritePrompt = $state(
+        initialDraftSettings.rewritePrompt ??
+            initialSettings.rewritePrompt ??
+            false,
+    );
 
     const aspectRatioGroups = $derived(getAspectRatioGroups(images.length > 0));
     const matchesSource = $derived(aspectRatio === MATCH_SOURCE);
@@ -71,9 +94,9 @@
                 outputSize,
                 trueCfgScale,
                 seed,
-                quality,
                 n,
                 steps,
+                rewritePrompt,
             },
         });
     });
@@ -88,10 +111,10 @@
             aspectRatio,
             trueCfgScale: supportsQwenControls ? trueCfgScale : undefined,
             seed: supportsQwenControls ? seed : undefined,
-            quality,
             n,
             steps,
             images,
+            rewritePrompt,
         });
     }
 
@@ -132,6 +155,15 @@
     </label>
 
     <ImageUpload bind:images />
+
+    <label class="rewrite-toggle">
+        <input
+            type="checkbox"
+            bind:checked={rewritePrompt}
+            disabled={generating}
+        />
+        <span>rewrite prompt before generating</span>
+    </label>
 
     <div class="row">
         <label class="field grow">
@@ -187,18 +219,6 @@
                 {#each OUTPUT_SIZES as edge}
                     <option value={edge}>{edge}px</option>
                 {/each}
-            </select>
-        </label>
-
-        <label class="field">
-            <span class="label mono">quality</span>
-            <select
-                bind:value={quality}
-                disabled={generating}
-            >
-                <option value="standard">standard</option>
-                <option value="high">high (remaster)</option>
-                <option value="low">low</option>
             </select>
         </label>
 

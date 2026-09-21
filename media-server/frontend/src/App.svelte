@@ -3,6 +3,7 @@
     import PromptForm from "./components/PromptForm.svelte";
     import ResultGrid from "./components/ResultGrid.svelte";
     import History from "./components/History.svelte";
+    import PromptRewriteSettings from "./components/PromptRewriteSettings.svelte";
     import { cancelImage, createImage, getBackends } from "./lib/api.js";
     import {
         getGenerations,
@@ -10,14 +11,24 @@
         deleteGeneration,
         clearHistory,
     } from "./lib/db.js";
-    import { loadDraft } from "./lib/draft.js";
+    import { rewritePrompt } from "./lib/prompt-rewrite.js";
     import { loadSettings, saveSettings } from "./lib/settings.js";
 
     let backends = $state([]);
     let defaultBackend = $state("");
-    let settings = $state(loadSettings());
-    let draft = $state(loadDraft());
+    const savedSettings = loadSettings();
+    let settings = $state({
+        ...savedSettings,
+        rewritePrompt: savedSettings.rewritePrompt ?? false,
+        promptRewrite: savedSettings.promptRewrite ?? {
+            endpoint: "",
+            apiKey: "",
+            model: "",
+        },
+    });
+    let showPromptRewriteSettings = $state(false);
     let generating = $state(false);
+    let isRevising = $state(false);
     let error = $state("");
     let results = $state(null);
     let history = $state([]);
@@ -61,11 +72,37 @@
         if (generating) return;
         error = "";
         generating = true;
+        isRevising = params.rewritePrompt;
         const requestId = crypto.randomUUID();
         activeRequestId = requestId;
         requestController = new AbortController();
         startTimer();
         try {
+            if (params.rewritePrompt) {
+                try {
+                    const rewrittenPrompt = await rewritePrompt({
+                        prompt: params.prompt,
+                        endpoint: settings.promptRewrite.endpoint,
+                        apiKey: settings.promptRewrite.apiKey,
+                        model: settings.promptRewrite.model,
+                        hasImages: params.images.length > 0,
+                        images: params.images,
+                        signal: requestController.signal,
+                    });
+                    console.info(
+                        "prompt rewrite",
+                        "ORIG: " + params.prompt,
+                        "NEW: " + rewrittenPrompt,
+                    );
+                } catch (e) {
+                    if (e.name === "AbortError") throw e;
+                    console.info(
+                        "prompt rewrite failed; generating original prompt",
+                        e,
+                    );
+                }
+            }
+            isRevising = false;
             const res = await createImage(
                 { ...params, request_id: requestId },
                 requestController.signal,
@@ -79,7 +116,6 @@
                 aspectRatio: params.aspectRatio,
                 trueCfgScale: params.trueCfgScale,
                 seed: params.seed,
-                quality: params.quality,
                 n: params.n,
                 steps: params.steps,
                 sourceImage: params.images[0] ?? null,
@@ -88,17 +124,20 @@
             };
             await addGeneration(record);
             results = record;
-            saveSettings({
+            const nextSettings = {
                 model: params.model,
                 size: params.size,
                 outputSize: params.outputSize,
                 aspectRatio: params.aspectRatio,
                 trueCfgScale: params.trueCfgScale,
                 seed: params.seed,
-                quality: params.quality,
                 n: params.n,
                 steps: params.steps,
-            });
+                rewritePrompt: params.rewritePrompt,
+                promptRewrite: settings.promptRewrite,
+            };
+            settings = { ...settings, ...nextSettings };
+            saveSettings(nextSettings);
             await refreshHistory();
         } catch (e) {
             if (e.name !== "AbortError") {
@@ -106,6 +145,7 @@
             }
         } finally {
             generating = false;
+            isRevising = false;
             requestController = null;
             activeRequestId = null;
             stopTimer();
@@ -131,6 +171,19 @@
         await clearHistory();
         refreshHistory();
     }
+
+    function handlePromptRewriteSettings(config) {
+        const promptRewrite = {
+            ...settings.promptRewrite,
+            ...config.promptRewrite,
+        };
+        settings = {
+            ...settings,
+            promptRewrite,
+        };
+        saveSettings({ promptRewrite });
+        showPromptRewriteSettings = false;
+    }
 </script>
 
 <div class="app">
@@ -154,6 +207,14 @@
                 ? `${backends.length} backends · default ${defaultBackend}`
                 : "connecting…"}
         </div>
+        <button
+            class="config-button"
+            type="button"
+            aria-label="Configure prompt rewriting"
+            onclick={() => (showPromptRewriteSettings = true)}
+        >
+            settings
+        </button>
     </header>
 
     <main
@@ -166,7 +227,6 @@
                     {backends}
                     {defaultBackend}
                     {settings}
-                    {draft}
                     {generating}
                     ongenerate={handleGenerate}
                     onabort={handleAbort}
@@ -180,7 +240,10 @@
                             class="safelight"
                             aria-hidden="true"
                         ></div>
-                        <p class="mono">developing… {fmtElapsed(elapsed)}</p>
+                        <p class="mono">
+                            {isRevising ? "revising…" : "developing…"}
+                            {fmtElapsed(elapsed)}
+                        </p>
                     </div>
                 {:else if results}
                     <ResultGrid result={results} />
@@ -210,3 +273,11 @@
         />
     </main>
 </div>
+
+{#if showPromptRewriteSettings}
+    <PromptRewriteSettings
+        config={settings.promptRewrite}
+        onsave={handlePromptRewriteSettings}
+        onclose={() => (showPromptRewriteSettings = false)}
+    />
+{/if}

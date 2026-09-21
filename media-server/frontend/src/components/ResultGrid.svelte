@@ -15,6 +15,8 @@
     });
 
     function handleKeyDown(event) {
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
+
         if (event.key.toLowerCase() === "z" && sourceImage) {
             event.preventDefault();
             comparing = true;

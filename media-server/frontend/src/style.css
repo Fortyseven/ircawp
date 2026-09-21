@@ -106,6 +106,24 @@ body {
   box-shadow: none;
 }
 
+.config-button,
+.dialog-close {
+  font: inherit;
+  font-size: 0.72rem;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.3rem 0.55rem;
+  cursor: pointer;
+}
+
+.config-button:hover,
+.dialog-close:hover {
+  border-color: var(--amber);
+  color: var(--amber-bright);
+}
+
 /* ── workspace ──────────────────────────────────────────────── */
 
 .content-shell {
@@ -217,6 +235,24 @@ input[type="number"]:disabled {
   margin: 0;
   font-size: 0.7rem;
   color: var(--dim);
+}
+
+.rewrite-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.rewrite-toggle input {
+  accent-color: var(--amber);
+}
+
+.rewrite-toggle:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 /* CTA */
@@ -382,6 +418,77 @@ input[type="number"]:disabled {
   background: rgba(224, 90, 78, 0.1);
   border: 1px solid rgba(224, 90, 78, 0.35);
   border-radius: 7px;
+}
+
+/* ── prompt rewrite settings ───────────────────────────────── */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.rewrite-dialog {
+  width: min(100%, 440px);
+  background: var(--panel);
+  border: 1px solid var(--border-bright);
+  border-radius: var(--radius);
+  padding: 1.1rem;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+}
+
+.dialog-head,
+.dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.dialog-head {
+  margin-bottom: 1rem;
+}
+
+.dialog-head h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--amber);
+}
+
+.rewrite-dialog form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.rewrite-dialog input[type="url"],
+.rewrite-dialog input[type="text"],
+.rewrite-dialog input[type="password"] {
+  width: 100%;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  color: var(--text);
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0.55rem 0.7rem;
+}
+
+.rewrite-dialog input:focus {
+  outline: none;
+  border-color: var(--amber);
+}
+
+.dialog-actions {
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+
+.dialog-actions .cta {
+  padding: 0.55rem 1rem;
 }
 
 /* ── results ────────────────────────────────────────────────── */

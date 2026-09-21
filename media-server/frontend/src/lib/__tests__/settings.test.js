@@ -69,6 +69,39 @@ describe("saveSettings", () => {
         expect(loadSettings()).toEqual(settings);
     });
 
+    it("preserves stored prompt rewrite settings when saving image generation settings", () => {
+        localStorageMock.setItem(
+            KEY,
+            JSON.stringify({
+                rewritePrompt: true,
+                promptRewrite: {
+                    endpoint: "https://rewrite.example.com/v1",
+                    apiKey: "rewrite-api-key",
+                    model: "rewrite-model",
+                },
+            }),
+        );
+
+        const imageSettings = {
+            model: "flux2klein",
+            size: "1024x1024",
+            quality: "high",
+            n: 2,
+        };
+
+        saveSettings(imageSettings);
+
+        expect(loadSettings()).toEqual({
+            ...imageSettings,
+            rewritePrompt: true,
+            promptRewrite: {
+                endpoint: "https://rewrite.example.com/v1",
+                apiKey: "rewrite-api-key",
+                model: "rewrite-model",
+            },
+        });
+    });
+
     it("does not throw when localStorage is unavailable", () => {
         vi.stubGlobal("localStorage", undefined);
         expect(() => saveSettings({ model: "sdxs" })).not.toThrow();
