@@ -56,6 +56,10 @@ export async function createImage(params, signal) {
     return generateImage(generationParams, signal);
 }
 
+export async function cancelImage(requestId) {
+    return postJSON(`/images/cancellations/${encodeURIComponent(requestId)}`);
+}
+
 export async function getBackends() {
     return request("/backends");
 }

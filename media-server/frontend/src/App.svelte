@@ -3,7 +3,7 @@
   import PromptForm from "./components/PromptForm.svelte";
   import ResultGrid from "./components/ResultGrid.svelte";
   import History from "./components/History.svelte";
-  import { createImage, getBackends } from "./lib/api.js";
+  import { cancelImage, createImage, getBackends } from "./lib/api.js";
   import {
     getGenerations,
     addGeneration,
@@ -22,6 +22,7 @@
   let elapsed = $state(0);
   let timer = $state(null);
   let requestController = null;
+  let activeRequestId = null;
 
   function fmtElapsed(s) {
     const m = Math.floor(s / 60);
@@ -58,10 +59,12 @@
     if (generating) return;
     error = "";
     generating = true;
+    const requestId = crypto.randomUUID();
+    activeRequestId = requestId;
     requestController = new AbortController();
     startTimer();
     try {
-      const res = await createImage(params, requestController.signal);
+      const res = await createImage({ ...params, request_id: requestId }, requestController.signal);
       const record = {
         prompt: params.prompt,
         model: params.model || defaultBackend,
@@ -90,11 +93,14 @@
     } finally {
       generating = false;
       requestController = null;
+      activeRequestId = null;
       stopTimer();
     }
   }
 
-  function handleAbort() {
+  async function handleAbort() {
+    const requestId = activeRequestId;
+    await cancelImage(requestId);
     requestController?.abort();
   }
 

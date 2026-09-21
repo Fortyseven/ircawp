@@ -11,6 +11,7 @@ All refinement logic lives in the main ircawp bot.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import os
 import shutil
@@ -18,6 +19,7 @@ import tempfile
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
+from threading import Event
 from typing import Optional
 
 import yaml
@@ -26,6 +28,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from rich.console import Console
 
+from app.backends.MediaBackend import GenerationCancelled
 from app.models import (
     Image,
     ImageEditRequest,
@@ -61,6 +64,26 @@ def _new_temp_file(suffix=".png") -> Path:
 
 # Cache of backend instances (keeps models in memory across requests)
 _backend_cache = {}
+_active_cancellations: dict[str, Event] = {}
+
+
+def _register_cancellation(request_id: str | None) -> Event | None:
+    if request_id is None:
+        return None
+    cancellation_event = Event()
+    _active_cancellations[request_id] = cancellation_event
+    return cancellation_event
+
+
+def _unregister_cancellation(
+    request_id: str | None, cancellation_event: Event | None
+) -> None:
+    if (
+        request_id is not None
+        and cancellation_event is not None
+        and _active_cancellations.get(request_id) is cancellation_event
+    ):
+        del _active_cancellations[request_id]
 
 
 def get_backend(backend_id: str):
@@ -216,6 +239,15 @@ async def backends():
     }
 
 
+@app.post("/images/cancellations/{request_id}", status_code=202)
+async def cancel_image_request(request_id: str):
+    cancellation_event = _active_cancellations.get(request_id)
+    if cancellation_event is None:
+        raise HTTPException(status_code=404, detail="Request not found")
+    cancellation_event.set()
+    return {"request_id": request_id, "status": "cancelling"}
+
+
 # ── POST /images/generations ────────────────────────────────────
 
 
@@ -232,66 +264,75 @@ async def images_generations(req: ImageGenerationRequest) -> ImagesResponse:
     if n > 4:
         raise HTTPException(status_code=400, detail="n must be between 1 and 4")
 
+    cancellation_event = _register_cancellation(req.request_id)
     try:
-        backend = get_backend(backend_id)
-    except HTTPException:
-        raise
-    except Exception as e:
-        console.log(f"[red]Backend '{backend_id}' failed to load: {e}")
-        raise HTTPException(status_code=500, detail=f"Backend load failed: {e}")
-
-    results = []
-
-    for i in range(n):
-        batch_id = i if n > 1 else None
-        output_file = str(_new_temp_file())
-        config = _build_backend_config(
-            backend_id=backend_id,
-            size=req.size,
-            quality=req.quality,
-            batch_id=batch_id,
-            output_file=output_file,
-            extra={"steps": req.steps} if req.steps is not None else None,
-        )
-
-        console.log(
-            f"[cyan]Generating ({i + 1}/{n}) with {backend_id}"
-            + (f": {req.prompt}" if req.verbose else "")
-        )
-
         try:
-            result = backend.execute(
-                prompt=req.prompt.strip(),
-                config=config,
-                media=[],
-            )
-
-            # Handle both (path, prompt) tuple and single path return
-            if isinstance(result, tuple):
-                image_path, final_prompt = result
-            else:
-                image_path = result
-                final_prompt = None
-
-            console.log(f"[green]Generated ({i + 1}/{n})")
-
-            img = _image_to_response(image_path, final_prompt)
-            results.append(img)
-
-            # Remove temp file — image is already encoded in the response
-            Path(image_path).unlink(missing_ok=True)
-
+            backend = get_backend(backend_id)
         except HTTPException:
             raise
         except Exception as e:
-            console.log(f"[red]Generation ({i + 1}/{n}) failed: {e}")
-            Path(output_file).unlink(missing_ok=True)
-            raise HTTPException(status_code=500, detail=str(e))
+            console.log(f"[red]Backend '{backend_id}' failed to load: {e}")
+            raise HTTPException(status_code=500, detail=f"Backend load failed: {e}")
 
-    return ImagesResponse(
-        created=int(time.time()),
-        data=results,
-    )
+        results = []
+
+        for i in range(n):
+            batch_id = i if n > 1 else None
+            output_file = str(_new_temp_file())
+            config = _build_backend_config(
+                backend_id=backend_id,
+                size=req.size,
+                quality=req.quality,
+                batch_id=batch_id,
+                output_file=output_file,
+                extra={"steps": req.steps} if req.steps is not None else None,
+            )
+            config["cancellation_event"] = cancellation_event
+
+            console.log(
+                f"[cyan]Generating ({i + 1}/{n}) with {backend_id}"
+                + (f": {req.prompt}" if req.verbose else "")
+            )
+
+            try:
+                result = await asyncio.to_thread(
+                    backend.execute,
+                    prompt=req.prompt.strip(),
+                    config=config,
+                    media=[],
+                )
+
+                # Handle both (path, prompt) tuple and single path return
+                if isinstance(result, tuple):
+                    image_path, final_prompt = result
+                else:
+                    image_path = result
+                    final_prompt = None
+
+                console.log(f"[green]Generated ({i + 1}/{n})")
+
+                img = _image_to_response(image_path, final_prompt)
+                results.append(img)
+
+                # Remove temp file — image is already encoded in the response
+                Path(image_path).unlink(missing_ok=True)
+
+            except GenerationCancelled:
+                Path(output_file).unlink(missing_ok=True)
+                raise HTTPException(status_code=409, detail="Generation cancelled")
+            except HTTPException:
+                raise
+            except Exception as e:
+                console.log(f"[red]Generation ({i + 1}/{n}) failed: {e}")
+                Path(output_file).unlink(missing_ok=True)
+                raise HTTPException(status_code=500, detail=str(e))
+
+        return ImagesResponse(
+            created=int(time.time()),
+            data=results,
+        )
+    finally:
+        _unregister_cancellation(req.request_id, cancellation_event)
 
 
 # ── POST /images/edits ──────────────────────────────────────────
@@ -314,6 +355,7 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
     if n > 4:
         raise HTTPException(status_code=400, detail="n must be between 1 and 4")
 
+    cancellation_event = _register_cancellation(req.request_id)
     # Decode input images to temp files
     temp_dir = Path(tempfile.mkdtemp())
     temp_media_paths = []
@@ -353,6 +395,7 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
                 output_file=output_file,
                 extra={"steps": req.steps} if req.steps is not None else None,
             )
+            config["cancellation_event"] = cancellation_event
 
             console.log(
                 f"[cyan]Editing ({i + 1}/{n}) with {backend_id}"
@@ -360,7 +403,8 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
             )
 
             try:
-                result = backend.execute(
+                result = await asyncio.to_thread(
+                    backend.execute,
                     prompt=req.prompt.strip(),
                     config=config,
                     media=temp_media_paths,
@@ -380,6 +424,9 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
                 # Remove temp file — image is already encoded in the response
                 Path(image_path).unlink(missing_ok=True)
 
+            except GenerationCancelled:
+                Path(output_file).unlink(missing_ok=True)
+                raise HTTPException(status_code=409, detail="Generation cancelled")
             except HTTPException:
                 raise
             except Exception as e:
@@ -395,6 +442,7 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
     finally:
         # Cleanup input temp files
         shutil.rmtree(temp_dir, ignore_errors=True)
+        _unregister_cancellation(req.request_id, cancellation_event)
 
 
 # ── Static Frontend Mount ───────────────────────────────────────

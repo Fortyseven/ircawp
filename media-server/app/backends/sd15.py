@@ -44,6 +44,7 @@ class sd15(MediaBackend):
             num_inference_steps=steps,
             guidance_scale=7,
             generator=torch.Generator("cuda").manual_seed(seed),
+            callback_on_step_end=self.cancellation_callback(config),
         ).images[0]
 
         self._save_image_with_metadata(

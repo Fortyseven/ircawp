@@ -43,6 +43,7 @@ class sdxs(MediaBackend):
             guidance_scale=0.5,
             generator=torch.Generator(device="cpu").manual_seed(seed),
             safety_checker=None,
+            callback_on_step_end=self.cancellation_callback(config),
         ).images[0]
 
         self._save_image_with_metadata(

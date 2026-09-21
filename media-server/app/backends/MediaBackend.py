@@ -7,6 +7,10 @@ No LLM calls, no prompt refinement.
 from PIL import Image, PngImagePlugin
 
 
+class GenerationCancelled(Exception):
+    """Raised when a generation backend observes a cancellation request."""
+
+
 class MediaBackend:
     def __init__(self, backend_config: dict = {}):
         self.backend_config = backend_config
@@ -22,6 +26,22 @@ class MediaBackend:
             tuple[str, str]: (path, final_prompt)
         """
         return ""
+
+    @staticmethod
+    def raise_if_cancelled(config: dict) -> None:
+        """Abort cooperative backend work when the request has been cancelled."""
+        cancellation_event = config.get("cancellation_event")
+        if cancellation_event is not None and cancellation_event.is_set():
+            raise GenerationCancelled()
+
+    def cancellation_callback(self, config: dict):
+        """Return a diffusers-compatible callback that observes cancellation."""
+
+        def callback(pipe, step_index, timestep, callback_kwargs):
+            self.raise_if_cancelled(config)
+            return callback_kwargs
+
+        return callback
 
     def _save_image_with_metadata(
         self,

@@ -25,6 +25,9 @@ class ImageRef(BaseModel):
 class ImageGenerationRequest(BaseModel):
     """Request body for POST /images/generations."""
 
+    request_id: Optional[str] = Field(
+        None, description="Optional identifier used to cancel this request."
+    )
     prompt: str = Field(
         ...,
         min_length=1,
@@ -60,6 +63,9 @@ class ImageGenerationRequest(BaseModel):
 class ImageEditRequest(BaseModel):
     """Request body for POST /images/edits."""
 
+    request_id: Optional[str] = Field(
+        None, description="Optional identifier used to cancel this request."
+    )
     prompt: str = Field(
         ...,
         min_length=1,

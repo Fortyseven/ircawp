@@ -205,6 +205,7 @@ class qwenimage21(MediaBackend):
             num_inference_steps=steps,
             generator=torch.Generator("cpu").manual_seed(seed),
             image=media_pil if has_image else None,
+            callback_on_step_end=self.cancellation_callback(config),
         ).images[0]
 
         self._save_image_with_metadata(
