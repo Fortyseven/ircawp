@@ -60,8 +60,6 @@ body {
   align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border);
 }
 
 .brand {
@@ -456,7 +454,7 @@ select:disabled {
   top: 1rem;
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 2rem);
+  max-height: calc(100vh - 7rem);
   min-width: 0;
 }
 
