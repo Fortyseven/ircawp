@@ -32,16 +32,21 @@
     let error = $state("");
     let results = $state(null);
     let history = $state([]);
-    let elapsed = $state(0);
-    let timer = $state(null);
+    let progressPercent = $state(0);
+    let progressTimer = null;
     let requestController = null;
     let activeRequestId = null;
     let promptFormRef = $state(null);
 
-    function fmtElapsed(s) {
-        const m = Math.floor(s / 60);
-        const sec = String(s % 60).padStart(2, "0");
-        return `${m}:${sec}`;
+    async function pollProgress(requestId) {
+        try {
+            const p = await getImageProgress(requestId);
+            const perImage = p.total_steps > 0 ? p.step / p.total_steps : 0;
+            const percent = ((p.image_index + perImage) / p.n) * 100;
+            progressPercent = Math.min(99, Math.round(percent));
+        } catch {
+            // not yet registered server-side, or already finished — ignore
+        }
     }
 
     async function refreshHistory() {
@@ -59,14 +64,14 @@
         refreshHistory();
     });
 
-    function startTimer() {
-        elapsed = 0;
-        timer = setInterval(() => (elapsed += 1), 1000);
+    function startProgressPolling(requestId) {
+        progressPercent = 0;
+        progressTimer = setInterval(() => pollProgress(requestId), 400);
     }
 
-    function stopTimer() {
-        clearInterval(timer);
-        timer = null;
+    function stopProgressPolling() {
+        clearInterval(progressTimer);
+        progressTimer = null;
     }
 
     async function handleGenerate(params) {
@@ -77,7 +82,6 @@
         const requestId = crypto.randomUUID();
         activeRequestId = requestId;
         requestController = new AbortController();
-        startTimer();
         try {
             let rewrittenPrompt = params.prompt;
             if (params.rewritePrompt) {
@@ -101,11 +105,14 @@
                 }
             }
             isRevising = false;
+            // Only poll once the request is actually registered server-side.
+            startProgressPolling(requestId);
             const generationParams = { ...params, prompt: rewrittenPrompt };
             const res = await createImage(
                 { ...generationParams, request_id: requestId },
                 requestController.signal,
             );
+            stopProgressPolling();
             const record = {
                 prompt: params.prompt,
                 model: params.model || defaultBackend,
@@ -147,7 +154,7 @@
             isRevising = false;
             requestController = null;
             activeRequestId = null;
-            stopTimer();
+            stopProgressPolling();
         }
     }
 
