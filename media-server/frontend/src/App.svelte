@@ -137,43 +137,45 @@
     </div>
   </header>
 
-  <section class="workspace">
-    <div class="panel form-panel">
-      <PromptForm
-        backends={backends}
-        defaultBackend={defaultBackend}
-        settings={settings}
-        generating={generating}
-        ongenerate={handleGenerate}
-        onabort={handleAbort}
-      />
-    </div>
+  <main class="content-shell" class:has-history={history.length > 0}>
+    <section class="workspace">
+      <div class="panel form-panel">
+        <PromptForm
+          backends={backends}
+          defaultBackend={defaultBackend}
+          settings={settings}
+          generating={generating}
+          ongenerate={handleGenerate}
+          onabort={handleAbort}
+        />
+      </div>
 
-    <div class="panel result-panel">
-      {#if generating}
-        <div class="generating">
-          <div class="safelight" aria-hidden="true"></div>
-          <p class="mono">developing… {fmtElapsed(elapsed)}</p>
-        </div>
-      {:else if results}
-        <ResultGrid result={results} />
-      {:else}
-        <div class="empty">
-          <p>nothing on the tray yet</p>
-          <p class="mono dim">prompt → generate</p>
-        </div>
-      {/if}
-      {#if error}
-        <p class="error mono" role="alert">{error}</p>
-      {/if}
-    </div>
-  </section>
+      <div class="panel result-panel">
+        {#if generating}
+          <div class="generating">
+            <div class="safelight" aria-hidden="true"></div>
+            <p class="mono">developing… {fmtElapsed(elapsed)}</p>
+          </div>
+        {:else if results}
+          <ResultGrid result={results} />
+        {:else}
+          <div class="empty">
+            <p>nothing on the tray yet</p>
+            <p class="mono dim">prompt → generate</p>
+          </div>
+        {/if}
+        {#if error}
+          <p class="error mono" role="alert">{error}</p>
+        {/if}
+      </div>
+    </section>
 
-  <History
-    items={history}
-    activeId={results?.id ?? null}
-    onview={viewHistoryItem}
-    ondelete={handleDelete}
-    onclear={handleClear}
-  />
+    <History
+      items={history}
+      activeId={results?.id ?? null}
+      onview={viewHistoryItem}
+      ondelete={handleDelete}
+      onclear={handleClear}
+    />
+  </main>
 </div>
