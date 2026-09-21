@@ -36,6 +36,7 @@
     let timer = $state(null);
     let requestController = null;
     let activeRequestId = null;
+    let promptFormRef = $state(null);
 
     function fmtElapsed(s) {
         const m = Math.floor(s / 60);
@@ -160,6 +161,10 @@
         results = item;
     }
 
+    function handleUsePrompt(prompt) {
+        promptFormRef?.setPrompt(prompt);
+    }
+
     async function handleDelete(id) {
         await deleteGeneration(id);
         refreshHistory();
@@ -222,6 +227,7 @@
         <section class="workspace">
             <div class="panel form-panel">
                 <PromptForm
+                    bind:this={promptFormRef}
                     {backends}
                     {defaultBackend}
                     {settings}
@@ -268,6 +274,7 @@
             onview={viewHistoryItem}
             ondelete={handleDelete}
             onclear={handleClear}
+            onuseprompt={handleUsePrompt}
         />
     </main>
 </div>

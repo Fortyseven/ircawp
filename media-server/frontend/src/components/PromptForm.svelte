@@ -118,6 +118,10 @@
         });
     }
 
+    export function setPrompt(text) {
+        prompt = text;
+    }
+
     function handleShortcut(event) {
         if (event.key === "Escape" && generating) {
             event.preventDefault();

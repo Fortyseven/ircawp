@@ -1,5 +1,12 @@
 <script>
-    let { items = [], activeId = null, onview, ondelete, onclear } = $props();
+    let {
+        items = [],
+        activeId = null,
+        onview,
+        ondelete,
+        onclear,
+        onuseprompt,
+    } = $props();
 
     function itemTooltip(item) {
         const lines = [item.prompt];
@@ -54,6 +61,18 @@
                             }}
                         >
                             ×
+                        </button>
+                        <button
+                            type="button"
+                            class="frame-useprompt"
+                            aria-label="copy prompt to form"
+                            title="use this prompt"
+                            onclick={(e) => {
+                                e.stopPropagation();
+                                onuseprompt(item.prompt);
+                            }}
+                        >
+                            ⎘
                         </button>
                     </div>
                 {/each}
