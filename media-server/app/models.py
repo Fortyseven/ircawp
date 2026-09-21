@@ -45,6 +45,13 @@ class ImageGenerationRequest(BaseModel):
     size: Optional[str] = Field(
         None, description="Image size as 'WIDTHxHEIGHT', e.g. '1024x1024'."
     )
+    output_size: Optional[int] = Field(
+        None,
+        ge=256,
+        le=4096,
+        multiple_of=16,
+        description="Maximum output edge in pixels, preserving the selected aspect ratio.",
+    )
     quality: Optional[Literal["standard", "hd", "low", "medium", "high", "auto"]] = (
         Field(
             None, description="Image quality. Maps to remaster flag for our backends."
@@ -84,6 +91,13 @@ class ImageEditRequest(BaseModel):
     )
     size: Optional[str] = Field(
         None, description="Output image size as 'WIDTHxHEIGHT'."
+    )
+    output_size: Optional[int] = Field(
+        None,
+        ge=256,
+        le=4096,
+        multiple_of=16,
+        description="Maximum output edge in pixels, preserving the source or selected aspect ratio.",
     )
     quality: Optional[Literal["standard", "hd", "low", "medium", "high", "auto"]] = (
         Field(None, description="Image quality.")

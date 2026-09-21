@@ -22,6 +22,17 @@ function clean(obj) {
     return out;
 }
 
+function imageRequestBody(params) {
+    const { images, inputFidelity, outputSize, aspectRatio, ...rest } = params;
+    const body = clean(rest);
+    if (outputSize !== undefined) body.output_size = outputSize;
+    if (images !== undefined) {
+        body.images = images.map((url) => ({ image_url: url }));
+    }
+    if (inputFidelity !== undefined) body.input_fidelity = inputFidelity;
+    return body;
+}
+
 function postJSON(url, body, signal) {
     return request(url, {
         method: "POST",
@@ -32,19 +43,16 @@ function postJSON(url, body, signal) {
 }
 
 export async function generateImage(params, signal) {
-    return postJSON("/images/generations", clean(params), signal);
+    const { images, ...generationParams } = params;
+    return postJSON(
+        "/images/generations",
+        imageRequestBody(generationParams),
+        signal,
+    );
 }
 
 export async function editImage(params, signal) {
-    const { images, inputFidelity, ...rest } = params;
-    const body = clean(rest);
-    if (images !== undefined) {
-        body.images = images.map((url) => ({ image_url: url }));
-    }
-    if (inputFidelity !== undefined) {
-        body.input_fidelity = inputFidelity;
-    }
-    return postJSON("/images/edits", body, signal);
+    return postJSON("/images/edits", imageRequestBody(params), signal);
 }
 
 export async function createImage(params, signal) {

@@ -132,6 +132,7 @@ def _build_backend_config(
     *,
     backend_id: str,
     size: Optional[str],
+    output_size: Optional[int],
     quality: Optional[str],
     batch_id=None,
     output_file: Optional[str] = None,
@@ -149,6 +150,9 @@ def _build_backend_config(
 
     if output_file:
         config["output_file"] = output_file
+
+    if output_size is not None:
+        config["max_output_size"] = output_size
 
     # Parse size into width/height if provided
     parsed = parse_size(size)
@@ -282,6 +286,7 @@ async def images_generations(req: ImageGenerationRequest) -> ImagesResponse:
             config = _build_backend_config(
                 backend_id=backend_id,
                 size=req.size,
+                output_size=req.output_size,
                 quality=req.quality,
                 batch_id=batch_id,
                 output_file=output_file,
@@ -390,6 +395,7 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
             config = _build_backend_config(
                 backend_id=backend_id,
                 size=req.size,
+                output_size=req.output_size,
                 quality=req.quality,
                 batch_id=batch_id,
                 output_file=output_file,

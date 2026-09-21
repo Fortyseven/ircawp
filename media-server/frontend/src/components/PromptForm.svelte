@@ -2,11 +2,12 @@
   import { untrack } from "svelte";
   import ImageUpload from "./ImageUpload.svelte";
   import {
-    DEFAULT_SIZE,
+    DEFAULT_ASPECT_RATIO,
+    DEFAULT_OUTPUT_SIZE,
     MATCH_SOURCE,
-    getSizeOptionGroups,
-    isSupportedSize,
-    resolveSizeForSubmission,
+    OUTPUT_SIZES,
+    dimensionsForAspect,
+    getAspectRatioGroups,
   } from "../lib/size-options.js";
 
   let {
@@ -18,32 +19,33 @@
     onabort,
   } = $props();
 
-  const persistedSize = $derived(
-    isSupportedSize(settings.size) ? settings.size : undefined,
-  );
-
   const initialSettings = untrack(() => settings);
 
   let prompt = $state("");
   let model = $state(initialSettings.model ?? "");
-  let size = $state(
-    isSupportedSize(initialSettings.size) ? initialSettings.size : DEFAULT_SIZE,
-  );
+  let aspectRatio = $state(initialSettings.aspectRatio ?? DEFAULT_ASPECT_RATIO);
+  let outputSize = $state(initialSettings.outputSize ?? DEFAULT_OUTPUT_SIZE);
+  let hadImages = false;
   let quality = $state(initialSettings.quality ?? "standard");
   let n = $state(initialSettings.n ?? 1);
   let steps = $state(initialSettings.steps ?? undefined);
   let images = $state([]);
 
-  const sizeOptionGroups = $derived(
-    getSizeOptionGroups(images.length ? "edit" : "generate"),
-  );
+  const aspectRatioGroups = $derived(getAspectRatioGroups(images.length > 0));
+  const matchesSource = $derived(aspectRatio === MATCH_SOURCE);
 
   const canSubmit = $derived(!generating && prompt.trim());
 
   $effect(() => {
-    if (images.length === 0 && size === MATCH_SOURCE) {
-      size = persistedSize ?? DEFAULT_SIZE;
+    const hasImages = images.length > 0;
+
+    if (hasImages && !hadImages) {
+      aspectRatio = MATCH_SOURCE;
+    } else if (!hasImages && matchesSource) {
+      aspectRatio = DEFAULT_ASPECT_RATIO;
     }
+
+    hadImages = hasImages;
   });
 
   function submit() {
@@ -51,7 +53,9 @@
     ongenerate({
       prompt: prompt.trim(),
       model: model || undefined,
-      size: resolveSizeForSubmission(size),
+      size: dimensionsForAspect(aspectRatio, outputSize),
+      outputSize: matchesSource ? undefined : outputSize,
+      aspectRatio,
       quality,
       n,
       steps,
@@ -118,14 +122,23 @@
 
   <div class="row">
     <label class="field">
-      <span class="label mono">size</span>
-      <select bind:value={size} disabled={generating}>
-        {#each sizeOptionGroups as group}
+      <span class="label mono">aspect</span>
+      <select bind:value={aspectRatio} disabled={generating}>
+        {#each aspectRatioGroups as group}
           <optgroup label={group.label}>
             {#each group.options as option}
               <option value={option.value}>{option.label}</option>
             {/each}
           </optgroup>
+        {/each}
+      </select>
+    </label>
+
+    <label class="field">
+      <span class="label mono">output</span>
+      <select bind:value={outputSize} disabled={generating || matchesSource}>
+        {#each OUTPUT_SIZES as edge}
+          <option value={edge}>{edge}px</option>
         {/each}
       </select>
     </label>

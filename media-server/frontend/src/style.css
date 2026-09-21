@@ -191,11 +191,12 @@ select:disabled {
 
 .row {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.9rem;
 }
 
 .row .field {
-  flex: 1;
+  flex: 1 1 6.5rem;
 }
 
 .hint {

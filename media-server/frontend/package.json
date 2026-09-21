@@ -12,7 +12,9 @@
     },
     "devDependencies": {
         "@sveltejs/vite-plugin-svelte": "^5.0.0",
+        "@testing-library/svelte": "^5.4.2",
         "fake-indexeddb": "^6.0.0",
+        "jsdom": "^30.1.0",
         "svelte": "^5.0.0",
         "vite": "^6.0.0",
         "vitest": "^3.0.0"

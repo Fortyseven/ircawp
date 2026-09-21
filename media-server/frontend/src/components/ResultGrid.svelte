@@ -5,7 +5,9 @@
 {#if result}
   <div class="result-meta mono">
     <span>{result.model}</span>
-    {#if result.size}
+    {#if result.aspectRatio && result.outputSize}
+      <span>{result.aspectRatio} · {result.outputSize}px</span>
+    {:else if result.size}
       <span>{result.size}</span>
     {/if}
     {#if result.quality && result.quality !== "standard"}

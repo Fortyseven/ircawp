@@ -70,6 +70,8 @@
         model: params.model || defaultBackend,
         mode: params.images.length ? "edit" : "generate",
         size: params.size,
+        outputSize: params.outputSize,
+        aspectRatio: params.aspectRatio,
         quality: params.quality,
         n: params.n,
         steps: params.steps,
@@ -81,6 +83,8 @@
       saveSettings({
         model: params.model,
         size: params.size,
+        outputSize: params.outputSize,
+        aspectRatio: params.aspectRatio,
         quality: params.quality,
         n: params.n,
         steps: params.steps,
