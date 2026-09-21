@@ -59,6 +59,9 @@ class qwenimage21(MediaBackend):
 
         gguf_path = self.backend_config.get("gguf", DEFAULT_GGUF)
         text_encoder_4bit = self.backend_config.get("text_encoder_4bit", True)
+        # Base model repo (text encoder + VAE + tokenizer). Can be a local
+        # directory for offline servers — see docs/QWENIMAGE21.md.
+        base_model = self.backend_config.get("base_model", BASE_MODEL)
 
         # from_single_file requires a valid URL (or local file path). Normalize
         # a bare "repo_id/file.gguf" into a full HuggingFace resolve URL.
@@ -74,7 +77,7 @@ class qwenimage21(MediaBackend):
         transformer = QwenImage21Transformer2DModel.from_single_file(
             gguf_path,
             quantization_config=GGUFQuantizationConfig(compute_dtype=torch.bfloat16),
-            config=BASE_MODEL,
+            config=base_model,
             subfolder="transformer",
         )
 
@@ -101,7 +104,7 @@ class qwenimage21(MediaBackend):
                 }
             )
 
-        self.pipe = QwenImage21Pipeline.from_pretrained(BASE_MODEL, **pipe_kwargs)
+        self.pipe = QwenImage21Pipeline.from_pretrained(base_model, **pipe_kwargs)
         self.pipe.enable_model_cpu_offload()
 
     def _parse_aspect(self, config: dict) -> float:
