@@ -22,19 +22,20 @@ function clean(obj) {
     return out;
 }
 
-function postJSON(url, body) {
+function postJSON(url, body, signal) {
     return request(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
+        signal,
     });
 }
 
-export async function generateImage(params) {
-    return postJSON("/images/generations", clean(params));
+export async function generateImage(params, signal) {
+    return postJSON("/images/generations", clean(params), signal);
 }
 
-export async function editImage(params) {
+export async function editImage(params, signal) {
     const { images, inputFidelity, ...rest } = params;
     const body = clean(rest);
     if (images !== undefined) {
@@ -43,16 +44,16 @@ export async function editImage(params) {
     if (inputFidelity !== undefined) {
         body.input_fidelity = inputFidelity;
     }
-    return postJSON("/images/edits", body);
+    return postJSON("/images/edits", body, signal);
 }
 
-export async function createImage(params) {
+export async function createImage(params, signal) {
     if (params.images?.length) {
-        return editImage(params);
+        return editImage(params, signal);
     }
 
     const { images, ...generationParams } = params;
-    return generateImage(generationParams);
+    return generateImage(generationParams, signal);
 }
 
 export async function getBackends() {

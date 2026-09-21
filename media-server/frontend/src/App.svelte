@@ -21,6 +21,7 @@
   let history = $state([]);
   let elapsed = $state(0);
   let timer = $state(null);
+  let requestController = null;
 
   function fmtElapsed(s) {
     const m = Math.floor(s / 60);
@@ -57,9 +58,10 @@
     if (generating) return;
     error = "";
     generating = true;
+    requestController = new AbortController();
     startTimer();
     try {
-      const res = await createImage(params);
+      const res = await createImage(params, requestController.signal);
       const record = {
         prompt: params.prompt,
         model: params.model || defaultBackend,
@@ -82,11 +84,18 @@
       });
       await refreshHistory();
     } catch (e) {
-      error = e.message;
+      if (e.name !== "AbortError") {
+        error = e.message;
+      }
     } finally {
       generating = false;
+      requestController = null;
       stopTimer();
     }
+  }
+
+  function handleAbort() {
+    requestController?.abort();
   }
 
   function viewHistoryItem(item) {
@@ -126,6 +135,7 @@
         settings={settings}
         generating={generating}
         ongenerate={handleGenerate}
+        onabort={handleAbort}
       />
     </div>
 

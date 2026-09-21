@@ -15,6 +15,7 @@
     settings = {},
     generating = false,
     ongenerate,
+    onabort,
   } = $props();
 
   const persistedSize = $derived(
@@ -57,7 +58,22 @@
       images,
     });
   }
+
+  function handleShortcut(event) {
+    if (event.key === "Escape" && generating) {
+      event.preventDefault();
+      onabort();
+      return;
+    }
+
+    if (event.ctrlKey && (event.key === "Enter" || event.key.toLowerCase() === "e")) {
+      event.preventDefault();
+      submit();
+    }
+  }
 </script>
+
+<svelte:window onkeydown={handleShortcut} />
 
 <form
   class="form"
