@@ -7,6 +7,9 @@ from typing import Annotated, Literal, Optional
 from pydantic import BaseModel, Field
 
 
+InferenceSteps = Annotated[int, Field(ge=1, le=100)]
+
+
 # ── Request Models ──────────────────────────────────────────────
 
 
@@ -22,35 +25,72 @@ class ImageRef(BaseModel):
 class ImageGenerationRequest(BaseModel):
     """Request body for POST /images/generations."""
 
-    prompt: str = Field(..., min_length=1, max_length=32000, description="Text description of the desired image(s).")
-    model: Optional[str] = Field(None, description="Backend/model to use (e.g. 'flux2klein'). Defaults to server default.")
+    prompt: str = Field(
+        ...,
+        min_length=1,
+        max_length=32000,
+        description="Text description of the desired image(s).",
+    )
+    model: Optional[str] = Field(
+        None,
+        description="Backend/model to use (e.g. 'flux2klein'). Defaults to server default.",
+    )
+    steps: Optional[InferenceSteps] = Field(
+        None, description="Number of inference steps (1-100)."
+    )
     n: int = Field(1, ge=1, le=4, description="Number of images to generate (1-4).")
-    size: Optional[str] = Field(None, description="Image size as 'WIDTHxHEIGHT', e.g. '1024x1024'.")
-    quality: Optional[Literal["standard", "hd", "low", "medium", "high", "auto"]] = Field(
-        None, description="Image quality. Maps to remaster flag for our backends."
+    size: Optional[str] = Field(
+        None, description="Image size as 'WIDTHxHEIGHT', e.g. '1024x1024'."
+    )
+    quality: Optional[Literal["standard", "hd", "low", "medium", "high", "auto"]] = (
+        Field(
+            None, description="Image quality. Maps to remaster flag for our backends."
+        )
     )
     response_format: Optional[Literal["url", "b64_json"]] = Field(
         None, description="Response format. We always return b64_json."
     )
     user: Optional[str] = Field(None, description="End-user identifier (ignored).")
-    verbose: Optional[bool] = Field(False, description="If true, include the full prompt in server logs. Default: false (privacy-first).")
+    verbose: Optional[bool] = Field(
+        False,
+        description="If true, include the full prompt in server logs. Default: false (privacy-first).",
+    )
 
 
 class ImageEditRequest(BaseModel):
     """Request body for POST /images/edits."""
 
-    prompt: str = Field(..., min_length=1, max_length=32000, description="Text description of the desired edit.")
-    images: list[ImageRef] = Field(..., min_length=1, description="Input image(s) to edit.")
-    model: Optional[str] = Field(None, description="Backend/model to use.")
-    n: int = Field(1, ge=1, le=4, description="Number of edited images to generate (1-4).")
-    size: Optional[str] = Field(None, description="Output image size as 'WIDTHxHEIGHT'.")
-    quality: Optional[Literal["standard", "hd", "low", "medium", "high", "auto"]] = Field(
-        None, description="Image quality."
+    prompt: str = Field(
+        ...,
+        min_length=1,
+        max_length=32000,
+        description="Text description of the desired edit.",
     )
-    input_fidelity: Optional[Literal["high", "low"]] = Field(None, description="Fidelity to original input.")
+    images: list[ImageRef] = Field(
+        ..., min_length=1, description="Input image(s) to edit."
+    )
+    model: Optional[str] = Field(None, description="Backend/model to use.")
+    steps: Optional[InferenceSteps] = Field(
+        None, description="Number of inference steps (1-100)."
+    )
+    n: int = Field(
+        1, ge=1, le=4, description="Number of edited images to generate (1-4)."
+    )
+    size: Optional[str] = Field(
+        None, description="Output image size as 'WIDTHxHEIGHT'."
+    )
+    quality: Optional[Literal["standard", "hd", "low", "medium", "high", "auto"]] = (
+        Field(None, description="Image quality.")
+    )
+    input_fidelity: Optional[Literal["high", "low"]] = Field(
+        None, description="Fidelity to original input."
+    )
     mask: Optional[ImageRef] = Field(None, description="Mask image for inpainting.")
     user: Optional[str] = Field(None, description="End-user identifier (ignored).")
-    verbose: Optional[bool] = Field(False, description="If true, include the full prompt in server logs. Default: false (privacy-first).")
+    verbose: Optional[bool] = Field(
+        False,
+        description="If true, include the full prompt in server logs. Default: false (privacy-first).",
+    )
 
 
 # ── Response Models ─────────────────────────────────────────────
@@ -60,15 +100,23 @@ class Image(BaseModel):
     """A single generated/edited image in the response."""
 
     b64_json: Optional[str] = Field(None, description="Base64-encoded image data.")
-    url: Optional[str] = Field(None, description="URL of the generated image (not used).")
-    revised_prompt: Optional[str] = Field(None, description="Revised prompt used for generation.")
+    url: Optional[str] = Field(
+        None, description="URL of the generated image (not used)."
+    )
+    revised_prompt: Optional[str] = Field(
+        None, description="Revised prompt used for generation."
+    )
 
 
 class ImagesResponse(BaseModel):
     """Response body for image generation/edit endpoints."""
 
-    created: int = Field(..., description="Unix timestamp (seconds) when the response was created.")
-    data: list[Image] = Field(default_factory=list, description="List of generated images.")
+    created: int = Field(
+        ..., description="Unix timestamp (seconds) when the response was created."
+    )
+    data: list[Image] = Field(
+        default_factory=list, description="List of generated images."
+    )
 
 
 # ── Size Parsing ────────────────────────────────────────────────

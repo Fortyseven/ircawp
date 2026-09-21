@@ -36,9 +36,10 @@ class sdxs(MediaBackend):
             output_file = config.get("output_file", DEFAULT_FILENAME)
 
         seed = random.randint(0, 100000)
+        steps = config.get("steps", 1)
         image = self.pipe(
             prompt=prompt,
-            num_inference_steps=1,
+            num_inference_steps=steps,
             guidance_scale=0.5,
             generator=torch.Generator(device="cpu").manual_seed(seed),
             safety_checker=None,
@@ -51,7 +52,7 @@ class sdxs(MediaBackend):
             seed=seed,
             model="sdxs",
             guidance_scale=0.5,
-            inference_steps=1,
+            inference_steps=steps,
             width=image.width,
             height=image.height,
         )

@@ -67,6 +67,7 @@
         size: params.size,
         quality: params.quality,
         n: params.n,
+        steps: params.steps,
         created: res.created,
         images: res.data,
       };
@@ -77,6 +78,7 @@
         size: params.size,
         quality: params.quality,
         n: params.n,
+        steps: params.steps,
       });
       await refreshHistory();
     } catch (e) {

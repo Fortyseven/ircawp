@@ -47,10 +47,11 @@ class hyper_sdxl(MediaBackend):
             output_file = config.get("output_file", DEFAULT_FILENAME)
 
         seed = random.randint(0, 100000)
+        steps = config.get("steps", 1)
 
         image = self.pipe(
             prompt=prompt,
-            num_inference_steps=1,
+            num_inference_steps=steps,
             guidance_scale=0,
             seed=seed,
             timesteps=[800],
@@ -64,7 +65,7 @@ class hyper_sdxl(MediaBackend):
             seed=seed,
             model="hyper_sdxl",
             guidance_scale=0,
-            inference_steps=1,
+            inference_steps=steps,
             width=image.width,
             height=image.height,
         )

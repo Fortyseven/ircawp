@@ -57,6 +57,7 @@ class zimageturbo(MediaBackend):
             output_file = config.get("output_file", DEFAULT_FILENAME)
 
         seed = torch.randint(0, 1000000, (1,)).item()
+        steps = config.get("steps", INF_STEPS)
 
         # Check if width/height are provided directly (from size param)
         if "width" in config and "height" in config:
@@ -87,7 +88,7 @@ class zimageturbo(MediaBackend):
             prompt=final_prompt,
             width=width,
             height=height,
-            num_inference_steps=INF_STEPS,
+            num_inference_steps=steps,
             guidance_scale=CFG_SCALE,
             generator=torch.Generator("cpu").manual_seed(seed),
         ).images[0]
@@ -99,7 +100,7 @@ class zimageturbo(MediaBackend):
             seed=seed,
             model="zimageturbo",
             guidance_scale=CFG_SCALE,
-            inference_steps=INF_STEPS,
+            inference_steps=steps,
             width=width,
             height=height,
             aspect_ratio=str(aspect),

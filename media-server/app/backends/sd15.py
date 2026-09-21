@@ -38,9 +38,10 @@ class sd15(MediaBackend):
             output_file = config.get("output_file", DEFAULT_FILENAME)
 
         seed = random.randint(0, 100000)
+        steps = config.get("steps", 25)
         image = self.pipe(
             prompt=prompt,
-            num_inference_steps=25,
+            num_inference_steps=steps,
             guidance_scale=7,
             generator=torch.Generator("cuda").manual_seed(seed),
         ).images[0]
@@ -52,7 +53,7 @@ class sd15(MediaBackend):
             seed=seed,
             model="sd15",
             guidance_scale=7,
-            inference_steps=25,
+            inference_steps=steps,
             width=image.width,
             height=image.height,
         )

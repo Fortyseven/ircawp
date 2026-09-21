@@ -30,6 +30,7 @@
   );
   let quality = $state(initialSettings.quality ?? "standard");
   let n = $state(initialSettings.n ?? 1);
+  let steps = $state(initialSettings.steps ?? undefined);
   let images = $state([]);
 
   const sizeOptionGroups = $derived(
@@ -52,6 +53,7 @@
       size: resolveSizeForSubmission(size),
       quality,
       n,
+      steps,
       images,
     });
   }
@@ -119,6 +121,17 @@
         <option value="high">high (remaster)</option>
         <option value="low">low</option>
       </select>
+    </label>
+
+    <label class="field">
+      <span class="label mono">steps</span>
+      <input
+        type="number"
+        bind:value={steps}
+        min="1"
+        max="100"
+        disabled={generating}
+      />
     </label>
   </div>
 

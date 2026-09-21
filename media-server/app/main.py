@@ -251,6 +251,7 @@ async def images_generations(req: ImageGenerationRequest) -> ImagesResponse:
             quality=req.quality,
             batch_id=batch_id,
             output_file=output_file,
+            extra={"steps": req.steps} if req.steps is not None else None,
         )
 
         console.log(
@@ -350,6 +351,7 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
                 quality=req.quality,
                 batch_id=batch_id,
                 output_file=output_file,
+                extra={"steps": req.steps} if req.steps is not None else None,
             )
 
             console.log(

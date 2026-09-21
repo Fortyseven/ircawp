@@ -50,7 +50,7 @@ class flux2klein(MediaBackend):
         batch_id=None,
         media=[],
     ) -> tuple[str, str]:
-        steps = INF_STEPS
+        steps = config.get("steps", INF_STEPS)
         has_image = len(media) > 0
 
         # Output path
@@ -94,7 +94,7 @@ class flux2klein(MediaBackend):
             final_prompt = (
                 """Enhance this image while faithfully preserving its original style, medium, composition, colors, and subject. Increase sharpness, clarity, and fine detail. Remove blur, noise, grain, compression artifacts, and haze. Restore crisp edges and clean lines. Keep the existing art style exactly as it is — do not change the medium, do not add photorealism, do not alter the pose, anatomy, proportions, or any text. The result should look like a cleaner, higher-fidelity version of the same image.. {}"""
             ).format(final_prompt)
-            steps = 8
+            steps += 3
 
         # Load input media
         media_pil = []
