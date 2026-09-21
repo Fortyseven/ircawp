@@ -128,7 +128,7 @@ class flux2klein(MediaBackend):
             guidance_scale=CFG_SCALE,
             generator=torch.Generator("cpu").manual_seed(seed),
             image=media_pil if has_image else None,
-            callback_on_step_end=self.cancellation_callback(config),
+            callback_on_step_end=self.cancellation_callback(config, steps),
         ).images[0]
 
         self._save_image_with_metadata(

@@ -122,6 +122,10 @@
         prompt = text;
     }
 
+    export function addImage(dataUrl) {
+        images = [...images, dataUrl];
+    }
+
     function handleShortcut(event) {
         if (event.key === "Escape" && generating) {
             event.preventDefault();

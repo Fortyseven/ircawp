@@ -6,7 +6,10 @@
         ondelete,
         onclear,
         onuseprompt,
+        onaddtoeditqueue,
     } = $props();
+
+    let openMenuId = $state(null);
 
     function itemTooltip(item) {
         const lines = [item.prompt];
@@ -14,7 +17,17 @@
         if (item.seed != null) lines.push(`Seed: ${item.seed}`);
         return lines.join("\n");
     }
+
+    function toggleMenu(id) {
+        openMenuId = openMenuId === id ? null : id;
+    }
+
+    function closeMenu() {
+        openMenuId = null;
+    }
 </script>
+
+<svelte:window onclick={closeMenu} />
 
 {#if items.length}
     <section class="history">
@@ -62,18 +75,51 @@
                         >
                             ×
                         </button>
-                        <button
-                            type="button"
-                            class="frame-useprompt"
-                            aria-label="copy prompt to form"
-                            title="use this prompt"
-                            onclick={(e) => {
-                                e.stopPropagation();
-                                onuseprompt(item.prompt);
-                            }}
-                        >
-                            ⎘
-                        </button>
+                        <div class="frame-menu">
+                            <button
+                                type="button"
+                                class="frame-useprompt"
+                                aria-label="prompt options"
+                                aria-haspopup="true"
+                                aria-expanded={openMenuId === item.id}
+                                title="prompt options"
+                                onclick={(e) => {
+                                    e.stopPropagation();
+                                    toggleMenu(item.id);
+                                }}
+                            >
+                                ⎘
+                            </button>
+                            {#if openMenuId === item.id}
+                                <div
+                                    class="frame-menu-list"
+                                    role="menu"
+                                >
+                                    <button
+                                        type="button"
+                                        role="menuitem"
+                                        onclick={(e) => {
+                                            e.stopPropagation();
+                                            onuseprompt(item.prompt);
+                                            closeMenu();
+                                        }}
+                                    >
+                                        use prompt
+                                    </button>
+                                    <button
+                                        type="button"
+                                        role="menuitem"
+                                        onclick={(e) => {
+                                            e.stopPropagation();
+                                            onaddtoeditqueue(item);
+                                            closeMenu();
+                                        }}
+                                    >
+                                        add to edit queue
+                                    </button>
+                                </div>
+                            {/if}
+                        </div>
                     </div>
                 {/each}
             </div>

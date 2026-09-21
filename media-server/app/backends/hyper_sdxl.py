@@ -56,7 +56,7 @@ class hyper_sdxl(MediaBackend):
             seed=seed,
             timesteps=[800],
             generator=torch.Generator(device=DEVICE).manual_seed(seed),
-            callback_on_step_end=self.cancellation_callback(config),
+            callback_on_step_end=self.cancellation_callback(config, steps),
         ).images[0]
 
         self._save_image_with_metadata(

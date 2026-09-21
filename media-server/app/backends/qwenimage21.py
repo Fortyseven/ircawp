@@ -213,7 +213,7 @@ class qwenimage21(MediaBackend):
             "num_inference_steps": steps,
             "generator": torch.Generator("cpu").manual_seed(seed),
             "image": media_pil if has_image else None,
-            "callback_on_step_end": self.cancellation_callback(config),
+            "callback_on_step_end": self.cancellation_callback(config, steps),
         }
         true_cfg_scale = config.get("true_cfg_scale")
         if true_cfg_scale is not None:

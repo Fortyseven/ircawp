@@ -91,7 +91,7 @@ class zimageturbo(MediaBackend):
             num_inference_steps=steps,
             guidance_scale=CFG_SCALE,
             generator=torch.Generator("cpu").manual_seed(seed),
-            callback_on_step_end=self.cancellation_callback(config),
+            callback_on_step_end=self.cancellation_callback(config, steps),
         ).images[0]
 
         self._save_image_with_metadata(

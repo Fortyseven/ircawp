@@ -76,6 +76,10 @@ export async function cancelImage(requestId) {
     return postJSON(`/images/cancellations/${encodeURIComponent(requestId)}`);
 }
 
+export async function getImageProgress(requestId) {
+    return request(`/images/progress/${encodeURIComponent(requestId)}`);
+}
+
 export async function getBackends() {
     return request("/backends");
 }

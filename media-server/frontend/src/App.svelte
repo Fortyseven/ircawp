@@ -4,7 +4,12 @@
     import ResultGrid from "./components/ResultGrid.svelte";
     import History from "./components/History.svelte";
     import PromptRewriteSettings from "./components/PromptRewriteSettings.svelte";
-    import { cancelImage, createImage, getBackends } from "./lib/api.js";
+    import {
+        cancelImage,
+        createImage,
+        getBackends,
+        getImageProgress,
+    } from "./lib/api.js";
     import {
         getGenerations,
         addGeneration,
@@ -172,6 +177,12 @@
         promptFormRef?.setPrompt(prompt);
     }
 
+    function handleAddToEditQueue(item) {
+        for (const image of item.images) {
+            promptFormRef?.addImage(`data:image/png;base64,${image.b64_json}`);
+        }
+    }
+
     async function handleDelete(id) {
         await deleteGeneration(id);
         refreshHistory();
@@ -253,8 +264,24 @@
                         ></div>
                         <p class="mono">
                             {isRevising ? "revising…" : "developing…"}
-                            {fmtElapsed(elapsed)}
                         </p>
+                        {#if !isRevising}
+                            <div
+                                class="progress-track"
+                                role="progressbar"
+                                aria-valuenow={progressPercent}
+                                aria-valuemin="0"
+                                aria-valuemax="100"
+                            >
+                                <div
+                                    class="progress-fill"
+                                    style="width: {progressPercent}%"
+                                ></div>
+                            </div>
+                            <p class="mono dim progress-label">
+                                {progressPercent}%
+                            </p>
+                        {/if}
                     </div>
                 {:else if results}
                     <ResultGrid result={results} />
@@ -282,6 +309,7 @@
             ondelete={handleDelete}
             onclear={handleClear}
             onuseprompt={handleUsePrompt}
+            onaddtoeditqueue={handleAddToEditQueue}
         />
     </main>
 </div>

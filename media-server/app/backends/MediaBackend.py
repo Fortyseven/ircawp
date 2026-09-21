@@ -34,14 +34,20 @@ class MediaBackend:
         if cancellation_event is not None and cancellation_event.is_set():
             raise GenerationCancelled()
 
-    def cancellation_callback(self, config: dict):
-        """Return a diffusers-compatible callback that observes cancellation."""
+    def cancellation_callback(self, config: dict, total_steps: int | None = None):
+        """Return a diffusers-compatible callback that observes cancellation and reports progress."""
+        progress_state = config.get("progress_state")
 
         def callback(pipe, step_index, timestep, callback_kwargs):
             self.raise_if_cancelled(config)
+            if progress_state is not None:
+                progress_state["step"] = step_index + 1
+                if total_steps is not None:
+                    progress_state["total_steps"] = total_steps
             return callback_kwargs
 
         return callback
+
 
     def _save_image_with_metadata(
         self,

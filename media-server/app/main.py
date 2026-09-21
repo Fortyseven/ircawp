@@ -65,6 +65,7 @@ def _new_temp_file(suffix=".png") -> Path:
 # Cache of backend instances (keeps models in memory across requests)
 _backend_cache = {}
 _active_cancellations: dict[str, Event] = {}
+_active_progress: dict[str, dict] = {}
 
 
 def _register_cancellation(request_id: str | None) -> Event | None:
@@ -84,6 +85,20 @@ def _unregister_cancellation(
         and _active_cancellations.get(request_id) is cancellation_event
     ):
         del _active_cancellations[request_id]
+
+
+def _register_progress(request_id: str | None, n: int) -> dict | None:
+    if request_id is None:
+        return None
+    progress_state = {"n": n, "image_index": 0, "step": 0, "total_steps": 0}
+    _active_progress[request_id] = progress_state
+    return progress_state
+
+
+def _unregister_progress(request_id: str | None) -> None:
+    if request_id is not None:
+        _active_progress.pop(request_id, None)
+
 
 
 def get_backend(backend_id: str):
@@ -260,6 +275,14 @@ async def cancel_image_request(request_id: str):
     return {"request_id": request_id, "status": "cancelling"}
 
 
+@app.get("/images/progress/{request_id}")
+async def get_image_progress(request_id: str):
+    progress_state = _active_progress.get(request_id)
+    if progress_state is None:
+        raise HTTPException(status_code=404, detail="Request not found")
+    return {"request_id": request_id, **progress_state}
+
+
 # ── POST /images/generations ────────────────────────────────────
 
 
@@ -277,6 +300,7 @@ async def images_generations(req: ImageGenerationRequest) -> ImagesResponse:
         raise HTTPException(status_code=400, detail="n must be between 1 and 4")
 
     cancellation_event = _register_cancellation(req.request_id)
+    progress_state = _register_progress(req.request_id, n)
     try:
         try:
             backend = get_backend(backend_id)
@@ -303,6 +327,9 @@ async def images_generations(req: ImageGenerationRequest) -> ImagesResponse:
                 extra={"steps": req.steps} if req.steps is not None else None,
             )
             config["cancellation_event"] = cancellation_event
+            if progress_state is not None:
+                progress_state.update(image_index=i, step=0, total_steps=0)
+            config["progress_state"] = progress_state
 
             console.log(
                 f"[cyan]Generating ({i + 1}/{n}) with {backend_id}"
@@ -348,6 +375,7 @@ async def images_generations(req: ImageGenerationRequest) -> ImagesResponse:
         )
     finally:
         _unregister_cancellation(req.request_id, cancellation_event)
+        _unregister_progress(req.request_id)
 
 
 # ── POST /images/edits ──────────────────────────────────────────
@@ -371,6 +399,7 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
         raise HTTPException(status_code=400, detail="n must be between 1 and 4")
 
     cancellation_event = _register_cancellation(req.request_id)
+    progress_state = _register_progress(req.request_id, n)
     # Decode input images to temp files
     temp_dir = Path(tempfile.mkdtemp())
     temp_media_paths = []
@@ -414,6 +443,9 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
                 extra={"steps": req.steps} if req.steps is not None else None,
             )
             config["cancellation_event"] = cancellation_event
+            if progress_state is not None:
+                progress_state.update(image_index=i, step=0, total_steps=0)
+            config["progress_state"] = progress_state
 
             console.log(
                 f"[cyan]Editing ({i + 1}/{n}) with {backend_id}"
@@ -461,6 +493,7 @@ async def images_edits(req: ImageEditRequest) -> ImagesResponse:
         # Cleanup input temp files
         shutil.rmtree(temp_dir, ignore_errors=True)
         _unregister_cancellation(req.request_id, cancellation_event)
+        _unregister_progress(req.request_id)
 
 
 # ── Static Frontend Mount ───────────────────────────────────────

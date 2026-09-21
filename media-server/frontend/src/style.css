@@ -392,6 +392,27 @@ input[type="number"]:disabled {
   color: var(--muted);
 }
 
+.progress-track {
+  width: min(220px, 70%);
+  height: 6px;
+  border-radius: 999px;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--amber), var(--amber-bright));
+  transition: width 0.3s ease-out;
+}
+
+.progress-label {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--dim);
+}
+
 .empty {
   flex: 1;
   display: flex;
@@ -759,9 +780,8 @@ input[type="number"]:disabled {
 }
 
 .frame-useprompt {
-  position: absolute;
-  top: 4px;
-  left: 4px;
+  position: relative;
+  display: block;
   width: 20px;
   height: 20px;
   padding: 0;
@@ -777,14 +797,53 @@ input[type="number"]:disabled {
   transition: opacity 0.15s, background 0.15s, color 0.15s;
 }
 
+.frame-menu {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 1;
+}
+
 .frame:hover .frame-useprompt,
-.frame:focus-within .frame-useprompt {
+.frame:focus-within .frame-useprompt,
+.frame-menu:has(.frame-menu-list) .frame-useprompt {
   opacity: 1;
 }
 
 .frame-useprompt:hover {
   background: var(--amber);
   color: var(--bg-deep);
+}
+
+.frame-menu-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 8rem;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-raised);
+  border: 1px solid var(--border-bright);
+  border-radius: 6px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.frame-menu-list button {
+  padding: 0.4rem 0.6rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.frame-menu-list button:hover {
+  background: var(--amber-dim);
+  color: var(--amber-bright);
 }
 
 /* ── scrollbars ─────────────────────────────────────────────── */
