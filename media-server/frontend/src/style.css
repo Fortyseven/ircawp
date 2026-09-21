@@ -173,7 +173,8 @@ body {
 }
 
 textarea,
-select {
+select,
+input[type="number"] {
   font-family: var(--font-display);
   font-size: 0.92rem;
   color: var(--text);
@@ -190,13 +191,15 @@ textarea {
 }
 
 textarea:focus,
-select:focus {
+select:focus,
+input[type="number"]:focus {
   outline: none;
   border-color: var(--amber);
 }
 
 textarea:disabled,
-select:disabled {
+select:disabled,
+input[type="number"]:disabled {
   opacity: 0.5;
 }
 
@@ -413,7 +416,9 @@ select:disabled {
 .shot img {
   display: block;
   width: 100%;
+  max-width: 100%;
   height: auto;
+  margin: 0 auto;
 }
 
 .shot figcaption {
@@ -429,6 +434,10 @@ select:disabled {
   color: var(--amber);
 }
 
+.shot .comparison-label {
+  color: var(--amber);
+}
+
 .shot .dl {
   color: var(--muted);
   text-decoration: none;
@@ -438,6 +447,12 @@ select:disabled {
 .shot .dl:hover {
   color: var(--amber-bright);
   border-color: var(--amber);
+}
+
+.comparison-hint {
+  margin: 0.55rem 0 0;
+  font-size: 0.68rem;
+  color: var(--dim);
 }
 
 .prompt-line {

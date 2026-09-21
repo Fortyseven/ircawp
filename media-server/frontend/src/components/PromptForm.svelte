@@ -27,6 +27,8 @@
         initialSettings.aspectRatio ?? DEFAULT_ASPECT_RATIO,
     );
     let outputSize = $state(initialSettings.outputSize ?? DEFAULT_OUTPUT_SIZE);
+    let trueCfgScale = $state(initialSettings.trueCfgScale ?? 2.0);
+    let seed = $state(initialSettings.seed ?? undefined);
     let hadImages = false;
     let quality = $state(initialSettings.quality ?? "standard");
     let n = $state(initialSettings.n ?? 1);
@@ -35,6 +37,9 @@
 
     const aspectRatioGroups = $derived(getAspectRatioGroups(images.length > 0));
     const matchesSource = $derived(aspectRatio === MATCH_SOURCE);
+    const supportsQwenControls = $derived(
+        (model || defaultBackend) === "qwenimage21",
+    );
 
     const canSubmit = $derived(!generating && prompt.trim());
 
@@ -58,6 +63,8 @@
             size: dimensionsForAspect(aspectRatio, outputSize),
             outputSize: matchesSource ? undefined : outputSize,
             aspectRatio,
+            trueCfgScale: supportsQwenControls ? trueCfgScale : undefined,
+            seed: supportsQwenControls ? seed : undefined,
             quality,
             n,
             steps,
@@ -182,6 +189,33 @@
                 disabled={generating}
             />
         </label>
+
+        {#if supportsQwenControls}
+            <label class="field">
+                <span class="label mono">true cfg</span>
+                <input
+                    type="number"
+                    bind:value={trueCfgScale}
+                    min="0"
+                    step="0.1"
+                    placeholder="default"
+                    disabled={generating}
+                />
+            </label>
+
+            <label class="field">
+                <span class="label mono">seed</span>
+                <input
+                    type="number"
+                    bind:value={seed}
+                    min="0"
+                    max="4294967295"
+                    step="1"
+                    placeholder="random"
+                    disabled={generating}
+                />
+            </label>
+        {/if}
     </div>
 
     {#if n > 1}

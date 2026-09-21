@@ -52,6 +52,8 @@ DEFAULT_MAX_OUTPUT_SIZE = 1024
 DEFAULT_STEPS = 40
 REMASTER_EXTRA_STEPS = 4
 
+DEFAULT_CFG = 2.0
+
 
 class qwenimage21(MediaBackend):
     def __init__(self, backend_config: dict = {}):
@@ -140,7 +142,9 @@ class qwenimage21(MediaBackend):
         scale_result = config.get("scale", 1.0)
         do_remaster = config.get("remaster", False)
 
-        seed = torch.randint(0, 1000000, (1,)).item()
+        seed = config.get("seed")
+        if seed is None:
+            seed = torch.randint(0, 1000000, (1,)).item()
         max_output_size = config.get("max_output_size", DEFAULT_MAX_OUTPUT_SIZE)
 
         # Compute dimensions
@@ -198,14 +202,22 @@ class qwenimage21(MediaBackend):
             aspect = self._parse_aspect(config)
 
         # Generate
+        pipeline_kwargs = {
+            "prompt": final_prompt,
+            "width": width,
+            "height": height,
+            "num_inference_steps": steps,
+            "generator": torch.Generator("cpu").manual_seed(seed),
+            "image": media_pil if has_image else None,
+            "callback_on_step_end": self.cancellation_callback(config),
+        }
+        true_cfg_scale = config.get("true_cfg_scale")
+        if true_cfg_scale is not None:
+            pipeline_kwargs["negative_prompt"] = ""
+            pipeline_kwargs["true_cfg_scale"] = true_cfg_scale
+
         output_image = self.pipe(
-            prompt=final_prompt,
-            width=width,
-            height=height,
-            num_inference_steps=steps,
-            generator=torch.Generator("cpu").manual_seed(seed),
-            image=media_pil if has_image else None,
-            callback_on_step_end=self.cancellation_callback(config),
+            **pipeline_kwargs,
         ).images[0]
 
         self._save_image_with_metadata(

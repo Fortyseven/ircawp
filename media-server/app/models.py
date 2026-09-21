@@ -52,6 +52,17 @@ class ImageGenerationRequest(BaseModel):
         multiple_of=16,
         description="Maximum output edge in pixels, preserving the selected aspect ratio.",
     )
+    true_cfg_scale: Optional[float] = Field(
+        None,
+        ge=0,
+        description="Optional classifier-free guidance scale for supported backends.",
+    )
+    seed: Optional[int] = Field(
+        None,
+        ge=0,
+        le=4294967295,
+        description="Optional deterministic generation seed for supported backends.",
+    )
     quality: Optional[Literal["standard", "hd", "low", "medium", "high", "auto"]] = (
         Field(
             None, description="Image quality. Maps to remaster flag for our backends."
@@ -98,6 +109,17 @@ class ImageEditRequest(BaseModel):
         le=4096,
         multiple_of=16,
         description="Maximum output edge in pixels, preserving the source or selected aspect ratio.",
+    )
+    true_cfg_scale: Optional[float] = Field(
+        None,
+        ge=0,
+        description="Optional classifier-free guidance scale for supported backends.",
+    )
+    seed: Optional[int] = Field(
+        None,
+        ge=0,
+        le=4294967295,
+        description="Optional deterministic generation seed for supported backends.",
     )
     quality: Optional[Literal["standard", "hd", "low", "medium", "high", "auto"]] = (
         Field(None, description="Image quality.")

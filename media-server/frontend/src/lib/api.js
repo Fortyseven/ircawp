@@ -23,9 +23,17 @@ function clean(obj) {
 }
 
 function imageRequestBody(params) {
-    const { images, inputFidelity, outputSize, aspectRatio, ...rest } = params;
+    const {
+        images,
+        inputFidelity,
+        outputSize,
+        aspectRatio,
+        trueCfgScale,
+        ...rest
+    } = params;
     const body = clean(rest);
     if (outputSize !== undefined) body.output_size = outputSize;
+    if (trueCfgScale !== undefined) body.true_cfg_scale = trueCfgScale;
     if (images !== undefined) {
         body.images = images.map((url) => ({ image_url: url }));
     }

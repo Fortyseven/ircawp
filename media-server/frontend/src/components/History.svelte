@@ -1,5 +1,12 @@
 <script>
     let { items = [], activeId = null, onview, ondelete, onclear } = $props();
+
+    function itemTooltip(item) {
+        const lines = [item.prompt];
+        if (item.trueCfgScale != null) lines.push(`CFG: ${item.trueCfgScale}`);
+        if (item.seed != null) lines.push(`Seed: ${item.seed}`);
+        return lines.join("\n");
+    }
 </script>
 
 {#if items.length}
@@ -23,7 +30,7 @@
                             type="button"
                             class="frame-view"
                             onclick={() => onview(item)}
-                            title={item.prompt}
+                            title={itemTooltip(item)}
                         >
                             <img
                                 src="data:image/png;base64,{item.images[0]
