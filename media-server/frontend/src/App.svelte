@@ -78,9 +78,10 @@
         requestController = new AbortController();
         startTimer();
         try {
+            let rewrittenPrompt = params.prompt;
             if (params.rewritePrompt) {
                 try {
-                    const rewrittenPrompt = await rewritePrompt({
+                    rewrittenPrompt = await rewritePrompt({
                         prompt: params.prompt,
                         endpoint: settings.promptRewrite.endpoint,
                         apiKey: settings.promptRewrite.apiKey,
@@ -89,11 +90,7 @@
                         images: params.images,
                         signal: requestController.signal,
                     });
-                    console.info(
-                        "prompt rewrite",
-                        "ORIG: " + params.prompt,
-                        "NEW: " + rewrittenPrompt,
-                    );
+                    console.info("prompt rewrite", "NEW: " + rewrittenPrompt);
                 } catch (e) {
                     if (e.name === "AbortError") throw e;
                     console.info(
@@ -103,8 +100,9 @@
                 }
             }
             isRevising = false;
+            const generationParams = { ...params, prompt: rewrittenPrompt };
             const res = await createImage(
-                { ...params, request_id: requestId },
+                { ...generationParams, request_id: requestId },
                 requestController.signal,
             );
             const record = {

@@ -3,6 +3,7 @@
 
     let { images = $bindable([]) } = $props();
     let dragging = $state(false);
+    let draggedIndex = $state(null);
     let fileInput;
 
     function readFile(file) {
@@ -34,6 +35,14 @@
 
     function removeAt(i) {
         images = images.filter((_, j) => j !== i);
+    }
+
+    function moveImage(from, to) {
+        if (from === null || from === to) return;
+        const reordered = [...images];
+        const [image] = reordered.splice(from, 1);
+        reordered.splice(to, 0, image);
+        images = reordered;
     }
 </script>
 
@@ -76,9 +85,24 @@
     </button>
 
     {#if images.length}
-        <div class="thumbs">
+        <div
+            class="thumbs"
+            role="list"
+        >
             {#each images as img, i}
-                <div class="thumb">
+                <div
+                    class="thumb"
+                    role="listitem"
+                    draggable={true}
+                    ondragstart={() => (draggedIndex = i)}
+                    ondragend={() => (draggedIndex = null)}
+                    ondragover={(event) => event.preventDefault()}
+                    ondrop={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        moveImage(draggedIndex, i);
+                    }}
+                >
                     <img
                         src={img}
                         alt="upload {i + 1}"

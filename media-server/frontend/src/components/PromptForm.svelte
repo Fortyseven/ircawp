@@ -47,7 +47,7 @@
     let trueCfgScale = $state(
         initialDraftSettings.trueCfgScale ??
             initialSettings.trueCfgScale ??
-            2.0,
+            1.0,
     );
     let seed = $state(
         initialDraftSettings.seed ?? initialSettings.seed ?? undefined,

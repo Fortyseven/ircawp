@@ -108,6 +108,10 @@ class qwenimage21(MediaBackend):
 
         self.pipe = QwenImage21Pipeline.from_pretrained(base_model, **pipe_kwargs)
         self.pipe.enable_model_cpu_offload()
+        # VAE decode of a full-res latent in one pass spikes memory after the last
+        # step; tiling keeps that final decode within budget.
+        # NOTE: This is commented out because it causes strange visual artifacts.
+        # self.pipe.vae.enable_tiling()
 
     def _parse_aspect(self, config: dict) -> float:
         """Parse aspect ratio from config."""

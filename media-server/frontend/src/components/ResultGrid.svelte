@@ -15,6 +15,7 @@
     });
 
     function handleKeyDown(event) {
+        if (event.target instanceof HTMLTextAreaElement) return;
         if (event.ctrlKey || event.metaKey || event.altKey) return;
 
         if (event.key.toLowerCase() === "z" && sourceImage) {

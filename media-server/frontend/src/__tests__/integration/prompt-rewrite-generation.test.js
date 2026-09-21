@@ -45,7 +45,15 @@ describe("prompt rewrite generation workflow", () => {
         expect(handleGenerate.indexOf("rewritePrompt(")).toBeLessThan(
             handleGenerate.indexOf("createImage("),
         );
-        expect(handleGenerate).toMatch(/createImage\s*\(/);
+        expect(handleGenerate).toMatch(
+            /const\s+generationParams\s*=\s*{\s*\.\.\.params\s*,\s*prompt\s*:\s*rewrittenPrompt\s*}/,
+        );
+        expect(handleGenerate).toMatch(
+            /createImage\s*\(\s*{\s*\.\.\.generationParams\s*,\s*request_id\s*:\s*requestId\s*}/,
+        );
+        expect(handleGenerate).toMatch(
+            /const\s+record\s*=\s*{[\s\S]*?prompt\s*:\s*params\.prompt/,
+        );
         expect(source).toMatch(
             /isRevising\s*\?\s*["']revising…["']\s*:\s*["']developing…["']/,
         );
