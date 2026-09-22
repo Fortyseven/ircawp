@@ -106,7 +106,26 @@ class qwenimage21(MediaBackend):
                 }
             )
 
+        vae_latent_scale = (
+            1.02  # float(self.backend_config.get("vae_latent_scale", 1.0))
+        )
+        vae_latent_shift = (
+            0.0  # float(self.backend_config.get("vae_latent_shift", 0.0))
+        )
+
         self.pipe = QwenImage21Pipeline.from_pretrained(base_model, **pipe_kwargs)
+
+        _orig_decode = self.pipe.vae.decode
+
+        def _decode_rescaled(latents, *a, **kw):
+            if latents is not None:
+                # this is not a perfect solution, but it can help with minor brightness adjustment
+                latents = latents * 0.88
+                return _orig_decode(latents, *a, **kw)
+
+            self.pipe.vae.decode = _decode_rescaled
+            print(f"VAE latent multiplier active: {vae_latent_scale}")
+
         self.pipe.enable_model_cpu_offload()
         # VAE decode of a full-res latent in one pass spikes memory after the last
         # step; tiling keeps that final decode within budget.
