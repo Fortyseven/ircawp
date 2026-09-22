@@ -162,6 +162,14 @@
         ></textarea>
     </label>
 
+    <button
+        class="cta"
+        type="submit"
+        disabled={!canSubmit}
+    >
+        {generating ? "developing…" : images.length ? "edit" : "generate"}
+    </button>
+
     <ImageUpload bind:images />
 
     <label class="rewrite-toggle">
@@ -274,12 +282,4 @@
             {n} images render sequentially — allow ~{n}× the time
         </p>
     {/if}
-
-    <button
-        class="cta"
-        type="submit"
-        disabled={!canSubmit}
-    >
-        {generating ? "developing…" : images.length ? "edit" : "generate"}
-    </button>
 </form>
