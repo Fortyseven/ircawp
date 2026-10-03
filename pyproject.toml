@@ -9,6 +9,7 @@ description = "Slack bot"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "agent-aimee>=0.1.0",
     "aiohttp>=3.12.15",
     "aiosignal>=1.4.0",
     "appier>=1.34.8",
@@ -96,5 +97,5 @@ markers = [
     "tools: Tests for tool framework",
 ]
 
-[tool.uv]
-exclude-newer = "1 week"
+#[tool.uv]
+#exclude-newer = "1 week"
