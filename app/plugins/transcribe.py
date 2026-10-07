@@ -23,18 +23,6 @@ Unless the user requests otherwise, retain the original language and do not tran
 DISABLE_IMAGEGEN = True
 
 
-class TranscriptionResponse(BaseModel):
-    """Structured response model for transcription output."""
-
-    transcription_text: str = Field(
-        ...,
-        description="The transcribed text, with optional user requested modifications.",
-    )
-    cannot_transcribe: bool = Field(
-        False, description="Indicates if the transcription could not be performed."
-    )
-
-
 def transcribe(
     prompt: str,
     media: list,

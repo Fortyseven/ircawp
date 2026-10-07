@@ -140,7 +140,6 @@ class TestToolResult:
 
         assert result.text == "Test result"
         assert result.images == []
-        assert result.has_content() is True
 
     def test_tool_result_with_images(self):
         """Test ToolResult with image paths."""
@@ -152,7 +151,6 @@ class TestToolResult:
         assert result.text == "Result with images"
         assert len(result.images) == 2
         assert result.images == images
-        assert result.has_content() is True
 
     def test_tool_result_empty(self):
         """Test empty ToolResult."""
@@ -162,7 +160,6 @@ class TestToolResult:
 
         assert result.text == ""
         assert result.images == []
-        assert result.has_content() is False
 
 
 class TestToolDiscovery:

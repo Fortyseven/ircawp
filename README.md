@@ -27,57 +27,56 @@ But for now, the standard LLM weirdness is good enough for me! ;)
 
 # Features
 
--   Designed to work on lower-end hardware first. (I personally deploy this on a small AMD Ryzen 5 5625U based media box that sits on a shelf.)
--   Request queue that processes requests in the order received.
--   OpenAI backend (compatible with Ollama, LMStudio, etc.)
--   LLM tool calling system — the bot can call external functions (weather, Wikipedia, calculator, network tools) during inference for richer, fact-checked responses.
--   Easy plugin support to add new `/slash` commands with arguments; return images and text.
-    -   Includes weather, news, Hacker News, transcription, translation, YouTube summaries, and a host of chatbot 'personalities' to ask advice of.
--   Supports media image attachments from Slack for the LLM, or passed to plugins.
--   **Dedicated media-server** — image generation runs as a separate FastAPI service with an OpenAI-compatible API (`POST /images/generations`, `POST /images/edits`), keeping the bot lightweight and decoupled from heavy GPU work.
--   Multiple image backends supporting GPU and CPU inference, from fast/low-quality to high-fidelity outputs.
+- Designed to work on lower-end hardware first. (I personally deploy this on a small AMD Ryzen 5 5625U based media box that sits on a shelf.)
+- Request queue that processes requests in the order received.
+- OpenAI backend (compatible with Ollama, LMStudio, etc.)
+- LLM tool calling system — the bot can call external functions (weather, Wikipedia, calculator, network tools) during inference for richer, fact-checked responses.
+- Easy plugin support to add new `/slash` commands with arguments; return images and text.
+    - Includes weather, news, Hacker News, transcription, translation, YouTube summaries, and a host of chatbot 'personalities' to ask advice of.
+- Supports media image attachments from Slack for the LLM, or passed to plugins.
+- **Dedicated media-server** — image generation runs as a separate FastAPI service with an OpenAI-compatible API (`POST /images/generations`, `POST /images/edits`), keeping the bot lightweight and decoupled from heavy GPU work.
+- Multiple image backends supporting GPU and CPU inference, from fast/low-quality to high-fidelity outputs.
 
 # Requirements
 
--   Tested with Python 3.11+
--   [uv](https://github.com/astral-sh/uv) package manager (used for virtual environments and dependency management)
--   Deployed on a small box with 64gb of RAM (it's overkill; 32gb is recommended though)
+- Tested with Python 3.11+
+- [uv](https://github.com/astral-sh/uv) package manager (used for virtual environments and dependency management)
+- Deployed on a small box with 64gb of RAM (it's overkill; 32gb is recommended though)
 
 ## Installation
 
--   Run `setup.sh` to setup a venv, install dependencies, create config files, and download models.
+- Run `setup.sh` to setup a venv, install dependencies, create config files, and download models.
 
--   You'll need to setup a Slack application. Doing that is beyond the scope of this meager README.
+- You'll need to setup a Slack application. Doing that is beyond the scope of this meager README.
 
--   Modify `.env` with your Slack API credentials.
+- Modify `.env` with your Slack API credentials.
 
--   The bot uses `uv` for package management. Dependencies are managed via `pyproject.toml` and `uv.lock`.
+- The bot uses `uv` for package management. Dependencies are managed via `pyproject.toml` and `uv.lock`.
 
 ## Config
 
 The main config is in `config.yml`. Key sections:
 
--   `frontend`: Which frontend to use (currently `slack`)
--   `backend`: Which LLM backend to use (currently `openai`)
--   `openai`: API URL, key, model, temperature, and `tools_enabled` (enable/disable LLM tool calling)
--   `imagegen`: Image generation settings:
-    -   `backend`: Which image backend to use
-    -   `media_server_url`: URL of the media-server (e.g. `http://localhost:8100`)
-    -   `max_output_size`: Maximum image dimension
--   `llm`: System prompts (`system_prompt`, `system_prompt_neutral`, `imagegen_prompt`)
-    -   The prompt strings support interpolated variables like `{username}`, `{current_datetime}`. Add your own as needed.
--   `weather`: OpenWeatherMap API key and options
+- `frontend`: Which frontend to use (currently `slack`)
+- `backend`: Which LLM backend to use (currently `openai`)
+- `openai`: API URL, key, model, temperature, and `tools_enabled` (enable/disable LLM tool calling)
+- `imagegen`: Image generation settings:
+    - `backend`: Which image backend to use
+    - `media_server_url`: URL of the media-server (e.g. `http://localhost:8100`)
+    - `max_output_size`: Maximum image dimension
+- `llm`: System prompts (`system_prompt`, `system_prompt_neutral`)
+    - The prompt strings support interpolated variables like `{username}`, `{current_datetime}`. Add your own as needed.
+- `weather`: OpenWeatherMap API key and options
 
 The media-server has its own `media-server/config.yml` for backend selection, port, and per-backend settings.
 
 ## Usage
 
--   Run `just run` (or `uv run -m app`) to start the bot. If all your configs and models are in place, and your creds are in `.env`, it should just work.
--   Run `just media-server` (or `cd media-server && uv run -m uvicorn app.main:app --reload --port 8100`) to start the image generation service. The bot needs this running to generate images.
--   Use `cli.py` to drive the bot from the command line. It runs the real bot through a console frontend, so it exercises the exact same pipeline as Slack (queue, routing, plugins, URL extraction, media):
-    -   `uv run python cli.py "some prompt"` — one-shot query, then exit.
-    -   `uv run python cli.py` — interactive chat. Every line is treated like a Slack message, so all the message prefixes below work (`+` for thread continuation, `^` for the last generated image, `/plugin` commands, bare URLs). Any valid file path in a line is stripped and attached as media, simulating a Slack file upload. Type `help` in the REPL for the full list.
--   Use `just test` to run the test suite.
+- Run `just run` (or `uv run -m app`) to start the bot. If all your configs and models are in place, and your creds are in `.env`, it should just work.
+- Use `cli.py` to drive the bot from the command line. It runs the real bot through a console frontend, so it exercises the exact same pipeline as Slack (queue, routing, plugins, URL extraction, media):
+    - `uv run python cli.py "some prompt"` — one-shot query, then exit.
+    - `uv run python cli.py` — interactive chat. Every line is treated like a Slack message, so all the message prefixes below work (`+` for thread continuation, `^` for the last generated image, `/plugin` commands, bare URLs). Any valid file path in a line is stripped and attached as media, simulating a Slack file upload. Type `help` in the REPL for the full list.
+- Use `just test` to run the test suite.
 
 ## Message Prefixes
 
@@ -99,6 +98,7 @@ bot: Paris is known for the Eiffel Tower, the Louvre...
 ```
 
 **How it works:**
+
 - Every message **without** `+` starts a fresh conversation (the default behavior)
 - Messages **with** `+` continue from the previous conversation, maintaining full context
 - The conversation is global - anyone in the channel can continue with `+`
@@ -156,22 +156,22 @@ Execute commands like so: `@ircawp /mycommand query value`.
 
 A base set of plugins are included, including but not limited to:
 
--   `/?` and `/help` - dumps all the registered slash commands
--   `/weather` - queries [OpenWeatherMap](https://openweathermap.org) for current weather conditions. Supports ZIP codes, city names, and "City, State" format (e.g. `@ircawp /weather 90210` or `@ircawp /weather Hartford, CT`). Can optionally generate a weather scene image.
--   `/askjesus` - ask Jesus for advice (e.g. `@ircawp /askjesus should I buy a new car?`) -- and other characters!
-    -   `/askspock`, `/askpicard`, `/askhawkeye`, `/askatherapist` — more personalities
--   `/8ball` - magic 8-ball fortune teller
--   `/summarize` - summarizes a webpage given a URL
--   `/geolocate` - runs rudimentary geolocation analysis on a provided image
--   `/hn` - fetches top stories from Hacker News
--   `/news` - fetches latest news
--   `/img` - generates an image from a text prompt (via the media-server)
--   `/translate` - translate text between languages
--   `/transcribe` - transcribe audio
--   `/yt` - summarize YouTube videos
--   `/uptime` - check if a website is up
--   `/tools` - list available LLM tools
--   `/raw` - send a raw message to the LLM without system prompt
+- `/?` and `/help` - dumps all the registered slash commands
+- `/weather` - queries [OpenWeatherMap](https://openweathermap.org) for current weather conditions. Supports ZIP codes, city names, and "City, State" format (e.g. `@ircawp /weather 90210` or `@ircawp /weather Hartford, CT`). Can optionally generate a weather scene image.
+- `/askjesus` - ask Jesus for advice (e.g. `@ircawp /askjesus should I buy a new car?`) -- and other characters!
+    - `/askspock`, `/askpicard`, `/askhawkeye`, `/askatherapist` — more personalities
+- `/8ball` - magic 8-ball fortune teller
+- `/summarize` - summarizes a webpage given a URL
+- `/geolocate` - runs rudimentary geolocation analysis on a provided image
+- `/hn` - fetches top stories from Hacker News
+- `/news` - fetches latest news
+- `/img` - generates an image from a text prompt (via the media-server)
+- `/translate` - translate text between languages
+- `/transcribe` - transcribe audio
+- `/yt` - summarize YouTube videos
+- `/uptime` - check if a website is up
+- `/tools` - list available LLM tools
+- `/raw` - send a raw message to the LLM without system prompt
 
 ### LLM Tool Calling
 
@@ -270,43 +270,27 @@ Place tools in `app/backends/tools/<tool_name>/tool.py` — they're auto-discove
 
 The bot is structured as a coordinator pattern with decoupled services:
 
--   **Ircawp** — coordinator that wires dependencies and provides the public API
--   **MessageRouter** — request queue, dispatch, and thread management
--   **PluginManager** — plugin discovery, lifecycle, and execution
--   **MediaManager** — media file handling and cleanup
--   **URLExtractor** — URL extraction and content fetching
--   **Media-Server** — separate FastAPI service for image generation (OpenAI-compatible API)
+- **Ircawp** — coordinator that wires dependencies and provides the public API
+- **MessageRouter** — request queue, dispatch, and thread management
+- **PluginManager** — plugin discovery, lifecycle, and execution
+- **MediaManager** — media file handling and cleanup
+- **URLExtractor** — URL extraction and content fetching
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full architecture diagram and message flow.
 
-## Media-Server
-
-The media-server is a standalone FastAPI service that handles image generation. It exposes an OpenAI-compatible API following the [OpenAI Images spec](https://platform.openai.com/docs/guides/images):
-
--   `POST /images/generations` — text-to-image generation (JSON body with `prompt`, `n`, `size`, `quality`)
--   `POST /images/edits` — image editing with input images plus a text prompt
--   `GET /health` — health check
-
-
-Requests use Pydantic models (`ImageGenerationRequest`, `ImageEditRequest`) and return an `ImagesResponse` with a `created` timestamp and `data[]` array of images (each containing `b64_json`). The `size` parameter accepts `WIDTHxHEIGHT` format, and `quality` maps to the backend's remaster setting.
-
-The main bot communicates with the media-server via HTTP through the `MediaBackend` client in `app/media_backends/MediaBackend.py`.
-
-See [media-server/README.md](media-server/README.md) for media-server specifics.
-
 ## Notes
 
--   You will need to judge for yourself whether your hardware available is good enough to run an LLM chat bot. By default this runs on the CPU, and I get some reasonable speeds. But you have to understand that this is a very computationally expensive process and it is not _streaming_ the response. So you have to wait for the **entire inference** to complete before the bot posts it back to the channel. This can be between a few seconds, or a few minutes, depending on your hardware and the size of the model you're using.
+- You will need to judge for yourself whether your hardware available is good enough to run an LLM chat bot. By default this runs on the CPU, and I get some reasonable speeds. But you have to understand that this is a very computationally expensive process and it is not _streaming_ the response. So you have to wait for the **entire inference** to complete before the bot posts it back to the channel. This can be between a few seconds, or a few minutes, depending on your hardware and the size of the model you're using.
 
--   This bot was designed for **small-scale** use by a handful of people. It will queue up requests and respond to them in order. If you have a large channel with a lot of people eager to talk to the bot, you may want to consider a different solution. Or maybe not. I don't know. I'm not your dad. (Unless you're my kid, in which case, I'm going out for a pack of cigs. Don't wait up.)
+- This bot was designed for **small-scale** use by a handful of people. It will queue up requests and respond to them in order. If you have a large channel with a lot of people eager to talk to the bot, you may want to consider a different solution. Or maybe not. I don't know. I'm not your dad. (Unless you're my kid, in which case, I'm going out for a pack of cigs. Don't wait up.)
 
--   This software could probably be written much more efficiently, faster, etc. Feel free to fork; maybe ping me if you do and maybe I'll steal some of your ideas.
+- This software could probably be written much more efficiently, faster, etc. Feel free to fork; maybe ping me if you do and maybe I'll steal some of your ideas.
 
--   This software is provided as-is, with no warranty or guarantee of any kind. Use at your own risk.
+- This software is provided as-is, with no warranty or guarantee of any kind. Use at your own risk.
 
 ## Contributing
 
--   Bug tickets are fine, but this project is not currently accepting outside contributions. Ideas are fine to run by me, as long as you don't expect me to agree and implement it. I mean, if it's good, I might. I already implemented some surprise ideas last night. Who knows?
+- Bug tickets are fine, but this project is not currently accepting outside contributions. Ideas are fine to run by me, as long as you don't expect me to agree and implement it. I mean, if it's good, I might. I already implemented some surprise ideas last night. Who knows?
 
 ## License
 

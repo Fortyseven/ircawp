@@ -83,17 +83,6 @@ def test_url_extractor_augment(monkeypatch, mock_console):
 # MediaManager -------------------------------------------------------
 
 
-def test_media_manager_validate_and_exists(tmp_path, mock_console):
-    mgr = MediaManager(console=mock_console, media_dir=str(tmp_path))
-    existing = tmp_path / "ok.txt"
-    existing.write_text("hi")
-
-    valid = mgr.validate_media_files([str(existing), "/nope/missing.txt", None])
-    assert valid == [str(existing)]
-    assert mgr.media_exists(str(existing)) is True
-    assert mgr.media_exists("/nope/missing.txt") is False
-
-
 def test_media_manager_cleanup(tmp_path, mock_console):
     mgr = MediaManager(console=mock_console, media_dir=str(tmp_path))
     file_path = tmp_path / "delete_me.txt"
@@ -148,7 +137,6 @@ def test_plugin_manager_has_and_get(
 
     assert mgr.has_plugin("plug") is True
     assert mgr.has_plugin("nope") is False
-    assert mgr.get_plugin("plug") is mock_plugin
 
 
 # MessageRouter ------------------------------------------------------

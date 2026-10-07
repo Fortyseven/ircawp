@@ -10,9 +10,8 @@ from rich.console import Console
 # from app.lib.thread_history import ThreadManager
 from app.core.plugin_manager import PluginManager
 from app.core.media_manager import MediaManager
-
+from app.plugins._img_utils.paths import LAST_GENERATED_IMAGE_PATH
 # Path to most recently generated image
-LAST_GENERATED_IMAGE_PATH = "/tmp/ircawp.last_imagegen_media.png"
 
 _BARE_URL_RE = re.compile(r"^https?://\S+$")
 _YOUTUBE_URL_RE = re.compile(r"(youtube\.com/(watch|shorts/)|youtu\.be/)")

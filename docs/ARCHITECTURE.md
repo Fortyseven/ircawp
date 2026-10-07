@@ -8,13 +8,13 @@
 │  - Wires dependencies                                            │
 │  - Initializes components                                        │
 │  - Provides public API                                           │
-└────────┬───────┬─────────┬──────────┬────────┬───────────────────┘
-         │       │         │          │        │
-         │       │         │          │        │
-    ┌────▼───┐ ┌─▼──────┐ ┌▼───────┐ ┌▼────────▼┐ ┌──────────┐
-    │Frontend│ │Backend │ │ImageGen│ │ Services │ │  Config  │
-    │(Slack) │ │(OpenAI)│ │ (SDXL) │ └──────────┘ │   (YAML) │
-    └────────┘ └────────┘ └────────┘      │       └──────────┘
+└─────────────────┬───────┬─────────┬──────────┬────────┬──────────┘
+                  │       │         │          │        │
+                  │       │         │          │        │
+              ┌────▼───┐ ┌─▼──────┐  ┌▼────────▼┐ ┌──────────┐
+              │Frontend│ │Backend │  │ Services │ │  Config  │
+              │(Slack) │ │(OpenAI)│  └──────────┘ │   (YAML) │
+              └────────┘ └────────┘       │       └──────────┘
                                           │
                      ┌────────────────────┼───────────────────┐
                      │                    │                   │
@@ -88,9 +88,6 @@ User sends: /weather Seattle
 
          │
          ▼
-PluginManager.is_plugin_command() → true
-         │
-         ▼
 PluginManager.execute_plugin("weather", "Seattle", user_id, media)
          │
          ▼
@@ -119,7 +116,6 @@ MessageRouter
 
 PluginManager
   ├─→ Backend (for plugin execution)
-  ├─→ ImageGen (optional, for plugins that generate images)
   └─→ Console (for logging)
 
 MediaManager
@@ -131,7 +127,6 @@ URLExtractor
 Ircawp
   ├─→ Frontend (Slack, Discord, etc.)
   ├─→ Backend (OpenAI, Ollama, etc.)
-  ├─→ ImageGen (SDXL, etc.) [optional]
   ├─→ MessageRouter
   ├─→ PluginManager
   ├─→ MediaManager

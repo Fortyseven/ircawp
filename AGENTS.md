@@ -6,7 +6,7 @@ This file provides context for AI coding assistants working on the ircawp codeba
 
 ircawp is an OpenAI-API-compatible IRC/Slack bot with plugin-based slash commands and LLM tool calling. It's designed for small-scale deployment on lower-end hardware.
 
-**Stack:** Python 3.11+, FastAPI (media-server), Slack SDK, OpenAI-compatible API, `uv` package manager.
+**Stack:** Python 3.11+, Slack SDK, OpenAI-compatible API, `uv` package manager.
 
 ## Quick Start
 
@@ -16,9 +16,6 @@ ircawp is an OpenAI-API-compatible IRC/Slack bot with plugin-based slash command
 
 # Run the bot
 just run          # or: uv run -m app
-
-# Run the media-server (needed for image generation)
-just media-server # or: cd media-server && uv run -m uvicorn app.main:app --reload --port 8100
 
 # Run tests
 just test         # or: python -m pytest tests/ -v
@@ -41,13 +38,6 @@ Ircawp (coordinator)
   └── MediaBackend       — HTTP client → media-server
 ```
 
-**Media-server** is a separate FastAPI service for image generation:
-
-- `POST /images/generations` — text-to-image (OpenAI-compatible)
-- `POST /images/edits` — image editing
-- Backends: flux2klein, zimageturbo, hyper_sdxl, sdxs, sd15, upscaler
-- Config: `media-server/config.yml`
-
 See `docs/ARCHITECTURE.md` for full diagrams and message flow.
 
 ## Key Directories
@@ -62,8 +52,6 @@ See `docs/ARCHITECTURE.md` for full diagrams and message flow.
 | `app/plugins/`               | Slash command plugins (auto-discovered `*.py`)     |
 | `app/media_backends/`        | HTTP client for media-server                       |
 | `app/lib/`                   | Utilities (config, network, thread_history)        |
-| `media-server/`              | Standalone image generation service                |
-| `media-server/app/backends/` | Image generation backends                          |
 | `tests/`                     | Pytest test suite                                  |
 | `scripts/`                   | Utility scripts (tool_diag.py, etc.)               |
 | `docs/`                      | Architecture and implementation docs               |
@@ -71,7 +59,6 @@ See `docs/ARCHITECTURE.md` for full diagrams and message flow.
 ## Configuration
 
 - **`config.yml`** — main bot config (frontend, backend, imagegen, LLM prompts, weather API)
-- **`media-server/config.yml`** — media-server config (backend, port, per-backend settings)
 - **`.env`** — Slack API credentials, secrets
 
 Key config sections:
@@ -136,7 +123,7 @@ See `app/backends/tools/README.md` and `docs/TOOL_CALLING_IMPLEMENTATION.md` for
 ## Coding Conventions
 
 - Python 3.11+ with type hints
-- Pydantic models for request/response schemas (media-server)
+- Pydantic models for request/response schemas
 - Rich console for structured logging
 - Dependency injection — no global state or singletons
 - Services receive dependencies via constructor
@@ -146,5 +133,3 @@ See `app/backends/tools/README.md` and `docs/TOOL_CALLING_IMPLEMENTATION.md` for
 
 - The bot is designed for **small-scale** use (handful of users)
 - Non-streaming responses — entire inference completes before posting
-- Media-server is strictly prompt-in → image-out (no LLM logic)
-- All prompt refinement happens in the main bot, not the media-server

@@ -44,22 +44,6 @@ def _get_condition_emoji(weather_id: int) -> str:
     return CONDITION_EMOJI_GROUP.get(group, "🌡")
 
 
-def _format_forecast_time(dt_txt: str) -> str:
-    """Parse dt_txt string and return a readable time label."""
-    # Format: "2023-06-30 12:00:00"
-    dt = datetime.datetime.strptime(dt_txt, "%Y-%m-%d %H:%M:%S")
-    hour = dt.hour
-
-    if 5 <= hour < 12:
-        return "Morning"
-    elif 12 <= hour < 17:
-        return "Afternoon"
-    elif 17 <= hour < 21:
-        return "Evening"
-    else:
-        return "Night"
-
-
 def _format_day_date(dt_txt: str) -> str:
     """Parse dt_txt string and return a short day label."""
     dt = datetime.datetime.strptime(dt_txt, "%Y-%m-%d %H:%M:%S")

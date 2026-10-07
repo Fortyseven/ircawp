@@ -34,18 +34,6 @@ class PluginManager:
         self.plugins = PLUGINS
         self.console.log(f"[green]Loaded {len(self.plugins)} plugins")
 
-    def get_plugin(self, name: str) -> Optional[Any]:
-        """
-        Get a plugin by name.
-
-        Args:
-            name: The plugin name
-
-        Returns:
-            The plugin instance, or None if not found
-        """
-        return self.plugins.get(name)
-
     def has_plugin(self, name: str) -> bool:
         """
         Check if a plugin exists.
@@ -101,35 +89,3 @@ class PluginManager:
             )
 
         return response, outgoing_media, skip_imagegen, meta
-
-    def is_plugin_command(self, message: str) -> bool:
-        """
-        Check if a message is a plugin command.
-
-        Args:
-            message: The message to check
-
-        Returns:
-            True if message starts with '/' and matches a plugin name
-        """
-        if not message.startswith("/"):
-            return False
-
-        plugin_name = message.split(" ")[0][1:]
-        return self.has_plugin(plugin_name)
-
-    def get_plugin_name_from_message(self, message: str) -> Optional[str]:
-        """
-        Extract plugin name from a message.
-
-        Args:
-            message: The message to parse
-
-        Returns:
-            Plugin name if found, None otherwise
-        """
-        if not message.startswith("/"):
-            return None
-
-        plugin_name = message.split(" ")[0][1:]
-        return plugin_name if self.has_plugin(plugin_name) else None
