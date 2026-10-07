@@ -9,7 +9,6 @@ import pytest
 from app.plugins.forecast import (
     process_forecast_json,
     _get_condition_emoji,
-    _format_day_date,
     _format_forecast_time,
     _format_temp,
     _group_by_day,

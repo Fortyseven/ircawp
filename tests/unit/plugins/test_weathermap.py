@@ -1,6 +1,5 @@
 """Tests for the weathermap plugin."""
 
-import math
 import pytest
 from PIL import Image
 import numpy as np
@@ -8,7 +7,6 @@ from app.plugins.weathermap import (
     _parse_query,
     _lat_lon_to_tile,
     _multiply_blend,
-    _stitch_map,
     LAYERS,
     DEFAULT_LAYER,
     GRID_SIZE,

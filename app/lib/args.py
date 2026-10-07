@@ -58,7 +58,7 @@ def parse_arguments(
         if not names:
             continue
         # Check if this is a boolean flag
-        is_flag = spec.get("type") == bool
+        is_flag = spec.get("type") is bool
         for pattern in _build_patterns(names, is_flag):
             compiled.append((re.compile(pattern, re.IGNORECASE), logical_name, spec))
 
