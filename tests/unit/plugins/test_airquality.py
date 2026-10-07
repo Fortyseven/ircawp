@@ -1,7 +1,6 @@
 """Tests for the airquality plugin."""
 
 import json
-import pytest
 from app.plugins.airquality import (
     process_airquality_json,
     _get_aqi_label,

@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.media_backends.MediaBackend import MediaBackend
 

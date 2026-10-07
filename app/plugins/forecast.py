@@ -5,7 +5,6 @@ OpenWeather 5-Day/3-Hour Forecast API.
 
 import json
 import datetime
-from urllib.parse import quote_plus
 
 from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.media_backends.MediaBackend import MediaBackend
@@ -14,7 +13,6 @@ from .__PluginBase import PluginBase
 from .weather import (
     _geocodeLocation,
     _fahrenheitToCelsius,
-    _mphToKph,
     _degreesToCompass,
 )
 
@@ -207,7 +205,6 @@ def process_forecast_json(
                 if wind_mph > 10:
                     wind_deg = entry["wind"].get("deg", 0)
                     wind_dir = _degreesToCompass(wind_deg)
-                    wind_kph = _mphToKph(wind_mph)
                     wind_str = f" · {wind_dir} {wind_mph:.0f}mph"
 
                 # Add precipitation
