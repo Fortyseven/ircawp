@@ -6,7 +6,9 @@ from rich.traceback import install
 from app.lib.thread_history import ThreadManager
 from app.core import MessageRouter, PluginManager, MediaManager, URLExtractor
 from app.core.message_router import _conversation_history
-from app.core import message_router  # Access _plugin_context via module to avoid import staleness
+from app.core import (
+    message_router,
+)  # Access _plugin_context via module to avoid import staleness
 
 install(show_locals=True)
 
@@ -112,6 +114,7 @@ class Ircawp:
         """Initialize the image generation client from config (optional).
 
         The MediaBackend is now an HTTP client to the media-server.
+        (https://github.com/Fortyseven/Ircawp-Media-Server)
         """
         from app.media_backends.MediaBackend import MediaBackend
 
@@ -270,9 +273,7 @@ class Ircawp:
                     "[yellow]Plugin context exists but no conversation history - NOT injecting (fresh session)"
                 )
             elif not plugin_ctx and conversation_hist:
-                self.console.log(
-                    "[yellow]No plugin context to inject"
-                )
+                self.console.log("[yellow]No plugin context to inject")
 
         response, tool_images = self.backend.runInference(
             prompt=message,
