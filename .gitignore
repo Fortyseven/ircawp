@@ -4,14 +4,8 @@ _archive
 .env*
 .ruff_cache
 .venv
-app/plugins/vendor/xtts_api_server/xtts_models/*
-attic
 config*.json
 config*.yml
-docs/REBUILD_IDEAS.md
-docs/TOOL_CALLING_IMPLEMENTATION.md
-docs/TOOL_IMAGES_IMPLEMENTATION.md
+docs/local/
 models
 prompts.sqlite3.thisisnotadatabase
-ztemp.py
-media-server/docs/QWENIMAGE21.md
