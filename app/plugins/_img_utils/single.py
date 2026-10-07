@@ -241,7 +241,9 @@ def doSingleImage(
             )
             final_prompt_for_gen = prompt.strip()
 
-        backend.console.log(f"[black on green] refined prompt: '{final_prompt_for_gen}'")
+        backend.console.log(
+            f"[black on green] refined prompt: '{final_prompt_for_gen}'"
+        )
     else:
         final_prompt_for_gen = prompt.strip()
 

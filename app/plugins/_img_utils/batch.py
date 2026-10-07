@@ -19,9 +19,7 @@ def doBatchImages(
     for i in range(config["batch"]):
         # Refine prompt independently for each image in the batch
         if not skip_refinement:
-            refined_prompt = refinePrompt(
-                prompt, backend, media, is_edit=is_edit
-            )
+            refined_prompt = refinePrompt(prompt, backend, media, is_edit=is_edit)
             batch_prompt = refined_prompt.strip()
             if (
                 "i'm sorry" in batch_prompt.lower()

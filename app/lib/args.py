@@ -76,9 +76,18 @@ def parse_arguments(
                 cast_value = caster(value)
             except (ValueError, TypeError):
                 # Determine the flag name used (from the match) for the error message
-                flag_name = last_match.string[last_match.start() : last_match.start() + len(last_match.group(0).split()[0])]
-                type_name = caster.__name__ if hasattr(caster, "__name__") else str(caster)
-                return original_prompt, config, f"Invalid value '{value}' for {flag_name}: expected {type_name}"
+                flag_name = last_match.string[
+                    last_match.start() : last_match.start()
+                    + len(last_match.group(0).split()[0])
+                ]
+                type_name = (
+                    caster.__name__ if hasattr(caster, "__name__") else str(caster)
+                )
+                return (
+                    original_prompt,
+                    config,
+                    f"Invalid value '{value}' for {flag_name}: expected {type_name}",
+                )
             config[logical_name] = cast_value
         else:
             # No value group: treat as boolean flag
