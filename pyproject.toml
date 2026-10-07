@@ -43,7 +43,6 @@ exclude = [
     "**/__pycache__/**",
     "tests/**",
     "_archive/**",
-    "attic/**",
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -56,7 +55,6 @@ exclude = [
     "**/__pycache__/**",
     "tests/**",
     "_archive/**",
-    "attic/**",
 ]
 [project.optional-dependencies]
 test = [
