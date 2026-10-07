@@ -4,15 +4,6 @@ DEST_SSH_PATH:="~/opt/ircawp-beta/"
 run:
 	uv run -m app
 
-media-server:
-    cd media-server && uv run -m app.main
-
-media-server-build:
-    cd media-server/frontend && npm install && npm run build
-
-media-server-dev:
-    cd media-server/frontend && npm run dev
-
 aimee:
 	uv run -m app --config ./config.aimee.yml
 
@@ -37,7 +28,6 @@ push-to-wheeljack:
         --exclude='.vscode' \
         --exclude='_archive' \
         --exclude='models' \
-        --exclude 'attic' \
         ./ {{DEST_SSH_HOST}}:{{DEST_SSH_PATH}}
     @echo "-----------------------------"
     @ssh {{DEST_SSH_HOST}}
