@@ -76,6 +76,7 @@ markers = [
     "slow: Slow running tests",
     "plugin: Tests for plugin framework",
     "tools: Tests for tool framework",
+    "forecast: Tests for the forecast plugin",
 ]
 
 #[tool.uv]
