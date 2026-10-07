@@ -32,8 +32,6 @@ Your task is to transcribe the input image into an exhaustive textual representa
         prompt = getRedoPrompt()
         media = getRedoMedia()
 
-        print("HEY ARE WE HERE?\n\n\n\n")
-
         if not media or len(media) != 1:
             return (
                 "No previous media found for --again. Run `/img --remix` with an image first.",
