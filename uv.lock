@@ -166,15 +166,6 @@ wheels = [
 ]
 
 [[package]]
-name = "appier"
-version = "1.35.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/be/ce/be0d719e3b933ffff8e1abe32310cce13e606c35c1169a2da198d0b6de1c/appier-1.35.0.tar.gz", hash = "sha256:140a37bec6912003302b5e7920b28d28eefa2d25848d0c34e3a1eacbf314d79b", size = 240598, upload-time = "2026-01-06T23:13:44.656Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/dd/5a73cc6b85728509ebc0b081ff813358bf9946e99e5dad21f25bb8c4125e/appier-1.35.0-py2.py3-none-any.whl", hash = "sha256:9811c7caa133deca6cc85d20ca2c6b155be09ebf0e9d4121db9f823df6a66728", size = 312969, upload-time = "2026-01-06T23:13:42.429Z" },
-]
-
-[[package]]
 name = "async-timeout"
 version = "5.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -356,15 +347,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d8/53/6f443c9a4a8358a93a6792e2acffb9d9d5cb0a5cfd8802644b7b1c9a02e4/colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44", size = 27697, upload-time = "2022-10-25T02:36:22.414Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6", size = 25335, upload-time = "2022-10-25T02:36:20.889Z" },
-]
-
-[[package]]
-name = "commonmark"
-version = "0.9.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/60/48/a60f593447e8f0894ebb7f6e6c1f25dafc5e89c5879fdc9360ae93ff83f0/commonmark-0.9.1.tar.gz", hash = "sha256:452f9dc859be7f06631ddcb328b6919c67984aca654e5fefb3914d54691aed60", size = 95764, upload-time = "2019-10-04T15:37:39.817Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b1/92/dfd892312d822f36c55366118b95d914e5f16de11044a27cf10a7d71bbbf/commonmark-0.9.1-py2.py3-none-any.whl", hash = "sha256:da2f38c92590f83de410ba1a3cbceafbc74fee9def35f9251ba9a971d6d66fd9", size = 51068, upload-time = "2019-10-04T15:37:37.674Z" },
 ]
 
 [[package]]
@@ -818,14 +800,12 @@ dependencies = [
     { name = "agent-aimee" },
     { name = "aiohttp" },
     { name = "aiosignal" },
-    { name = "appier" },
     { name = "async-timeout" },
     { name = "attrs" },
     { name = "autopep8" },
     { name = "beautifulsoup4" },
     { name = "certifi" },
     { name = "charset-normalizer" },
-    { name = "commonmark" },
     { name = "faster-whisper" },
     { name = "feedparser" },
     { name = "frozenlist" },
@@ -837,8 +817,6 @@ dependencies = [
     { name = "playwright" },
     { name = "pycodestyle" },
     { name = "pydantic" },
-    { name = "pygments" },
-    { name = "pyparsing" },
     { name = "pytest" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
@@ -866,14 +844,12 @@ requires-dist = [
     { name = "agent-aimee", specifier = ">=0.1.0" },
     { name = "aiohttp", specifier = ">=3.12.15" },
     { name = "aiosignal", specifier = ">=1.4.0" },
-    { name = "appier", specifier = ">=1.34.8" },
     { name = "async-timeout", specifier = ">=5.0.1" },
     { name = "attrs", specifier = ">=25.3.0" },
     { name = "autopep8", specifier = ">=2.3.2" },
     { name = "beautifulsoup4", specifier = ">=4.13.5" },
     { name = "certifi", specifier = ">=2025.8.3" },
     { name = "charset-normalizer", specifier = ">=3.4.3" },
-    { name = "commonmark", specifier = ">=0.9.1" },
     { name = "faster-whisper", specifier = ">=1.1.0" },
     { name = "feedparser", specifier = ">=6.0.11" },
     { name = "frozenlist", specifier = ">=1.7.0" },
@@ -885,8 +861,6 @@ requires-dist = [
     { name = "playwright", specifier = ">=1.56.0" },
     { name = "pycodestyle", specifier = ">=2.14.0" },
     { name = "pydantic", specifier = ">=2.13.5" },
-    { name = "pygments", specifier = ">=2.19.2" },
-    { name = "pyparsing", specifier = ">=3.2.3" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=7.4.0" },
     { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=0.21.0" },
@@ -1551,15 +1525,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b0/77/a5b8c569bf593b0140bde72ea885a803b82086995367bf2037de0159d924/pygments-2.19.2.tar.gz", hash = "sha256:636cb2477cec7f8952536970bc533bc43743542f70392ae026374600add5b887", size = 4968631, upload-time = "2025-06-21T13:39:12.283Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c7/21/705964c7812476f378728bdf590ca4b771ec72385c533964653c68e86bdc/pygments-2.19.2-py3-none-any.whl", hash = "sha256:86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b", size = 1225217, upload-time = "2025-06-21T13:39:07.939Z" },
-]
-
-[[package]]
-name = "pyparsing"
-version = "3.3.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f3/91/9c6ee907786a473bf81c5f53cf703ba0957b23ab84c264080fb5a450416f/pyparsing-3.3.2.tar.gz", hash = "sha256:c777f4d763f140633dcb6d8a3eda953bf7a214dc4eff598413c070bcdc117cbc", size = 6851574, upload-time = "2026-01-21T03:57:59.36Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/10/bd/c038d7cc38edc1aa5bf91ab8068b63d4308c66c4c8bb3cbba7dfbc049f9c/pyparsing-3.3.2-py3-none-any.whl", hash = "sha256:850ba148bd908d7e2411587e247a1e4f0327839c40e2e5e6d05a007ecc69911d", size = 122781, upload-time = "2026-01-21T03:57:55.912Z" },
 ]
 
 [[package]]
