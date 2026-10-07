@@ -7,7 +7,7 @@ import time
 from typing import Any, Callable, Optional, List
 from rich.console import Console
 
-from app.lib.thread_history import ThreadManager
+# from app.lib.thread_history import ThreadManager
 from app.core.plugin_manager import PluginManager
 from app.core.media_manager import MediaManager
 
@@ -100,7 +100,6 @@ class MessageRouter:
         message: str,
         username: str,
         media: List[str] = None,
-        thread_history: Optional[ThreadManager] = None,
         aux: Any = None,
     ) -> None:
         """
@@ -110,13 +109,12 @@ class MessageRouter:
             message: The message text
             username: Username of the sender
             media: List of media file paths
-            thread_history: Thread history manager instance
             aux: Auxiliary data for routing response back to user
         """
         if media is None:
             media = []
 
-        self.queue.put((message, username, media, thread_history, aux))
+        self.queue.put((message, username, media, aux))
 
     def _message_queue_loop(self) -> None:
         """
@@ -134,7 +132,7 @@ class MessageRouter:
                 self.console.rule("[white on purple]START QUEUE ITEM PROCESSING")
 
                 # Get message from queue
-                message, user_id, incoming_media, thread_history, aux = self.queue.get()
+                message, user_id, incoming_media, aux = self.queue.get()
                 message = message.strip()
 
                 # Handle ^ prefix: prepend last generated image to media list

@@ -3,7 +3,6 @@ import importlib
 
 from rich import console as rich_console
 from rich.traceback import install
-from app.lib.thread_history import ThreadManager
 from app.core import MessageRouter, PluginManager, MediaManager, URLExtractor
 from app.core.message_router import _conversation_history
 from app.core import (
@@ -153,7 +152,6 @@ class Ircawp:
         message,
         username,
         media=[],
-        thread_history: ThreadManager = None,
         aux=None,
     ):
         """
@@ -166,7 +164,7 @@ class Ircawp:
             thread_history: Thread history manager instance
             aux (List, optional): Bundle of optional data needed to route the message back to the user.
         """
-        self.message_router.ingest(message, username, media, thread_history, aux)
+        self.message_router.ingest(message, username, media, aux)
 
     def _egest_message(self, message: str, media: list, aux: dict) -> None:
         """

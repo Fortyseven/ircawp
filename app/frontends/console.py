@@ -110,7 +110,7 @@ class Console(Ircawp_Frontend):
 
         done = threading.Event()
         aux = ("CLI", "console", None, None, None, None, done)
-        self.parent.ingestMessage(text, "CLI", media, None, aux)
+        self.parent.ingestMessage(text, "CLI", media, aux)
         done.wait()
 
     def _prepare_media(self, line: str) -> tuple[str, list[str]]:
