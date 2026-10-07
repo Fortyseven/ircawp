@@ -24,7 +24,6 @@ dependencies = [
     "feedparser>=6.0.11",
     "frozenlist>=1.7.0",
     "idna>=3.10",
-    "langchain>=0.3.27",
     "llama-cpp-python>=0.3.16",
     "multidict>=6.6.4",
     "numpy>=1.26.4",
