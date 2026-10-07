@@ -9,7 +9,6 @@ import pytest
 from app.plugins.forecast import (
     process_forecast_json,
     _get_condition_emoji,
-    _format_forecast_time,
     _format_temp,
     _group_by_day,
     _pick_period_entry,
@@ -99,19 +98,6 @@ class TestFormatHelpers:
         result = _format_temp(28.4)
         assert "28F" in result
         assert "-2C" in result
-
-    def test_format_forecast_time_morning(self):
-        assert _format_forecast_time("2024-06-30 07:00:00") == "Morning"
-
-    def test_format_forecast_time_afternoon(self):
-        assert _format_forecast_time("2024-06-30 14:00:00") == "Afternoon"
-
-    def test_format_forecast_time_evening(self):
-        assert _format_forecast_time("2024-06-30 19:00:00") == "Evening"
-
-    def test_format_forecast_time_night(self):
-        assert _format_forecast_time("2024-06-30 23:00:00") == "Night"
-        assert _format_forecast_time("2024-06-30 02:00:00") == "Night"
 
 
 class TestGroupByDay:

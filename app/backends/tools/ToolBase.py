@@ -27,10 +27,6 @@ class ToolResult:
         self.text = text
         self.images = images or []
 
-    def has_content(self) -> bool:
-        """Check if result has any content."""
-        return bool(self.text or self.images)
-
 
 class ToolBase(ABC):
     """

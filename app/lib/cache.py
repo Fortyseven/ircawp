@@ -33,11 +33,3 @@ def get_cache(key: str) -> Any:
     # Expired; remove and return None
     del _store[key]
     return None
-
-
-def cache_size() -> int:
-    return len(_store)
-
-
-def clear_cache() -> None:
-    _store.clear()

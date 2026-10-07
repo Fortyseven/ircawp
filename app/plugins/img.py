@@ -156,19 +156,6 @@ def img(
     # remaster is passed as a config flag to the media
     # backend, which can choose to use it or not
 
-    # Handle --undo: use previous image if available (takes precedence over --andthen)
-    # if config.get("undo", False) and config.get("batch", 1) == 1:
-    #     if getUndoMedia():
-    #         # # If no prompt, just restore the previous image without generating
-    #         # if not prompt or prompt.strip() == "":
-    #         #     shutil.copy(UNDO_IMAGE_PATH, LAST_GENERATED_IMAGE_PATH)
-    #         #     backend.console.log("[cyan on black] restored previous image (undo)")
-    #         #     return "", UNDO_IMAGE_PATH, False, {}
-
-    #         # Otherwise use previous image as input for new generation
-    #         media = getUndoMedia()
-    #         backend.console.log("[cyan on black] using previous image for undo")
-
     if config.get("andthen", False):
         # check if we have a saved copy of the prior media run, use that as
         # our media input

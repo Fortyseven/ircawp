@@ -120,19 +120,7 @@ def process_weather_json(json_text: str) -> tuple[str, str]:
 
             where = f"{where}, {where2}"
 
-        # imagegen_prompt = buildImageGenPrompt(
-        #     where,
-        #     desc,
-        #     temps,
-        #     wind_dir,
-        #     wind_mph,
-        #     wind_kph,
-        #     humidity,
-        #     observed,
-        # )
-
         return f"Weather for {where}: {desc} at 🌡 {temps}, winds 🌬 {wind_dir} at {wind_mph}mph ({wind_kph}kph), 💦 humidity at {humidity}%. (⏰ As of {observed}, local.)"
-    # imagegen_prompt,
 
     except json.decoder.JSONDecodeError:
         return "Error: could not decode JSON.", "", True, {}
@@ -147,7 +135,7 @@ def get_weather(location: str) -> str:
         url_query = f"https://wttr.in/{quote_plus(location)}?format=j1"
         # response = requests.get(url_query, timeout=12, allow_redirects=True)
         content = fetchHtml(url_query, bypass_cache=True)
-        print("content: ", content)
+        # print("content: ", content)
         return process_weather_json(content), "", False
 
     except Exception as e:

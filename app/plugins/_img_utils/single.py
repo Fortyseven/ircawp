@@ -7,7 +7,7 @@ from app.backends.Ircawp_Backend import Ircawp_Backend
 from app.media_backends.MediaBackend import MediaBackend
 
 from .paths import LAST_GENERATED_IMAGE_PATH, REDO_MEDIA_PATH_PREFIX
-# , UNDO_IMAGE_PATH
+
 
 last_refined_prompt: str = None
 last_redo_prompt: str = None
@@ -53,22 +53,10 @@ def getRedoConfig() -> dict:
 
 # -------------------------------------
 
-# def getUndoMedia() -> list:
-#     return [UNDO_IMAGE_PATH] if Path(UNDO_IMAGE_PATH).is_file() else []
-
 
 def setLastGeneratedMedia(image_path: str):
     # new generated image -> shift current last to undo, then set new last
-    # if Path(LAST_GENERATED_IMAGE_PATH).is_file():
-    #     shutil.copy(LAST_GENERATED_IMAGE_PATH, UNDO_IMAGE_PATH)
-
     shutil.copy(image_path, LAST_GENERATED_IMAGE_PATH)
-
-
-def getLastGeneratedMediaPath() -> str:
-    if Path(LAST_GENERATED_IMAGE_PATH).is_file():
-        return LAST_GENERATED_IMAGE_PATH
-    return None
 
 
 def getLastGeneratedMedia() -> list:

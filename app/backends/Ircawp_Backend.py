@@ -18,10 +18,6 @@ class Ircawp_Backend:
         self.console.log(f"Backend config: {self.config}")
 
     @abc.abstractmethod
-    def start():
-        pass
-
-    @abc.abstractmethod
     def runInference(
         self,
         prompt: str,
