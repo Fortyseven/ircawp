@@ -36,11 +36,6 @@ class Console(Ircawp_Frontend):
             "[black on light_salmon3]Console frontend: no credentials required"
         )
 
-    def get_thread_history(self, conversation_id) -> list:
-        # Thread history is a NOP in the Slack frontend too; conversation
-        # continuation is handled by the router's _conversation_history.
-        return []
-
     def ingestEvent(self, event, message, client, say, body):
         # Not used: the REPL ingests directly via parent.ingestMessage.
         pass
