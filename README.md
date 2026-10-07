@@ -74,7 +74,9 @@ The media-server has its own `media-server/config.yml` for backend selection, po
 
 -   Run `just run` (or `uv run -m app`) to start the bot. If all your configs and models are in place, and your creds are in `.env`, it should just work.
 -   Run `just media-server` (or `cd media-server && uv run -m uvicorn app.main:app --reload --port 8100`) to start the image generation service. The bot needs this running to generate images.
--   Use `cli.py` to query the bot from the command line. This is useful for debugging and manually testing plugins.
+-   Use `cli.py` to drive the bot from the command line. It runs the real bot through a console frontend, so it exercises the exact same pipeline as Slack (queue, routing, plugins, URL extraction, media):
+    -   `uv run python cli.py "some prompt"` — one-shot query, then exit.
+    -   `uv run python cli.py` — interactive chat. Every line is treated like a Slack message, so all the message prefixes below work (`+` for thread continuation, `^` for the last generated image, `/plugin` commands, bare URLs). Any valid file path in a line is stripped and attached as media, simulating a Slack file upload. Type `help` in the REPL for the full list.
 -   Use `just test` to run the test suite.
 
 ## Message Prefixes

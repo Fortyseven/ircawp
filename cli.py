@@ -1,44 +1,23 @@
 #!/usr/bin/env python
+"""
+CLI for ircawp.
+
+Runs the real bot with a console frontend (stdin/stdout) so the CLI
+exercises the exact same pipeline as the Slack frontend (message queue,
+routing, plugins, URL extraction, media):
+
+    uv run python cli.py                 # interactive chat
+    uv run python cli.py "some prompt"   # one-shot, then exit
+"""
+
 import os
 import argparse
 import yaml
 
 from rich import print
 from rich.traceback import install
-from rich.console import Console
 
-# from imagegen.BaseImageGen import BaseImageGen
-# from imagegen.SDXS import SDXS
-from app.backends.openai import Openai
-from app.backends.Ircawp_Backend import Ircawp_Backend
-from app.plugins import PLUGINS
-import app.plugins as plugins
-
-
-def processMessagePlugin(plugin: str, message: str, user_id: str, backend_instance):
-    """
-    Process a message from the queue, directed towards a plugin
-    instead of the standard inference backend.
-
-    Args:
-        message (str): _description_
-        user_id (str): _description_
-
-    Returns:
-        InfResponse: _description_
-    """
-    console.log(f"Processing plugin: {plugin}")
-    message = message.replace(f"/{plugin} ", "").strip()
-    response = PLUGINS[plugin].execute(
-        query=message,
-        backend=backend_instance,
-        media=[],
-    )
-
-    return response
-
-
-console = Console()
+from app.ircawp import Ircawp
 
 install(show_locals=False)
 
@@ -50,7 +29,11 @@ parser.add_argument(
     default="config.yml",
     help="Path to configuration file (default: config.yml)",
 )
-parser.add_argument("prompt", nargs="*", help="The prompt to send")
+parser.add_argument(
+    "prompt",
+    nargs="*",
+    help="The prompt to send (omit to enter interactive chat mode)",
+)
 
 args = parser.parse_args()
 
@@ -67,40 +50,12 @@ except Exception as e:
     print(f"[red]Error loading config file: {e}")
     os._exit(-1)
 
-prompt = " ".join(args.prompt)
+prompt = " ".join(args.prompt).strip()
 
-if not prompt:
-    print("Need a prompt.")
-    os._exit(-1)
+# Drive the real bot through the console frontend so the CLI behaves
+# exactly like the Slack frontend.
+config["frontend"] = "console"
+if prompt:
+    config["console_prompt"] = prompt
 
-backend_instance: Ircawp_Backend | None = None
-
-backend_instance = Openai(console=console, config=config, parent=None)
-
-print("\n----------------------------\n")
-
-plugins.load(console)
-
-print(f"- PROMPT: [yellow]{prompt}")
-response = ""
-
-if prompt.startswith("/"):
-    print(PLUGINS)
-    plugin_name = prompt.split(" ")[0][1:]
-    if plugin_name in PLUGINS:
-        response = processMessagePlugin(
-            plugin=plugin_name,
-            message=prompt,
-            user_id="CLI",
-            backend_instance=backend_instance,
-        )
-    else:
-        response = f"Plugin {plugin_name} not found."
-        media_filename = ""
-else:
-    response = backend_instance.runInference(
-        system_prompt=config["llm"]["system_prompt"], prompt=prompt.strip()
-    )
-
-
-print(f"- ASSISTANT:\n[blue]{response}")
+Ircawp(config).start()
