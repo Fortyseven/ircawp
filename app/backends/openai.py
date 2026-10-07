@@ -304,26 +304,6 @@ class Openai(Ircawp_Backend):
             # Compose messages for chat endpoint
             messages = []
 
-            # If aux carries thread conversation_id, include prior thread history
-            # aux tuple layout in Slack frontend: (user_id, channel, say, body, thread_ts, conversation_id)
-            try:
-                conversation_id = aux[-1] if aux else None
-            except Exception:
-                conversation_id = None
-            if conversation_id and getattr(self.parent, "frontend", None):
-                try:
-                    history = self.parent.frontend.get_thread_history(conversation_id)
-                    for msg in history[
-                        :-1
-                    ]:  # exclude current user message which we add below
-                        role = msg.get("role")
-                        content = msg.get("content", "")
-                        if role in ("user", "assistant") and isinstance(content, str):
-                            # Map roles directly
-                            messages.append({"role": role, "content": content})
-                except Exception as e:
-                    self.console.log(f"[yellow]Failed to include thread history: {e}")
-
             # Inject global conversation history from + prefix
             if conversation_history:
                 for msg in conversation_history:
