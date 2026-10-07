@@ -77,6 +77,7 @@ markers = [
     "plugin: Tests for plugin framework",
     "forecast: Tests for the forecast plugin",
     "tools: Tests for tool framework",
+    "forecast: Tests for the forecast plugin",
 ]
 
 #[tool.uv]
