@@ -9,7 +9,6 @@ from .Ircawp_Frontend import Ircawp_Frontend
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
-# from app.lib.thread_history import ThreadManager
 from app.lib.network import depipeText
 
 
@@ -18,13 +17,11 @@ class Slack(Ircawp_Frontend):
 
     # FIXME: Currently thread history retention is a NOP; we'll return to
     # this later; we're currently only responding to threads for one-offs
-    thread_history = None
 
     ###############################
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.configure()
-        # self.thread_history = ThreadManager()
 
     ###############################
     def configure(self):
@@ -208,16 +205,10 @@ class Slack(Ircawp_Frontend):
                 )
                 incoming_media.append(media_path)
 
-        # Only store history if in a thread (conversation_id is not None)
-        # Channel messages are fresh starts with no history
-        # if conversation_id:
-        # self.thread_history.addToThreadHistory(conversation_id, "user", prompt)
-
         self.parent.ingestMessage(
             depipeText(prompt),
             username,
             incoming_media,
-            # self.thread_history.getThreadHistory(conversation_id),
             "",
             (
                 user_id,
@@ -231,13 +222,6 @@ class Slack(Ircawp_Frontend):
 
     def egestEvent(self, message, media, aux={}):
         user_id, channel, say, body, thread_ts, conversation_id = aux
-
-        # Only store assistant response if in a thread (conversation_id is not None)
-        # Channel messages don't maintain history
-        # if conversation_id and message:
-        # self.thread_history.addToThreadHistory(
-        #     conversation_id, "assistant", str(message)
-        # )
 
         # HACK:
         media = media[0]
