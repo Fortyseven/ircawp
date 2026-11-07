@@ -9,5 +9,4 @@ config*.yml
 docs/local/
 models
 prompts.sqlite3.thisisnotadatabase
-ztemp.py
 tmp
