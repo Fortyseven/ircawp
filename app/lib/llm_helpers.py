@@ -370,7 +370,7 @@ def refinePrompt(
         )
         return refined_prompt.strip()
 
-    if media:
+    elif media:
         sprompt = override_system_prompt or SYSTEM_PROMPT_MEDIA
         refined_prompt, _ = backend.runInference(
             prompt="",
@@ -394,6 +394,7 @@ def refinePrompt(
             )
         pass
     else:
+        # no media, normal prompt
         sprompt = override_system_prompt or SYSTEM_PROMPT
 
         refined_prompt, _ = backend.runInference(
