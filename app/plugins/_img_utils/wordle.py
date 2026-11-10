@@ -25,6 +25,18 @@ def preprocess_wordle_image(image_path: str) -> str:
     return PREPROCESSED_PATH
 
 
+IMAGEGEN_PROMPT = (
+    "Loose creative brief: {themes}. "
+    "Interpret each word as a thing, place, character or event and weave all of "
+    "them into one surprising, richly detailed, clearly lit scene with a clear "
+    "setting, a focal subject and a sense of story. "
+    "Choose the medium and visual style yourself, from any era or tradition of "
+    "image making. "
+    "The words are subjects to depict, not captions. "
+    "Writing appears only where the scene would naturally have it."
+)
+
+
 class WordleWordsResponse(BaseModel):
     words: list[str] = []
 
@@ -98,7 +110,12 @@ Analyze the composite image, which contains four distinct scenes. For each scene
 
     config = {"batch": 4, "aspect": "4:3"}
 
-    batch = doBatchImages(" ".join(words), [], backend, media_backend, config)
+    # Frame the words as a creative brief rather than passing them bare:
+    # bare upper-case words get treated by prompt refinement as text to render.
+    themes = ", ".join(word.lower() for word in words)
+    imagegen_prompt = IMAGEGEN_PROMPT.format(themes=themes)
+
+    batch = doBatchImages(imagegen_prompt, [], backend, media_backend, config)
 
     # add extracted words to the response
     foo, bar, baz, quux = batch
