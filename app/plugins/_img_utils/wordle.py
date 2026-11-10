@@ -28,8 +28,8 @@ def preprocess_wordle_image(image_path: str) -> str:
 IMAGEGEN_PROMPT = (
     "Loose creative brief: {themes}. "
     "Interpret each word as a thing, place, character or event and weave all of "
-    "them into one surprising, richly detailed scene with a clear setting, a focal "
-    "subject and a sense of story. "
+    "them into one surprising, richly detailed, clearly lit scene with a clear "
+    "setting, a focal subject and a sense of story. "
     "Choose the medium and visual style yourself, from any era or tradition of "
     "image making. "
     "The words are subjects to depict, not captions. "
