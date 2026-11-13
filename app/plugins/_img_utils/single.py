@@ -193,6 +193,25 @@ def doSingleImage(
 ) -> tuple[str, str, bool, dict]:
     from app.lib.llm_helpers import refinePrompt
 
+    # Guard: no image generation backend configured (e.g. imagegen disabled on
+    # a low-RAM host). Every generation path funnels through here or
+    # doBatchImages, so this is the choke point for a clear error instead of
+    # "'NoneType' object has no attribute 'execute'".
+    if media_backend is None:
+        backend.console.log(
+            "[red] /img requested but no image generation backend is configured (None)"
+        )
+        return (
+            "Image generation is not available — no image generator backend is configured on this instance (was None).",
+            "",
+            False,
+            {},
+        )
+    else:
+        backend.console.log(
+            f"[green] /img using image generation backend: {media_backend.backend_id}"
+        )
+
     setRedoPrompt(prompt)  # for --redo
     saveRedoMedia(media)  # for --redo
     setRedoConfig(config)
@@ -241,7 +260,9 @@ def doSingleImage(
             )
             final_prompt_for_gen = prompt.strip()
 
-        backend.console.log(f"[black on green] refined prompt: '{final_prompt_for_gen}'")
+        backend.console.log(
+            f"[black on green] refined prompt: '{final_prompt_for_gen}'"
+        )
     else:
         final_prompt_for_gen = prompt.strip()
 

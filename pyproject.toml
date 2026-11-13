@@ -93,6 +93,7 @@ markers = [
     "integration: Integration tests",
     "slow: Slow running tests",
     "plugin: Tests for plugin framework",
+    "forecast: Tests for the forecast plugin",
     "tools: Tests for tool framework",
 ]
 

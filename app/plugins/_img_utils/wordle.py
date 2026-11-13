@@ -25,16 +25,23 @@ def preprocess_wordle_image(image_path: str) -> str:
     return PREPROCESSED_PATH
 
 
-IMAGEGEN_PROMPT = (
-    "Loose creative brief: {themes}. "
-    "Interpret each word as a thing, place, character or event and weave all of "
-    "them into one surprising, richly detailed, clearly lit scene with a clear "
-    "setting, a focal subject and a sense of story. "
-    "Choose the medium and visual style yourself, from any era or tradition of "
-    "image making. "
-    "The words are subjects to depict, not captions. "
-    "Writing appears only where the scene would naturally have it."
-)
+IMAGEGEN_PROMPT = """Create an original, visually compelling work of art inspired by these words:
+
+> {themes}
+
+Treat these words as creative ingredients, not a literal checklist. Find unexpected connections, surprising relationships and imaginative ways to bring them together. They may become objects, characters, creatures, environments, materials, actions, symbols or visual metaphors.
+
+Invent a distinctive visual concept that makes the combination feel intentional, intriguing and memorable. It might be surreal, whimsical, cinematic, mysterious, fantastical, dramatic, beautiful, strange or delightfully absurd. Follow whichever creative direction produces the most interesting result.
+
+Think like an adventurous artist and art director, not an illustrator working from a checklist. Make bold creative decisions. Establish a strong visual idea, an engaging composition, an unmistakable focal point and a sense of atmosphere or narrative. Look for unusual scale, unexpected juxtapositions, interesting shapes, evocative lighting, rich colour relationships and compelling visual details.
+
+Choose the artistic medium, aesthetic, visual language and historical or cultural influences freely. Each image should feel like a considered, individual piece of art, not a generic AI illustration.
+
+Integrate all the supplied words meaningfully, but do not feel obliged to depict each one literally. Suggestion, transformation, symbolism and visual wordplay are encouraged.
+
+No explanatory text, labels, word lists or typography. Any lettering should exist only if it is a natural and intentional part of the depicted world.
+
+Prioritize originality, visual impact and creative interpretation over literalness."""
 
 
 class WordleWordsResponse(BaseModel):

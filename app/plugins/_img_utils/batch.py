@@ -44,9 +44,7 @@ def _compose_grid(image_paths: list[str], backend) -> str:
         base_w, base_h = opened[min_idx].width, opened[min_idx].height
         resized = [im.resize((base_w, base_h)) for im in opened]
 
-        canvas_w, canvas_h, positions = _layout_for_count(
-            len(resized), base_w, base_h
-        )
+        canvas_w, canvas_h, positions = _layout_for_count(len(resized), base_w, base_h)
         canvas = Image.new("RGB", (canvas_w, canvas_h), color=(0, 0, 0))
         for im, pos in zip(resized, positions):
             canvas.paste(im, pos)
@@ -70,15 +68,29 @@ def doBatchImages(
     config,
     skip_refinement: bool = False,
 ):
+    # Guard: no image generation backend configured (mirrors doSingleImage).
+    if media_backend is None:
+        backend.console.log(
+            "[red] /img --batch requested but no image generation backend is configured (None)"
+        )
+        return (
+            "Image generation is not available — no image generator backend is configured on this instance (was None).",
+            "",
+            False,
+            {},
+        )
+    else:
+        backend.console.log(
+            f"[green] /img --batch using image generation backend: {media_backend.backend_id}"
+        )
+
     image_paths = []
     is_edit = len(media) > 0
 
     for i in range(config["batch"]):
         # Refine prompt independently for each image in the batch
         if not skip_refinement:
-            refined_prompt = refinePrompt(
-                prompt, backend, media, is_edit=is_edit
-            )
+            refined_prompt = refinePrompt(prompt, backend, media, is_edit=is_edit)
             batch_prompt = refined_prompt.strip()
             if (
                 "i'm sorry" in batch_prompt.lower()
